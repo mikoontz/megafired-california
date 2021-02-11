@@ -7,7 +7,7 @@ dir.create("data/raw", recursive = TRUE, showWarnings = FALSE)
 dir.create("data/out", recursive = TRUE, showWarnings = FALSE)
 
 download.file(url = "https://scholar.colorado.edu/downloads/2r36tz557",
-              destfile = "data/raw/FIRED_CONUS_Daily_w_README.zip")
+              destfile = "data/raw/FIRED_CONUS_Daily_w_README.7z")
 
 ### Currently in 7-zip format, so need external software to unzip it
 ### MacOS built-in unzipper works, but can't be done programmatically.

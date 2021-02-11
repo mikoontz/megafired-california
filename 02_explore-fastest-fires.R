@@ -24,6 +24,8 @@ quantile(california_fired$daily_area_ha, probs = 0.995)
 
 big_days <- california_fired[california_fired$daily_area_ha >= quantile(california_fired$daily_area_ha, probs = 0.995), ]
 
+st_write(obj = big_days, dsn = "data/out/fired-california-big-event-day-combos.gpkg")
+
 # Percent of all area burned that come during the biggest (top 0.5%) blow up events
 # almost 21%!
 sum(big_days$daily_area_ha) / sum(california_fired$daily_area_ha)

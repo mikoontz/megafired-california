@@ -13,12 +13,13 @@ unlink("data/raw/fire19_1.zip")
 
 st_layers("data/raw/fire19_1.gdb")
 
-frap <- st_read("data/raw/fire19_1.gdb", layer = "firep19_1")
-
-fired <- 
+frap <- 
+  st_read("data/raw/fire19_1.gdb", layer = "firep19_1", as_tibble = FALSE) %>% 
+  mutate(ALARM_DATE = lubridate::with_tz(time = ALARM_DATE, tzone = "UTC"),
+         CONT_DATE = lubridate::with_tz(time = CONT_DATE, tzone = "UTC"))
 
 modis_frap <- 
   frap %>% 
   filter(ALARM_DATE > lubridate::ymd(min(fired$date)))
 
-st_write(obj = modis_frap, dsn = "data/out/frap-during-modis-record.gpkg")
+st_write(obj = modis_frap, dsn = "data/out/frap-perims-during-modis-record.gpkg")

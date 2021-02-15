@@ -20,6 +20,8 @@ frap <-
 
 modis_frap <- 
   frap %>% 
-  filter(ALARM_DATE > lubridate::ymd(min(fired$date)))
+  filter(ALARM_DATE > lubridate::ymd(min(fired$date))) %>% 
+  mutate(id = 1:nrow(.)) %>% 
+  dplyr::select(id, everything())
 
-st_write(obj = modis_frap, dsn = "data/out/frap-perims-during-modis-record.gpkg")
+st_write(obj = modis_frap, dsn = "data/out/frap-perims-during-modis-record.gpkg", delete_dsn = TRUE)

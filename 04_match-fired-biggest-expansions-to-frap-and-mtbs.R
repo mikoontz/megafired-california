@@ -44,7 +44,8 @@ for (i in 1:nrow(fired_big)) {
   this_year <- fired_big$ignition_year[i]
   this_year_external <- 
     external_data_sources[external_data_sources$year == this_year, ] %>% 
-    st_cast("MULTIPOLYGON")
+    st_cast("MULTIPOLYGON") %>% 
+    mutate(external_id = as.factor(external_id))
   
   intersections <- 
     try({
@@ -54,18 +55,31 @@ for (i in 1:nrow(fired_big)) {
   
   if("try-error" %in% class(intersections)) {
     this_fired_r <- fasterize::fasterize(sf = this_fired, raster = ca_r)
+    this_external_r <- fasterize::fasterize(sf = this_year_external, r = ca_r, field = "external_id", by = "source")
     
-    for(j in seq_along(1:nrow(this_year_external))) {
-      this_external <- this_year_external[j, ]
-      this_external_r <- fasterize::fasterize(sf = this_external, r = ca_r)
-      intersections <- raster::intersect(this_external_r, this_fired_r)
+    intersections <- 
+      raster::mask(x = this_external_r, mask = this_fired_r) %>% 
+      as.data.frame() %>% 
+      tidyr::pivot_longer(cols = c(frap, mtbs), 
+                          names_to = "source", 
+                          values_to = "external_id") %>% 
+      filter(complete.cases(.)) 
+    
+    best_fit <-
+      intersections %>% 
+      group_by(source, external_id) %>% 
+      summarize(n = n()) %>% 
+      filter(n == max(n)) %>% 
+      ungroup() %>% 
+      mutate(overlapping_area = units::set_units(n * 100, ha),
+             overlapping_pct = overlapping_area / this_fired$total_area_ha,
+             external_id = levels(this_year_external$external_id)[external_id],
+             fired_id = this_fired$fired_id) %>% 
+      left_join(y = this_year_external) %>% 
+      dplyr::select(fired_id, year, external_id, external_name, source, overlapping_area, overlapping_pct)
       
-      this_external_year$[k] <- sum(values(intersections), na.rm = TRUE)) / 100
-      
+    out[[i]] <- best_fit
     
-    }
-    
-    out[[i]] <- NULL
   } else {
   
   best_fit <- 
@@ -85,3 +99,4 @@ for (i in 1:nrow(fired_big)) {
 }
 
 out
+

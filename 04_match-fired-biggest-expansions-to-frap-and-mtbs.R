@@ -32,16 +32,22 @@ external_data_sources <-
   rbind(frap[, c("external_id", "source", "year", "external_name")], 
         mtbs[, c("external_id", "source", "year", "external_name")])
 
-fired_big <- 
+# biggest expansions
+fired <- 
   sf::st_read("data/out/fired_events_conus_nov2001-jan2019_california_biggest-expansions.gpkg") %>% 
-  mutate(fired_id = id)
+  mutate(id_fired = id)
 
-out <- vector(mode = "list", length = nrow(fired_big))
+# all FIRED in california
+fired <- 
+  sf::st_read("data/out/fired_events_conus_nov2001-jan2019_california.gpkg") %>% 
+  mutate(id_fired = id)
 
-for (i in 1:nrow(fired_big)) {
+out <- vector(mode = "list", length = nrow(fired))
+
+for (i in 1:nrow(fired)) {
   print(i)
-  this_fired <- fired_big[i, ]
-  this_year <- fired_big$ignition_year[i]
+  this_fired <- fired[i, ]
+  this_year <- fired$ignition_year[i]
   this_year_external <- 
     external_data_sources[external_data_sources$year == this_year, ] %>% 
     st_cast("MULTIPOLYGON") %>% 
@@ -74,9 +80,10 @@ for (i in 1:nrow(fired_big)) {
       mutate(overlapping_area = units::set_units(n * 100, ha),
              overlapping_pct = overlapping_area / this_fired$total_area_ha,
              external_id = levels(this_year_external$external_id)[external_id],
-             fired_id = this_fired$fired_id) %>% 
+             id_fired = this_fired$id_fired) %>% 
       left_join(y = this_year_external) %>% 
-      dplyr::select(fired_id, year, external_id, external_name, source, overlapping_area, overlapping_pct)
+      dplyr::select(id_fired, year, external_id, external_name, source, overlapping_area, overlapping_pct) %>% 
+      rename(id = external_id, name = external_name)
       
     out[[i]] <- best_fit
     
@@ -90,7 +97,8 @@ for (i in 1:nrow(fired_big)) {
     filter(overlapping_area == max_overlapping_area) %>% 
     st_drop_geometry() %>% 
     mutate(overlapping_pct = overlapping_area / this_fired$total_area_ha) %>% 
-    dplyr::select(fired_id, year, external_id, external_name, source, overlapping_area, overlapping_pct)
+    dplyr::select(id_fired, year, external_id, external_name, source, overlapping_area, overlapping_pct) %>% 
+    rename(id = external_id, name = external_name)
   
   out[[i]] <- best_fit
   
@@ -98,5 +106,12 @@ for (i in 1:nrow(fired_big)) {
   
 }
 
-out
+out <- 
+  out %>% 
+  bind_rows() %>% 
+  tidyr::pivot_wider(id_cols = c(id_fired, year), names_from = source, values_from = c(id, name, overlapping_area, overlapping_pct))
 
+fired_joined_to_external <- left_join(fired, out)
+
+st_write(obj = fired_joined_to_external, 
+         dsn = "data/out/fired_events_conus_nov2001-jan2019_california_frap-mtbs-joined.gpkg")

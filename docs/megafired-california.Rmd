@@ -1,0 +1,74 @@
+---
+bibliography: megafired-california.bib
+csl: ecosphere.csl
+params:
+  title: "Megafires in California"
+  author: |
+    Michael J. Koontz^1\*^,
+    Malcolm P. North^2,3^,
+    Amy DeCastro^4,5^,
+    Jennifer K. Balch^5^,
+    Andrew M. Latimer^3^
+  affiliation: |
+    ^1^Earth Lab, University of Colorado; Boulder, CO, USA  
+    ^2^USFS Pacific Southwest Research Station; Mammoth Lakes, CA, USA
+    ^3^Department of Plant Sciences, University of California; Davis, CA, USA
+    ^4^National Center for Atmospheric Research; Boulder, CO, USA
+    ^5^Department of Geography, University of Colorado; Boulder, CO, USA
+  correspondence: |
+    michael.koontz@colorado.edu
+  keywords: |
+    wildfire, megafire    
+  date_generated: !r format(Sys.Date(), "%B %d, %Y")
+  
+geometry: margin=1in
+header-includes:
+  - \usepackage[left]{lineno}
+  - \linenumbers
+  - \usepackage{setspace}
+  - \doublespacing
+  - \DeclareUnicodeCharacter{200E}{}
+  - \usepackage{caption}
+  - \captionsetup[figure]{labelformat=empty}
+  - \captionsetup[table]{labelformat=empty}
+
+output: pdf_document
+---
+
+```{r setup, include = FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = FALSE)
+```
+
+# `r params$title`
+
+`r params$author`
+
+`r params$affiliation`
+
+*^\*^Correspondence:* ``r params$correspondence``
+
+*Keywords:* `r params$keywords`
+
+Date report generated: `r params$date_generated`
+
+## Abstract 
+
+## Introduction
+
+## Methods
+
+## Results
+
+## Discussion
+
+## Acknowledgements
+
+
+## Author contributions
+
+Author contributions are defined using the Contributor Roles Taxonomy (CRediT; https://casrai.org/credit/).
+Conceptualization: ; Data curation: ; Formal analysis: ; Funding acquisition: ; Investigation: ; Methodology: ; Project administration: ; Resources: ; Software: ; Supervision: ; Validation: ; Visualization: ; Writing -- original draft: ; Writing -- review and editing:   
+
+\newpage
+
+## References

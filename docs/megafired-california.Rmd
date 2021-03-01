@@ -2,7 +2,7 @@
 bibliography: megafired-california.bib
 csl: ecosphere.csl
 params:
-  title: "Megafires in California"
+  title: "Causes, characteristics, and consequences of California's extreme wildfire events"
   author: |
     Michael J. Koontz^1\*^,
     Malcolm P. North^2,3^,
@@ -16,7 +16,7 @@ params:
     ^4^National Center for Atmospheric Research; Boulder, CO, USA
     ^5^Department of Geography, University of Colorado; Boulder, CO, USA
   correspondence: |
-    michael.koontz@colorado.edu
+    mikoontz@gmail.com
   keywords: |
     wildfire, megafire    
   date_generated: !r format(Sys.Date(), "%B %d, %Y")
@@ -55,11 +55,55 @@ Date report generated: `r params$date_generated`
 
 ## Introduction
 
+Increasing frequency of large fires in western U.S. [@dennison2014]
+Increasing frequency of extreme fire conditions in California [@goss2020].
+Increasing severity of fires in western US [@parks2020].
+Increasing area burned [@williams2016; @williams2019]
+Burned area is fundamentally limited way of characterizing wildfires, particularly extreme wildfire events [@kolden2020].
+
+Clear link between fire activity and climate change, and a proposed link to extreme events. 
+
+Important to understand extreme wildfire events, as they are likely to be societally impactful [@balch2018; Iglesias et al., 2021].
+
+Some efforts exist, but still focus on size [@joseph2019].
+
+Challenge of defining "extreme wildfire events", but can be done by considering fire behavior within the context of fire's controllability, but decoupled from the societal impact [@tebim2018].
+
+Then we can further characterize drivers of these extremes, and under what conditions they can lead to disasters [@bowman2017].
+
+Interactions between drivers can be especially important [@balch2018].
+Notion of homogenization of conditions in space/time leading to more extreme behavior (continuous fuels, longer duration hot drought)
+Consideration of positive feedback-driven events as its own category.
+
+Fuel, topography, weather and their spatiotemporal nexus to describe different "taxa" of extreme wildfire events.
+
+
+
 ## Methods
+
+FIRED dataset daily fire perimeters [@balch2020].
+2000 fire events in California between 2001 and 2020.
+Spatial join with FRAP (https://frap.fire.ca.gov/frap-projects/fire-perimeters/) and MTBS [@eidenshink2007].
+
+MODIS active fire product (MCD14ML) [@giglio2016].
+
+Fire radiative power (FRP) to fireline intensity on a 4x daily timestep, then classification of that day based on @tebim2018.
+
+Classes 5, 6, and 7 considered "extreme wildfire events."
+
+Fire radiative power to fire radiative energy (FRE) by integrating through time course of each event.
+
+Total fuel, fuel heterogeneity
+Max wind speed from nearby RAWS station
+VPD from ERA-5 or Gridmet [@abatzoglou2013].
+Wind alignment [@abatzoglou2013] with slope (National Elevation Dataset)
+Historic aridity from CWD? [@flint2013]
 
 ## Results
 
 ## Discussion
+
+Wildfire disasters versus extreme wildfire events.
 
 ## Acknowledgements
 

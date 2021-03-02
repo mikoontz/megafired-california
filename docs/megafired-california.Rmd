@@ -81,25 +81,44 @@ Fuel, topography, weather and their spatiotemporal nexus to describe different "
 
 ## Methods
 
+### Characterize extreme wildfire events
 FIRED dataset daily fire perimeters [@balch2020].
 2000 fire events in California between 2001 and 2020.
-Spatial join with FRAP (https://frap.fire.ca.gov/frap-projects/fire-perimeters/) and MTBS [@eidenshink2007].
-
 MODIS active fire product (MCD14ML) [@giglio2016].
-
 Fire radiative power (FRP) to fireline intensity on a 4x daily timestep, then classification of that day based on @tedim2018.
-
 Classes 5, 6, and 7 considered "extreme wildfire events."
-
 Fire radiative power to fire radiative energy (FRE) by integrating through time course of each event.
+Additional characterization of "extreme" based on FRE due to smoke impact
 
-Total fuel, fuel heterogeneity
-Max wind speed from nearby RAWS station
-VPD from ERA-5 or Gridmet [@abatzoglou2013].
-Wind alignment [@abatzoglou2013] with slope (National Elevation Dataset)
-Historic aridity from CWD? [@flint2013]
+### Causes of extreme wildfire events
+Collate potential causes of extreme wildfire events (or perhaps of all events; might as well?)
+Total fuel, fuel heterogeneity  
+Max wind speed from nearby RAWS station  
+VPD from ERA-5 or Gridmet [@abatzoglou2013]  
+Wind alignment [@abatzoglou2013] with slope (National Elevation Dataset)  
+Historic aridity from CWD? [@flint2013]  
+
+### Characterize different taxa of extreme wildfire events, perhaps using PCA
+
+### Consequences of extreme wildfire events
+Spatial join with FRAP (https://frap.fire.ca.gov/frap-projects/fire-perimeters/) and MTBS [@eidenshink2007].
+Simple stats on cost, lives lost, homes destroyed for each category of extreme wildfire events
+
+
 
 ## Results
+
+Figures
+1. Conceptual diagram of fuel, topography, weather factors (and how they interact) to drive extreme wildfire events  
+1. Map of daily FIRED perimeter having active fire detections within it and delineation of fire head  
+1. Distribution of fireline intensity for all California fires
+1. Distribution of multivariate fuel, topography, climate conditions
+1. 
+
+Table
+1. Akin to [@bowman2017] showing different categories of extreme wildfire events
+1. Depending on how many are classified as "extreme", a table with the info joined from MTBS/FRAP
+
 
 ## Discussion
 

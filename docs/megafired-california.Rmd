@@ -58,7 +58,7 @@ Date report generated: `r params$date_generated`
 Increasing frequency of large fires in western U.S. [@dennison2014]
 Increasing frequency of extreme fire conditions in California [@goss2020].
 Increasing severity of fires in western US [@parks2020].
-Increasing area burned [@williams2016; @williams2019]
+Increasing area burned [@abatzoglou2016; @williams2019]
 Burned area is fundamentally limited way of characterizing wildfires, particularly extreme wildfire events [@kolden2020].
 
 Clear link between fire activity and climate change, and a proposed link to extreme events. 
@@ -67,7 +67,7 @@ Important to understand extreme wildfire events, as they are likely to be societ
 
 Some efforts exist, but still focus on size [@joseph2019].
 
-Challenge of defining "extreme wildfire events", but can be done by considering fire behavior within the context of fire's controllability, but decoupled from the societal impact [@tebim2018].
+Challenge of defining "extreme wildfire events", but can be done by considering fire behavior within the context of fire's controllability, but decoupled from the societal impact [@tedim2018].
 
 Then we can further characterize drivers of these extremes, and under what conditions they can lead to disasters [@bowman2017].
 
@@ -87,7 +87,7 @@ Spatial join with FRAP (https://frap.fire.ca.gov/frap-projects/fire-perimeters/)
 
 MODIS active fire product (MCD14ML) [@giglio2016].
 
-Fire radiative power (FRP) to fireline intensity on a 4x daily timestep, then classification of that day based on @tebim2018.
+Fire radiative power (FRP) to fireline intensity on a 4x daily timestep, then classification of that day based on @tedim2018.
 
 Classes 5, 6, and 7 considered "extreme wildfire events."
 

@@ -33,9 +33,9 @@ external_data_sources <-
         mtbs[, c("external_id", "source", "year", "external_name")])
 
 # biggest expansions
-fired <- 
-  sf::st_read("data/out/fired_events_conus_nov2001-jan2019_california_biggest-expansions.gpkg") %>% 
-  mutate(id_fired = id)
+# fired <- 
+#   sf::st_read("data/out/fired_events_conus_nov2001-jan2019_california_biggest-expansions.gpkg") %>% 
+#   mutate(id_fired = id)
 
 # all FIRED in california
 fired <- 

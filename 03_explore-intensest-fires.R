@@ -15,11 +15,20 @@ library(alphahull)
 
 
 fired_ca <- sf::st_read("data/out/fired_conus_daily_nov2001-jan2019_california.gpkg")
-fired_ca_event <- sf::st_read("data/out/fired_events_conus_nov2001-jan2019_california.gpkg") %>% dplyr::select(id)
-modis_afd <- sf::st_read("data/raw/DL_FIRE_M6_184262/fire_archive_M6_184262.shp") %>% sf::st_transform(sf::st_crs(fired_ca))
+# fired_ca_event <- sf::st_read("data/out/fired_events_conus_nov2001-jan2019_california.gpkg") %>% dplyr::select(id)
+fired_ca_event <- 
+  sf::st_read("data/out/fired_events_conus_nov2001-jan2019_california.gpkg") %>% 
+  dplyr::select(id, ignition_date, last_date, max_growth_ha)
+
 big <- sf::st_read("data/out/fired_conus_daily_nov2001-jan2019_california_biggest-expansions.gpkg")
 ca <- USAboundaries::us_states(resolution = "high", states = "California") %>% sf::st_transform(sf::st_crs(fired_ca))
 fired_frap_mtbs <- sf::st_read("data/out/fired_events_conus_nov2001-jan2019_california_frap-mtbs-joined.gpkg")
+
+modis_afd <- 
+  sf::st_read("data/raw/DL_FIRE_M6_184262/fire_archive_M6_184262.shp") %>% 
+  sf::st_transform(sf::st_crs(fired_ca)) %>% 
+  dplyr::mutate(x = st_coordinates(.)[, 1],
+                y = st_coordinates(.)[, 2])
 
 n_workers <- 10
 
@@ -73,70 +82,86 @@ st_square_buffer <- function(obj, radius = NULL) {
   return(new_obj) 
 }
 
-fired_list <-
-  fired_ca %>%
-  group_by(date) %>% 
-  group_split()
+# 
+# rim_with_afd_by_event <-
+#   fired_with_afd %>% 
+#   filter(id == 57206) %>% 
+#   dplyr::filter(complete.cases(.)) %>% 
+#   sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
+#   st_square_buffer()
+# 
+# king_with_afd_by_event <-
+#   fired_with_afd %>% 
+#   filter(id == 60932) %>% 
+#   dplyr::filter(complete.cases(.)) %>% 
+#   sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
+#   st_square_buffer()
+# 
+# x = king_with_afd_by_event
 
-# Example date with lots of fires (10) and detections (>1000)
-# fired <- fired_list[[634]]
+################################
+fired_with_afd <- 
+  sf::st_join(fired_ca_event, modis_afd) %>% 
+  filter(ACQ_DATE >= ignition_date & ACQ_DATE <= last_date) %>% 
+  dplyr::mutate(pixel_area = TRACK * SCAN,
+                frp_per_area = FRP / pixel_area) %>% 
+  sf::st_drop_geometry()
 
-spacetime_join <- function(fired) {
-  this_date <- unique(fired$date)
-  afd_on_date <- modis_afd %>% 
-    dplyr::filter(ACQ_DATE == this_date) %>% 
-    dplyr::mutate(x = st_coordinates(.)[, 1],
-                  y = st_coordinates(.)[, 2])
-  
-  this_fired_with_afd <-
-    fired %>%
-    dplyr::select(id, date) %>% 
-    sf::st_join(afd_on_date) %>% 
-    dplyr::mutate(frp_per_area = FRP / (TRACK * SCAN)) %>% 
-    sf::st_drop_geometry()
-  
-  return(this_fired_with_afd)
-}
+# fired_with_afd_by_event <-
+#   fired_with_afd %>% 
+#   sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
+#   st_square_buffer() %>% 
+#   group_by(id) %>% 
+#   group_split() 
 
-# setup parallelization
-if (.Platform$OS.type == "windows") {
-  cl <- parallel::makeCluster(n_workers)
-  parallel::clusterEvalQ(cl = cl, expr = {
-    library(dplyr)
-    library(sf)
-  })
-} else {
-  cl <- n_workers
-}
+### testing
+# king <- 
+#   fired_with_afd %>% 
+#   filter(id == 60932)
 
-fired_with_afd_list <- pblapply(X = fired_list, FUN = spacetime_join, cl = cl)
-parallel::stopCluster(cl)
-
-fired_with_afd <- bind_rows(fired_with_afd_list)
-
-fired_with_afd_by_event <- 
-  fired_with_afd %>%
-  dplyr::filter(complete.cases(.)) %>% 
-  sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
-  st_square_buffer() %>% 
+biggest_frp <-
+  fired_with_afd %>% 
   group_by(id) %>% 
-  group_split() 
- 
-rim_with_afd_by_event <-
-  fired_with_afd %>% 
-  filter(id == 57206) %>% 
-  dplyr::filter(complete.cases(.)) %>% 
-  sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
-  st_square_buffer()
+  filter(CONFIDENCE > 90 & pixel_area < 2 & frp_per_area == max(frp_per_area)) %>% 
+  dplyr::select(id, frp_per_area, everything()) %>% 
+  arrange(desc(frp_per_area))
 
-king_with_afd_by_event <-
-  fired_with_afd %>% 
-  filter(id == 60932) %>% 
-  dplyr::filter(complete.cases(.)) %>% 
-  sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
-  st_square_buffer()
+fired_ca_event_with_frp <-
+  fired_ca_event %>% 
+  left_join(biggest_frp)
 
-x = king_with_afd_by_event
+ggplot(fired_ca_event_with_frp, aes(x = max_growth_ha, y = FRP)) +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth()
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ggplot(biggest_frp, aes(x = frp_per_area)) + geom_histogram()
+
+ggplot(biggest_frp, aes(x = pixel_area, y = frp_per_area)) + geom_point() + geom_smooth()
 # Note that this algorithm doesn't currently take into account individual detections at a given datetime
 # that overlap *with each other*. That is, two detections can overlap, which could mean that a single
 # fire on the ground is detected as each pixel, but the two pixels show up as a much larger footprint
@@ -177,19 +202,19 @@ designate_front_and_residual_burning <- function(x) {
   
   # clustering based on distance
   # https://stackoverflow.com/questions/28672399/spatial-clustering-in-r-simple-example
-  first_detections <-
-    first_detections %>% 
-    st_drop_geometry() %>% 
-    st_as_sf(coords = c("x", "y"), remove = FALSE, crs = 3310) %>% 
-    mutate(cluster_id = cutree(hclust(dist(cbind(x, y)), method = "single"), h = 2000))
+  # first_detections <-
+  #   first_detections %>% 
+  #   st_drop_geometry() %>% 
+  #   st_as_sf(coords = c("x", "y"), remove = FALSE, crs = 3310) %>% 
+  #   mutate(cluster_id = cutree(hclust(dist(cbind(x, y)), method = "single"), h = 2000))
+  # 
+  # first_perimeters <- 
+  #   first_detections %>% 
+  #   group_by(cluster_id) %>% 
+  #   summarize() %>% 
+  #   st_convex_hull()
   
-  first_perimeters <- 
-    first_detections %>% 
-    group_by(cluster_id) %>% 
-    summarize() %>% 
-    alphahull::ahull(alpha = 1)
-  ?ahull
-  # Create LINESTRING geometries that represent the outlines of the discrete "patches" of active fire detections
+  # # Create LINESTRING geometries that represent the outlines of the discrete "patches" of active fire detections
   first_perimeters <- st_union(first_detections) %>% st_cast(to = "POLYGON") %>% st_cast(to = "LINESTRING")
   
   # The active fire detections from the first datetime that touch any of the perimeter(s) should all be "front burning"
@@ -250,7 +275,7 @@ designate_front_and_residual_burning <- function(x) {
     }
     
     augmented_detections <- bind_rows(detections_list)
-
+    
     return(augmented_detections)
   }
 } # end function
@@ -283,6 +308,14 @@ fi_by_detection <- bind_rows(fi_by_detection_list)
 king_augmented_detections <-
   fi_by_detection %>% 
   dplyr::filter(id == 60932)
+
+king_gg <-
+  ggplot() +
+  geom_sf(data = st_geometry(king_augmented_detections)) +
+  geom_sf(data = mutate(king_augmented_detections, datetime = as.POSIXct(datetime)), aes(fill = behavior_type)) +
+  facet_wrap(facets = "datetime")
+
+king_gg
 
 king_gg <-
   ggplot(mutate(king_augmented_detections, datetime = as.POSIXct(datetime)), aes(fill = behavior_type, group = datetime)) +

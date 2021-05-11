@@ -29,57 +29,57 @@ modis_afd <-
   dplyr::mutate(x = st_coordinates(.)[, 1],
                 y = st_coordinates(.)[, 2])
 
-n_workers <- 4
+n_workers <- 10
 
-# function to create square buffer around fire points ---------------------
-st_square_buffer <- function(obj, radius = NULL) {
-  pts <- st_coordinates(obj)
-  
-  if(!is.null(radius)) {  
-    xmin <- pts[, "X"] - radius
-    xmax <- pts[, "X"] + radius
-    ymin <- pts[, "Y"] - radius
-    ymax <- pts[, "Y"] + radius
-  } else {
-    xmin <- pts[, "X"] - (pull(obj, SCAN) * 1000 / 2)
-    xmax <- pts[, "X"] + (pull(obj, SCAN) * 1000 / 2)
-    ymin <- pts[, "Y"] - (pull(obj, TRACK) * 1000 / 2)
-    ymax <- pts[, "Y"] + (pull(obj, TRACK) * 1000 / 2)
-  }
-  
-  corners <- tibble(xmin, xmax, ymin, ymax)
-  
-  square_polys <- 
-    corners %>% 
-    pmap(.f = function(xmin, xmax, ymin, ymax) {
-      square_poly <- st_polygon(list(matrix(c(xmin, ymax, 
-                                              xmax, ymax, 
-                                              xmax, ymin, 
-                                              xmin, ymin, 
-                                              xmin, ymax), 
-                                            byrow = TRUE, 
-                                            ncol = 2)))
-      return(square_poly)
-    })
-  
-  # Now that the rectangles are built, we can rotate them properly here based on the
-  # orbital characteristics of the particular satellite that the detection came from
-  # Ascending/descending based on time + satellite combination
-  # Orbital inclination (and thus rotation) based on satellite + ascending/descending
-  # An enhancement for another time.
-  
-  # rot = function(a) matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)
-  # cntrd = st_centroid(st_geometry(x))
-  # rot_x = (st_geometry(x) - cntrd) * rot(-98.2098 * pi / 180) * 1.1 + cntrd
-  
-  new_obj <-
-    obj %>%
-    st_drop_geometry() %>% 
-    dplyr::mutate(geometry = st_sfc(square_polys, crs = st_crs(obj))) %>% 
-    st_as_sf()
-  
-  return(new_obj) 
-}
+# # function to create square buffer around fire points ---------------------
+# st_square_buffer <- function(obj, radius = NULL) {
+#   pts <- st_coordinates(obj)
+#   
+#   if(!is.null(radius)) {  
+#     xmin <- pts[, "X"] - radius
+#     xmax <- pts[, "X"] + radius
+#     ymin <- pts[, "Y"] - radius
+#     ymax <- pts[, "Y"] + radius
+#   } else {
+#     xmin <- pts[, "X"] - (pull(obj, SCAN) * 1000 / 2)
+#     xmax <- pts[, "X"] + (pull(obj, SCAN) * 1000 / 2)
+#     ymin <- pts[, "Y"] - (pull(obj, TRACK) * 1000 / 2)
+#     ymax <- pts[, "Y"] + (pull(obj, TRACK) * 1000 / 2)
+#   }
+#   
+#   corners <- tibble(xmin, xmax, ymin, ymax)
+#   
+#   square_polys <- 
+#     corners %>% 
+#     pmap(.f = function(xmin, xmax, ymin, ymax) {
+#       square_poly <- st_polygon(list(matrix(c(xmin, ymax, 
+#                                               xmax, ymax, 
+#                                               xmax, ymin, 
+#                                               xmin, ymin, 
+#                                               xmin, ymax), 
+#                                             byrow = TRUE, 
+#                                             ncol = 2)))
+#       return(square_poly)
+#     })
+#   
+#   # Now that the rectangles are built, we can rotate them properly here based on the
+#   # orbital characteristics of the particular satellite that the detection came from
+#   # Ascending/descending based on time + satellite combination
+#   # Orbital inclination (and thus rotation) based on satellite + ascending/descending
+#   # An enhancement for another time.
+#   
+#   # rot = function(a) matrix(c(cos(a), sin(a), -sin(a), cos(a)), 2, 2)
+#   # cntrd = st_centroid(st_geometry(x))
+#   # rot_x = (st_geometry(x) - cntrd) * rot(-98.2098 * pi / 180) * 1.1 + cntrd
+#   
+#   new_obj <-
+#     obj %>%
+#     st_drop_geometry() %>% 
+#     dplyr::mutate(geometry = st_sfc(square_polys, crs = st_crs(obj))) %>% 
+#     st_as_sf()
+#   
+#   return(new_obj) 
+# }
 
 # 
 # rim_with_afd_by_event <-

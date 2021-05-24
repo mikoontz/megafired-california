@@ -4,17 +4,10 @@ library(lubridate)
 
 fired <- sf::read_sf("data/raw/FIRED_CONUS_Daily_w_README/fired_conus_daily_nov2001-jan2019.gpkg")
 
-download.file(url = "https://frap.fire.ca.gov/media/10969/fire19_1.zip",
-              destfile = "data/raw/fire19_1.zip")
-
-unzip(zipfile = "data/raw/fire19_1.zip", exdir = "data/raw")
-
-unlink("data/raw/fire19_1.zip")
-
-st_layers("data/raw/fire19_1.gdb")
+st_layers("data/raw/fire20_1.gdb")
 
 frap <- 
-  st_read("data/raw/fire19_1.gdb", layer = "firep19_1", as_tibble = FALSE) %>% 
+  st_read("data/raw/fire20_1.gdb", layer = "firep20_1", as_tibble = FALSE) %>% 
   mutate(ALARM_DATE = lubridate::with_tz(time = ALARM_DATE, tzone = "UTC"),
          CONT_DATE = lubridate::with_tz(time = CONT_DATE, tzone = "UTC"))
 

@@ -4,7 +4,7 @@ library(sf)
 library(dplyr)
 library(mgcv)
 library(ggplot2)
-library(purr)
+library(purrr)
 library(data.table)
 
 daily <- 
@@ -15,7 +15,7 @@ events <- sf::st_read("data/out/fired_events_ca.gpkg")
 fired_frap_mtbs_join <- read.csv(file = "data/out/fired-frap-mtbs-join.csv")
 
 modis_afd <- 
-  data.table::fread("data/out/mcd14ml_ca.csv") %>% 
+  data.table::fread("data/out/mcd14ml_ca.csv", colClasses = c(acq_time = "character")) %>% 
   sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE)
 
 n_workers <- 10
@@ -39,7 +39,12 @@ biggest_frp <-
   group_by(id) %>% 
   filter(confidence > 90 & pixel_area < 2 & frp_per_area == max(frp_per_area)) %>% 
   dplyr::ungroup() %>% 
-  dplyr::select(id, frp_per_area)
+  dplyr::select(id, frp_per_area, acq_date, acq_time) %>% 
+  dplyr::rename(acq_date_frp = acq_date, acq_time_frp = acq_time)
+
+ggplot(daily, aes(x = cum_area_ha_tminus1, y = daily_area_ha, color = lc_name)) +
+  geom_point()
+
 
 # biggest deviation from expected area of increase (i.e., fastest)
 fm1 <- mgcv::gam(daily_area_ha ~ s(cum_area_ha_tminus1, by = lc_name) + s(id, bs = "re"), 
@@ -50,7 +55,8 @@ biggest_area_of_increase_residual <-
   daily %>% 
   mutate(preds = predict(fm1),
          area_of_increase_residual = residuals(fm1)) %>% 
-  dplyr::select(id, area_of_increase_residual) %>% 
+  dplyr::select(id, area_of_increase_residual, date) %>%
+  dplyr::rename(acq_date_aoir = date) %>% 
   st_drop_geometry() %>% 
   group_by(id) %>% 
   filter(area_of_increase_residual == max(area_of_increase_residual))
@@ -62,7 +68,8 @@ ggplot(daily, aes(x = cum_area_ha_tminus1, y = daily_area_ha)) +
 # biggest area of increase
 biggest_area_of_increase <-
   daily %>% 
-  dplyr::select(id, daily_area_ha) %>% 
+  dplyr::select(id, daily_area_ha, date) %>% 
+  dplyr::rename(acq_date_aoir = date) %>%
   st_drop_geometry() %>% 
   group_by(id) %>% 
   filter(daily_area_ha == max(daily_area_ha))
@@ -96,18 +103,35 @@ ranked_ewe <-
     mean(.[, "total_area_ha"] <= total_area_ha & .[, "frp_per_area"] <= frp_per_area & .[, "area_of_increase_residual"] <= area_of_increase_residual)
     })) %>% 
   mutate(ewe_rank = rank(-mecdf)) %>% 
-  left_join(ranking_ewe) %>% 
+  left_join(ranking_ewe) %>%
   dplyr::arrange(ewe_rank) %>% 
   as_tibble() %>% 
-  dplyr::select(id, name_frap, ignition_date, ignition_year, ewe_rank, size_rank, frp_rank, aoir_rank, mecdf, everything())
+  dplyr::select(id, name_frap, ignition_date, ignition_year, ewe_rank, size_rank, frp_rank, aoir_rank, mecdf, everything()) %>% 
+  dplyr::select(-geom)
 
-ranked_ewe
+ranked_ewe <- 
+  ranked_ewe %>% 
+  dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ewe_rank, size_rank, frp_rank, aoir_rank, mecdf, acq_date_frp, acq_time_frp, acq_date_aoir) %>% 
+  as.data.frame()
+
+write.csv(x = ranked_ewe, file = "data/out/extreme-wildfire-events-ranking.csv", row.names = FALSE)
 
 ranked_ewe %>% filter(name_frap == "KING")
 ranked_ewe %>% filter(name_frap == "TUBBS")
 
-ggplot(ranked_ewe, aes(x = mecdf)) + 
-  geom_histogram()
+ggplot(ranked_ewe, aes(x = mecdf)) +
+  geom_histogram(bins = 100) +
+  geom_vline(aes(xintercept = 0.9), color = "red") 
+
+ranked_ewe %>% 
+  filter(mecdf >= 0.9)
+
+ranked_ewe[205, ]
+
+ranked_ewe %>% 
+  filter(frp_per_area == 0)
+
+ggplot(ranked_ewe, aes(x = ))
 
 ggplot(ranked_ewe, aes(x = ignition_date, y = total_area_ha)) + 
   geom_point() +
@@ -129,3 +153,6 @@ ggplot(ranked_ewe, aes(x = ignition_date, y = mecdf)) +
 ggplot(ranked_ewe, aes(x = ignition_month, y = mecdf)) + 
   geom_point() +
   geom_smooth()
+
+ggplot(ranked_ewe, aes(x = mecdf)) +
+  geom_histogram()

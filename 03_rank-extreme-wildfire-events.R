@@ -111,7 +111,7 @@ ranked_ewe <-
 
 ranked_ewe <- 
   ranked_ewe %>% 
-  dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ewe_rank, size_rank, frp_rank, aoir_rank, mecdf, acq_date_frp, acq_time_frp, acq_date_aoir) %>% 
+  dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, last_date, ewe_rank, size_rank, frp_rank, aoir_rank, mecdf, acq_date_frp, acq_time_frp, acq_date_aoir) %>% 
   as.data.frame()
 
 write.csv(x = ranked_ewe, file = "data/out/extreme-wildfire-events-ranking.csv", row.names = FALSE)

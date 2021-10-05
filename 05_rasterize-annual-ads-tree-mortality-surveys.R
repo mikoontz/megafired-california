@@ -7,6 +7,8 @@ library(sf)
 library(here)
 library(fasterize)
 
+dnjy <- read.csv("data/raw/doi_10.5061_dryad.7vt36__v1/Young_et_al_Data.xlsx")
+
 # National Insect and Disease Detection Surveys
 # Info about Digital Mobile Sketch Mapping
 # https://www.fs.fed.us/foresthealth/applied-sciences/mapping-reporting/digital-mobile-sketch-mapping.shtml

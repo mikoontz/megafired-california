@@ -10,6 +10,7 @@ library(tidyr)
 library(ggplot2)
 library(USAboundaries)
 library(grainchanger)
+library(pbapply)
 library(exactextractr)
 
 # Goal is to determine dead trees per acre (TPA) numbers that delineate the 5
@@ -20,7 +21,7 @@ library(exactextractr)
 
 ca <- 
   USAboundaries::us_states(resolution = "high", states = "California") %>% 
-  sf::st_transform(3310) %>% 
+  sf::st_transform(sf::st_crs(3310)) %>% 
   terra::vect()
 
 # Make implicit missing ADS data explicit with NA's
@@ -39,7 +40,7 @@ template_r <-
   setValues(values = NA)
 
 template_df <-
-  as.data.frame(r, xy = TRUE)
+  as.data.frame(template_r, xy = TRUE)
 
 # get 2017 ADS data
 ads2017_surveyed_areas <-
@@ -98,6 +99,8 @@ no_mort <- terra::mask(x = no_mort, mask = surveyed_r)
 max_frac <- terra::app(x = c(no_mort, s), fun = sum)
 corrected_s <- c(no_mort, s) / max_frac
 
+plot(corrected_s)
+
 s <- c(no_mort, s)
 
 
@@ -118,6 +121,37 @@ area_coverage_of_severity_classes_2017 <-
   group_by(plural_sev) %>% 
   tally() %>% 
   dplyr::mutate(area = 3500*3500/10000*n)
+
+
+
+
+## What does LEMMA data suggest mortality looked like in 2017?
+lemma <- terra::rast("data/raw/2017-lemma-forest-structure-data/rasters/stph_ge_25_2017.tif")
+
+tph_live <- terra::rast("data/raw/2017-lemma-forest-structure-data/rasters/tph_ge_3_2017.tif")
+terra::NAflag(tph_live) <- -1
+
+tph_snag <- terra::rast("data/raw/2017-lemma-forest-structure-data/rasters/stph_ge_25_2017.tif")
+terra::NAflag(tph_snag) <- -1
+
+pct_dead <- tph_snag / (tph_live + tph_snag)
+plot(pct_dead)
+
+
+severity_code = dplyr::case_when(pct_mort == 0.00 ~ 0,
+                                 pct_mort <= 0.03 ~ 1,
+                                 pct_mort <= 0.10 ~ 2,
+                                 pct_mort <= 0.29 ~ 3,
+                                 pct_mort <= 0.50 ~ 4,
+                                 pct_mort > 0.50 ~ 5 )) %>% 
+  dplyr::mutate(severity = sev_abbrv$new_name[match(x = severity_code, table = sev_abbrv$code)]) %>% 
+  dplyr::mutate(severity = factor(severity, levels = sev_abbrv$new_name))
+
+
+
+
+
+
 
 
 
@@ -227,15 +261,6 @@ s <- sapply(years, FUN = function(y) {
 y = years[1]
 plot(f)
 
-tph_live <- terra::rast("data/raw/2017-lemma-forest-structure-data/rasters/tph_ge_3_2017.tif")
-terra::NAflag(tph_live) <- -1
-
-tph_snag <- terra::rast("data/raw/2017-lemma-forest-structure-data/rasters/stph_ge_25_2017.tif")
-terra::NAflag(tph_snag) <- -1
-
-pct_dead <- tph_snag / (tph_live + tph_snag)
-plot(pct_dead)
-plot(tph_snag)
 
 
 f <- raster::calc(x = f, fun = mean)

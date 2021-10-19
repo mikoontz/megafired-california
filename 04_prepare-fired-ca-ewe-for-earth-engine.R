@@ -80,8 +80,11 @@ fired_events_ee <-
 
 fired_daily_ee <-
   fired_daily %>% 
-  dplyr::select(id) %>% 
+  dplyr::select(id, did, date) %>% 
   dplyr::left_join(ewe)
+
+sf::st_write(obj = fired_events_ee, dsn = "data/out/fired_events_ca_ewe_rank.gpkg", delete_dsn = TRUE)
+sf::st_write(obj = fired_daily_ee, dsn = "data/out/fired_daily_ca_ewe_rank.gpkg", delete_dsn = TRUE)
 
 sf::st_write(obj = fired_events_ee, dsn = "data/out/fired_events_ca_ewe_rank/fired_events_ca_ewe_rank.shp", delete_dsn = TRUE)
 sf::st_write(obj = fired_daily_ee, dsn = "data/out/fired_daily_ca_ewe_rank/fired_daily_ca_ewe_rank.shp", delete_dsn = TRUE)

@@ -42,8 +42,8 @@ npl <-
   dplyr::bind_rows(npl) %>% 
   dplyr::arrange(year, month, day) %>% 
   dplyr::filter(year >= 2000 & year <= 2020) %>% 
-  dplyr::filter(!(is.na(npl) & lubridate::leap_year(year)))
+  dplyr::filter(!(is.na(npl) & !lubridate::leap_year(year)))
 
 unique(npl$year)
 summary(npl)
-as.data.frame(npl[is.na(npl$npl), ])
+npl

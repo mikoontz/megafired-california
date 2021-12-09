@@ -6,6 +6,8 @@ library(ggrepel)
 library(pbapply)
 library(lubridate)
 
+dir.create("data/out/analysis-ready", showWarnings = FALSE)
+
 # Tidyverse PCA
 # https://clauswilke.com/blog/2020/09/07/pca-tidyverse-style/
 npl <- 
@@ -94,6 +96,10 @@ event_drivers <-
 
 daily_drivers[, .geo := NULL]
 hourly_drivers[, .geo := NULL]
+
+data.table::fwrite(x = event_drivers, file = "data/out/analysis-ready/FIRED-event-scale-drivers_california.csv")
+data.table::fwrite(x = hourly_drivers, file = "data/out/analysis-ready/FIRED-hourly-scale-drivers_california.csv")
+data.table::fwrite(x = daily_drivers, file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california.csv")
 
 # "forest_structure_rumple"
 # "mean_ndvi" # (multiplied by 100, so divide by 100 to get to usual scale)

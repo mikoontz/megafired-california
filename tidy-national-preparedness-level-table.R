@@ -47,3 +47,5 @@ npl <-
 unique(npl$year)
 summary(npl)
 npl
+
+write.csv(x = npl, file = "data/out/national-preparedness-level.csv", row.names = FALSE)

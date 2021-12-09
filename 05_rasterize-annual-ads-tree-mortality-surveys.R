@@ -12,6 +12,7 @@ library(USAboundaries)
 library(grainchanger)
 library(pbapply)
 library(exactextractr)
+library(stars)
 
 # Goal is to determine dead trees per acre (TPA) numbers that delineate the 5
 # severity categories used for 2017- aerial detection surveys
@@ -137,15 +138,25 @@ terra::NAflag(tph_snag) <- -1
 pct_dead <- tph_snag / (tph_live + tph_snag)
 plot(pct_dead)
 
+rcl_matrix <- data.frame(from = c(0, 0.03, 0.10, 0.29, 0.50),
+                         to = c(0.03, 0.10, 0.29, 0.50, 1.0),
+                         becomes = 1:5)
+dead_categories <- terra::classify(x = pct_dead, rcl = rcl_matrix)
+plot(dead_categories)
 
-severity_code = dplyr::case_when(pct_mort == 0.00 ~ 0,
-                                 pct_mort <= 0.03 ~ 1,
-                                 pct_mort <= 0.10 ~ 2,
-                                 pct_mort <= 0.29 ~ 3,
-                                 pct_mort <= 0.50 ~ 4,
-                                 pct_mort > 0.50 ~ 5 )) %>% 
-  dplyr::mutate(severity = sev_abbrv$new_name[match(x = severity_code, table = sev_abbrv$code)]) %>% 
-  dplyr::mutate(severity = factor(severity, levels = sev_abbrv$new_name))
+dead_categories_coarse <- terra::aggregate(dead_categories, fact = 117, fun = "modal")
+
+terra::writeRaster(x = dead_categories_coarse, filename = "data/out/pct-dead-categories_coarse.tif")
+plot(dead_categories_coarse, col = viridis::viridis(6))
+st_crs(3310)
+
+plot(dead_categories_coarse, col = viridis::viridis(6))
+plot(plurality_severity_r, col = viridis::viridis(6))
+
+
+
+
+
 
 
 

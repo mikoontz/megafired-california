@@ -47,11 +47,11 @@ plot_ly(data = ranked_ewe_plot_data[1:n_fires, ],
         type = "scatter3d", mode = "markers", 
         color = ~megafire, colors = c("red", "black"))
 
-ggplot(ranked_ewe, aes(x = mecdf, fill = (frp_90 == 0))) +
+ggplot(ranked_ewe_plot_data, aes(x = mecdf, fill = (frp_90 == 0))) +
   geom_histogram(bins = 100, alpha = 0.25) +
   geom_vline(aes(xintercept = 0.90), color = "red") 
 
-ggplot(mutate(ranked_ewe, frp_exists = frp_90 != 0), aes(x = mecdf)) +
+ggplot(mutate(ranked_ewe_plot_data, frp_exists = frp_90 != 0), aes(x = mecdf)) +
   geom_histogram(bins = 100, alpha = 0.25) +
   geom_vline(aes(xintercept = 0.90), color = "red") +
   facet_wrap(facets = "frp_exists")

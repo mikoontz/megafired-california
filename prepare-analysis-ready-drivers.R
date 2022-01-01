@@ -58,19 +58,6 @@ if(!file.exists("data/out/human-drivers-summary.csv")) {
   write.csv(x = human_factors, file = "data/out/human-drivers-summary.csv", row.names = FALSE)
 }
 
-human_factors <- read.csv("data/out/human-drivers-summary.csv")
-
-ewe_ranks <- read.csv("data/out/extreme-wildfire-events-ranking.csv")
-
-human_factors_mega <- 
-  human_factors %>% 
-  dplyr::rename(driver_starting_npl = starting_npl,
-                driver_mean_npl = mean_npl,
-                driver_concurrent_fire_count = concurrent,
-                driver_cumulative_fire_count = cum_count,
-                driver_cumulative_fire_area = cum_area) %>% 
-  dplyr::mutate(driver_cumulative_fire_area = driver_cumulative_fire_area / 1000000)
-
 event_drivers <- data.table::fread("data/out/ee/FIRED-event-scale-drivers_california.csv")
 hourly_drivers <- data.table::fread("data/out/ee/FIRED-hourly-drivers_california.csv")
 

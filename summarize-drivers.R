@@ -8,6 +8,19 @@ event_drivers <- data.table::fread("data/out/analysis-ready/FIRED-event-scale-dr
 hourly_drivers <- data.table::fread("data/out/analysis-ready/FIRED-hourly-scale-drivers_california.csv")
 daily_drivers <- data.table::fread("data/out/analysis-ready/FIRED-daily-scale-drivers_california.csv")
 
+human_factors <- read.csv("data/out/human-drivers-summary.csv")
+
+ewe_ranks <- read.csv("data/out/extreme-wildfire-events-ranking.csv")
+
+human_factors_mega <- 
+  human_factors %>% 
+  dplyr::rename(driver_starting_npl = starting_npl,
+                driver_mean_npl = mean_npl,
+                driver_concurrent_fire_count = concurrent,
+                driver_cumulative_fire_count = cum_count,
+                driver_cumulative_fire_area = cum_area) %>% 
+  dplyr::mutate(driver_cumulative_fire_area = driver_cumulative_fire_area / 1000000)
+
 # "forest_structure_rumple"
 # "mean_ndvi" # (multiplied by 100, so divide by 100 to get to usual scale)
 # "rumple_index"
@@ -49,8 +62,8 @@ daily_drivers_summary <-
 hourly_drivers_summary <-
   hourly_drivers %>% 
   group_by(id) %>% 
-  summarize(driver_temperature_2m_percentile = quantile(temperature_2m_percentile, probs = 0.9, names = FALSE, na.rm = TRUE),
-            driver_volumetric_soil_water_layer_1_percentile = quantile(soil_water_percentile, probs = 0.1, names = FALSE, na.rm = TRUE),
+  summarize(driver_temp_percentile = quantile(temp_percentile, probs = 0.9, names = FALSE, na.rm = TRUE),
+            driver_soil_water_percentile = quantile(soil_water_percentile, probs = 0.1, names = FALSE, na.rm = TRUE),
             driver_rh_hi_percentile = quantile(rh_percentile, probs = 0.9, names = FALSE, na.rm = TRUE),
             driver_rh_lo_percentile = quantile(rh_percentile, probs = 0.1, names = FALSE, na.rm = TRUE),
             driver_vpd_hPa_hi_percentile = quantile(vpd_percentile, probs = 0.9, names = FALSE, na.rm = TRUE),

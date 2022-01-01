@@ -69,17 +69,34 @@ fired_daily <-
 
 ewe <- 
   read.csv("data/out/extreme-wildfire-events-ranking.csv") %>% 
-  dplyr::rename(olap_frap = overlapping_pct_frap, ig_date = ignition_date, ig_year = ignition_year, ig_month = ignition_month, date_frp = acq_date_frp, time_frp = acq_time_frp, date_aoir = acq_date_aoir) %>% 
-  dplyr::mutate(megafire = ifelse(mecdf >= 0.9, 1, 0)) %>% 
+  dplyr::filter(ignition_year <= 2020) %>% 
+  dplyr::rename(olap_frap = overlapping_pct_frap, 
+                ig_date = ignition_date, 
+                ig_year = ignition_year, 
+                ig_month = ignition_month, 
+                date_frp = acq_date_frp, 
+                date_aoir = acq_date_aoir,
+                tot_hect = total_area_ha,
+                pred_aoi = predicted_aoi,
+                act_aoi = actual_aoi_during_max_aoir,
+                c_area_tm1 = cum_area_ha_tminus1,
+                date_aoi = acq_date_aoi,
+                e_day_aoir = event_day_aoir,
+                e_day_aoi = event_day_aoi,
+                event_dur = event_duration,
+                model_aoir = modeled_max_aoir) %>% 
+  dplyr::mutate(megafire = ifelse(mecdf >= 0.9, yes = "megafire", "non-megafire")) %>% 
   dplyr::select(id, megafire, everything())
 
 fired_events_ee <-
   fired_events %>% 
+  dplyr::filter(ig_year <= 2020) %>% 
   dplyr::select(id) %>% 
   dplyr::left_join(ewe)
 
 fired_daily_ee <-
   fired_daily %>% 
+  dplyr::filter(ig_year <= 2020) %>% 
   dplyr::select(id, did, date) %>% 
   dplyr::left_join(ewe)
 
@@ -89,12 +106,12 @@ sf::st_write(obj = fired_daily_ee, dsn = "data/out/fired_daily_ca_ewe_rank.gpkg"
 sf::st_write(obj = fired_events_ee, dsn = "data/out/fired_events_ca_ewe_rank/fired_events_ca_ewe_rank.shp", delete_dsn = TRUE)
 sf::st_write(obj = fired_daily_ee, dsn = "data/out/fired_daily_ca_ewe_rank/fired_daily_ca_ewe_rank.shp", delete_dsn = TRUE)
 
-ggplot(fired_ee, aes(x = ig_month)) +
+ggplot(fired_events_ee, aes(x = ig_month)) +
   geom_histogram() +
   facet_wrap(facets = "megafire")
 
-ggplot(fired_ee, aes(x = ig_year)) +
+ggplot(fired_daily_ee, aes(x = ig_year)) +
   geom_histogram() +
   facet_wrap(facets = "megafire", scales = "free_y")
 
-fired_ee %>% st_drop_geometry() %>% count(megafire, ig_year)
+fired_events_ee %>% st_drop_geometry() %>% count(megafire, ig_year)

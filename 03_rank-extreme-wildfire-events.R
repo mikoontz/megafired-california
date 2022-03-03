@@ -42,17 +42,8 @@ fired_with_afd <-
 biggest_size <-
   events %>% 
   dplyr::select(id, total_area_ha) %>% 
-  st_drop_geometry()
-
-# # Max FRP
-# biggest_frp <-
-#   fired_with_afd %>% 
-#   st_drop_geometry() %>%
-#   group_by(id) %>% 
-#   filter(confidence > 90 & pixel_area < 2 & frp_per_area == max(frp_per_area)) %>% 
-#   dplyr::ungroup() %>% 
-#   dplyr::select(id, frp_per_area, acq_date, acq_time) %>% 
-#   dplyr::rename(acq_date_frp = acq_date, acq_time_frp = acq_time)
+  st_drop_geometry() %>% 
+  as_tibble()
 
 # 90th percentile FRP of the fire to try to account for
 # saturation of individual FRP measurements
@@ -92,7 +83,7 @@ biggest_area_of_increase_residual <-
   mutate(preds_raw = predict(fm1),
          preds = exp(preds_raw),
          area_of_increase_residual = residuals(fm1)) %>% 
-  dplyr::select(id, area_of_increase_residual, event_day, event_duration, daily_area_ha, preds, cum_area_ha_tminus1, date,
+  dplyr::select(id, area_of_increase_residual, event_day, daily_area_ha, preds, cum_area_ha_tminus1, date,
                 preds_raw) %>%
   dplyr::rename(acq_date_aoir = date,
                 predicted_aoi = preds,
@@ -103,7 +94,8 @@ biggest_area_of_increase_residual <-
   filter(area_of_increase_residual == max(area_of_increase_residual)) %>% 
   dplyr::rename(modeled_max_aoir = area_of_increase_residual,
                 actual_aoi_during_max_aoir = daily_area_ha) %>% 
-  dplyr::mutate(aoir_max = actual_aoi_during_max_aoir - predicted_aoi)
+  dplyr::mutate(aoir_max = actual_aoi_during_max_aoir - predicted_aoi) %>% 
+  dplyr::ungroup()
 
 biggest_area_of_increase_residual
 
@@ -124,52 +116,25 @@ ggsave(filename = "figs/modeled-area-of-increase-vs-cumulative-area-burned.png",
 # biggest area of increase
 biggest_area_of_increase <-
   daily %>% 
-  dplyr::select(id, daily_area_ha, event_day, event_duration, date) %>% 
+  dplyr::select(id, daily_area_ha, event_day, date) %>% 
   dplyr::rename(acq_date_aoi = date,
                 event_day_aoi = event_day) %>%
   st_drop_geometry() %>% 
   group_by(id) %>% 
   filter(daily_area_ha == max(daily_area_ha)) %>% 
-  dplyr::rename(aoi_max = daily_area_ha)
+  # One fire had it's maximum area of increase on two separate days (the minimum possible area of increase-- one pixel) so just take the first day that happens
+  # using arrange() then slice(1)
+  dplyr::arrange(event_day_aoi) %>% 
+  dplyr::slice(1) %>% 
+  dplyr::rename(aoi_max = daily_area_ha) %>% 
+  dplyr::ungroup()
 
 # join all together
-# Code if using max FRP
-# ranking_ewe <-
-#   events %>% 
-#   dplyr::select(-total_area_ha) %>% 
-#   left_join(biggest_size) %>% 
-#   left_join(biggest_frp) %>% 
-#   left_join(biggest_area_of_increase_residual) %>%
-#   left_join(biggest_area_of_increase) %>% 
-#   mutate(frp_per_area = ifelse(is.na(frp_per_area), yes = 0, no = frp_per_area)) %>%
-#   mutate(size_rank = rank(-total_area_ha)) %>% 
-#   mutate(frp_rank = rank(-frp_per_area)) %>% 
-#   mutate(aoir_rank = rank(-aoir_max)) %>% 
-#   mutate(aoi_rank = rank(-daily_area_ha)) %>% 
-#   left_join(fired_frap_mtbs_join, by = c(id = "id_fired"))
-# 
-# pairs(x = st_drop_geometry(ranking_ewe[, c("total_area_ha", "frp_per_area", "aoir_max")]))
-# 
-# ranked_ewe <- 
-#   ranking_ewe %>% 
-#   dplyr::select(id, total_area_ha, frp_per_area, aoir_max) %>%
-#   st_drop_geometry() %>%
-#   mutate(mecdf = pmap_dbl(., .f = function(id, total_area_ha, frp_per_area, aoir_max) {
-#     mean(.[, "total_area_ha"] <= total_area_ha & .[, "frp_per_area"] <= frp_per_area & .[, "aoir_max"] <= aoir_max)
-#     })) %>% 
-#   mutate(ewe_rank = rank(-mecdf)) %>% 
-#   left_join(ranking_ewe) %>%
-#   dplyr::arrange(ewe_rank) %>% 
-#   as_tibble() %>% 
-#   dplyr::select(id, name_frap, ignition_date, ignition_year, ewe_rank, size_rank, frp_rank, aoir_rank, mecdf, everything()) %>% 
-#   dplyr::select(-geom)
-# 
-# ranked_ewe <- 
-#   ranked_ewe %>% 
-#   dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, last_date, ewe_rank, size_rank, frp_rank, aoir_rank, mecdf, acq_date_frp, acq_time_frp, acq_date_aoir) %>% 
-#   as.data.frame()
-# 
-# write.csv(x = ranked_ewe, file = "data/out/extreme-wildfire-events-ranking.csv", row.names = FALSE)
+events
+biggest_size
+biggest_frp
+biggest_area_of_increase_residual
+biggest_area_of_increase
 
 # code if using daily 90th percentile FRP
 ranking_ewe <-
@@ -184,7 +149,8 @@ ranking_ewe <-
   mutate(frp_rank = rank(-frp_90)) %>% 
   mutate(aoir_rank = rank(-aoir_max)) %>% 
   mutate(aoi_rank = rank(-aoi_max)) %>% 
-  left_join(fired_frap_mtbs_join, by = c(id = "id_fired"))
+  left_join(fired_frap_mtbs_join, by = c(id = "id_fired")) %>% 
+  sf::st_drop_geometry()
 
 pairs(x = st_drop_geometry(ranking_ewe[, c("total_area_ha", "frp_90", "aoir_max")]))
 
@@ -192,7 +158,6 @@ ranked_ewe <-
   ranking_ewe %>% 
   dplyr::filter(ignition_year <= 2020) %>% 
   dplyr::select(id, total_area_ha, frp_90, aoir_max) %>%
-  st_drop_geometry() %>%
   mutate(mecdf = pmap_dbl(., .f = function(id, total_area_ha, frp_90, aoir_max) {
     mean(.[, "total_area_ha"] <= total_area_ha & .[, "frp_90"] <= frp_90 & .[, "aoir_max"] <= aoir_max)
   })) %>% 
@@ -200,14 +165,10 @@ ranked_ewe <-
   left_join(ranking_ewe) %>%
   dplyr::arrange(ewe_rank) %>% 
   as_tibble() %>% 
-  dplyr::select(id, name_frap, ignition_date, ignition_year, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, mecdf, everything()) %>% 
-  dplyr::select(-geom)
+  dplyr::select(id, name_frap, ignition_date, ignition_year, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, mecdf, everything())
 
 ranked_ewe_out <- 
   ranked_ewe %>% 
-  dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, last_date, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, mecdf, total_area_ha, frp_90, aoir_max, aoi_max, predicted_aoi, actual_aoi_during_max_aoir, cum_area_ha_tminus1, acq_date_frp, acq_date_aoir, acq_date_aoi, event_day_aoir, event_day_aoi, event_duration, modeled_max_aoir) %>% 
-  as.data.frame()
+  dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, last_date, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, mecdf, total_area_ha, frp_90, aoir_max, aoi_max, predicted_aoi, actual_aoi_during_max_aoir, cum_area_ha_tminus1, acq_date_frp, acq_date_aoir, acq_date_aoi, event_day_aoir, event_day_aoi, event_duration, modeled_max_aoir)
 
 write.csv(x = ranked_ewe_out, file = "data/out/extreme-wildfire-events-ranking.csv", row.names = FALSE)
-
-

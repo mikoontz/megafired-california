@@ -114,4 +114,9 @@ ggplot(fired_daily_ee, aes(x = ig_year)) +
   geom_histogram() +
   facet_wrap(facets = "megafire", scales = "free_y")
 
-fired_events_ee %>% st_drop_geometry() %>% count(megafire, ig_year)
+fired_events_ee %>% 
+  st_drop_geometry() %>% 
+  count(megafire, ig_year) %>% 
+  tidyr::pivot_wider(id_cols = ig_year, names_from = "megafire", values_from = "n") %>% 
+  dplyr::mutate(prop_mega = megafire / (megafire + `non-megafire`)) %>% 
+  as.data.frame()

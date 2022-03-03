@@ -20,6 +20,15 @@ library(stars)
 # those 5 severity classes for a given year
 # Step 2 is to determine, *for the same year*, what the distribution of 
 
+lyrs <- sf::st_layers("data/raw/stelprd3856634/ADS_Regionwide_78_04.gdb")
+test <- sf::st_read("data/raw/stelprd3856634/ADS_Regionwide_78_04.gdb", layer = "ADS_78_04")
+sort(unique(test$RPT_YR))
+
+test2004 <- test %>% filter(RPT_YR == 2004)
+test2004b <- ads2017 %>% filter(SURVEY_YEAR == 2004)
+par(mfrow = c(1, 2))
+plot(test2004$Shape)
+plot(test2004b$SHAPE)
 ca <- 
   USAboundaries::us_states(resolution = "high", states = "California") %>% 
   sf::st_transform(sf::st_crs(3310)) %>% 
@@ -43,6 +52,8 @@ template_r <-
 template_df <-
   as.data.frame(template_r, xy = TRUE)
 
+# ADS data come from 
+# https://www.fs.fed.us/foresthealth/applied-sciences/mapping-reporting/detection-surveys.shtml
 # get 2017 ADS data
 ads2017_surveyed_areas <-
   sf::st_read(here::here("data", "raw", "CONUS_Region5_AllYears.gdb"),
@@ -56,9 +67,12 @@ surveyed_r <-
   terra::rasterize(x = ads2017_surveyed_areas, y = template_r, touches = TRUE)
 
 # data from the 2017 aerial detection surveys (uses the 5 classes of tree mortality severity)
-ads2017 <- 
+ads <-
   sf::st_read(here::here("data", "raw", "CONUS_Region5_AllYears.gdb"), 
-              layer = "DAMAGE_AREAS_FLAT_AllYears_CONUS_Rgn5") %>% 
+              layer = "DAMAGE_AREAS_FLAT_AllYears_CONUS_Rgn5")
+
+ads2017 <- 
+  ads %>% 
   dplyr::filter(SURVEY_YEAR == 2017) %>% 
   st_transform(terra::crs(template_r))
 
@@ -78,15 +92,15 @@ s <-
   ads2017 %>% 
   base::split(f = .$severity) %>% 
   pblapply(FUN = function(x) {
-  
-  frac <-
-    exactextractr::coverage_fraction(x = raster::raster(template_r), y = x, crop = FALSE) %>%
-    raster::stack() %>% 
-    sum() %>% 
-    terra::rast()
-
-  return(frac)
-}) %>% 
+    
+    frac <-
+      exactextractr::coverage_fraction(x = raster::raster(template_r), y = x, crop = FALSE) %>%
+      raster::stack() %>% 
+      sum() %>% 
+      terra::rast()
+    
+    return(frac)
+  }) %>% 
   terra::rast() %>% 
   terra::mask(mask = surveyed_r) # give NAs to cells where there wasn't any survey
 
@@ -191,7 +205,7 @@ ggplot(dplyr::filter(plurality_severity, plural_sev != "none"), aes(x = plural_s
 ggplot(dplyr::filter(data, severity != "none"), aes(severity)) + 
   geom_bar() + 
   facet_wrap(facets = vars(year))
-  
+
 
 
 

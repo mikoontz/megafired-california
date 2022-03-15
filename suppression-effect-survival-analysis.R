@@ -18,8 +18,8 @@ library(data.table)
 fire_size_classes <- tibble(class = LETTERS[1:7], 
                             size_lwr_ac = c(0, 0.25, 10, 100, 300, 1000, 5000),
                             size_upr_ac = c(0.25, 10, 100, 300, 1000, 5000, NA),
-                            size_lwr_ha = 2.47105 * size_lwr_ac,
-                            size_upr_ha = 2.47105 * size_upr_ac)
+                            size_lwr_ha = size_lwr_ac / 2.47105,
+                            size_upr_ha = size_upr_ac / 2.47105)
 
 fire_size_classes
 
@@ -29,5 +29,26 @@ fired <-
   group_by(id) %>% 
   mutate(cum_area_ha = cumsum(daily_area_ha)) %>% 
   mutate(cum_area_ha_tminus1 = cum_area_ha - daily_area_ha) %>% 
-  dplyr::ungroup()
+  dplyr::ungroup() %>% 
+  dplyr::filter(date >= lubridate::ymd("2003-01-01"))
 
+summary(fired)
+range(fired$date)
+
+fired_nonspatial <- sf::st_drop_geometry(fired)
+
+length(unique(fired_nonspatial$id))
+fired_nonspatial %>% nrow()
+
+sub <- 
+  fired_nonspatial %>% 
+  filter(tot_hect >= 405)
+
+length(unique(sub$id))
+length(unique(sub$id)) / length(unique(fired_nonspatial$id))
+
+sub %>% nrow()
+
+
+length(unique(sub$id)) / length(unique(fired_nonspatial$id))
+sub %>% nrow() / fired_nonspatial %>% nrow()

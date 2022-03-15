@@ -6,10 +6,8 @@ library(ggrepel)
 library(pbapply)
 library(lubridate)
 
-megafire_drivers <- 
-  read.csv(file = "data/out/megafire-drivers-summarized.csv") %>% 
-  as_tibble()
-
+megafire_drivers <- data.table::fread(file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california.csv")
+apply(megafire_drivers, 2, function(x) return(sum(is.na(x))))
 # megafire_drivers[is.na(megafire_drivers$driver_wind_aspect_alignment_rad), "driver_wind_aspect_alignment_rad"] <- 0
 
 pca_data <- 

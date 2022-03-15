@@ -5,18 +5,24 @@ library(sf)
 library(data.table)
 library(lubridate)
 library(pbapply)
+library(USAboundaries)
 
 dir.create("data/out/analysis-ready", showWarnings = FALSE)
 
 #### --- input data
 hourly_drivers <- data.table::fread("data/out/ee/FIRED-hourly-drivers_california.csv")
 
-daily_drivers_list <-
+lcms_gridmet_accessibility_daily_drivers_list <-
   list.files("data/out/ee/",
-             pattern = "FIRED-daily-drivers_california_",
+             pattern = "lcms-gridmet-accessibility-drivers",
              full.names = TRUE) %>%
-  lapply(FUN = fread)
+  lapply(FUN = data.table::fread)
 
+landsat_dem_daily_drivers_list <-
+  list.files("data/out/ee",
+             pattern = "landsat-dem-drivers",
+             full.names = TRUE) %>% 
+  lapply(FUN = data.table::fread)
 
 ## read in various forms of the FIRED data
 fired_daily <-
@@ -24,11 +30,47 @@ fired_daily <-
   dplyr::rename(geometry = geom) %>% 
   dplyr::mutate(date = lubridate::ymd(date),
                 ig_date = lubridate::ymd(ig_date)) %>% 
-  dplyr::select(did, id, date, everything())
+  dplyr::select(did, id, date, everything()) %>% 
+  sf::st_transform(3310)
+
+fired_daily_centroids <-
+  fired_daily %>% 
+  sf::st_centroid()
 
 fired_events <- 
   sf::st_read("data/out/fired_events_ca_ewe_rank.gpkg") %>% 
-  dplyr::rename(geometry = geom)
+  dplyr::rename(geometry = geom) %>% 
+  sf::st_transform(3310)
+
+## determine the fires that we want to work with based on filtering criteria
+## Between 2003-01-01 and 2020-12-31
+## All fire growth centroids within California
+ca <- 
+  USAboundaries::us_states(resolution = "high", states = "California") %>% 
+  sf::st_transform(3310) %>% 
+  sf::st_geometry()
+
+target_fires <- 
+  fired_daily_centroids %>% 
+  dplyr::filter(sf::st_intersects(x = ., y = ca, sparse = FALSE)) %>% 
+  dplyr::filter(date >= lubridate::ymd("2003-01-01") & date <= lubridate::ymd("2020-12-31"))
+
+target_fires_id <- unique(target_fires$id)
+target_fires_did <- unique(target_fires$did)
+
+fired_daily <- 
+  fired_daily %>% 
+  dplyr::filter(did %in% target_fires_did)
+
+fired_events <-
+  fired_events %>% 
+  dplyr::filter(id %in% target_fires_id)
+
+fired_daily_centroids <-
+  fired_daily_centroids %>% 
+  dplyr::filter(did %in% target_fires_did)
+
+## 
 
 npl <- 
   read.csv("data/out/national-preparedness-level.csv") %>% 
@@ -37,14 +79,13 @@ npl <-
   as.data.table()
 
 r_era5 <- 
-  terra::rast("data/out/era5-weather-percentiles_1981-01-01_2020-12-31.tif")
+  terra::rast("data/out/ee/era5-weather-percentiles_1981-01-01_2020-12-31.tif")
 
 r_gridmet <-
-  terra::rast("data/out/gridmet-weather-percentiles_1981-01-01_2020-12-31.tif")
+  terra::rast("data/out/ee/gridmet-weather-percentiles_1981-01-01_2020-12-31.tif")
 
 #### --- hourly drivers prep
-
-hourly_drivers <- hourly_drivers[date < "2021-01-01", ]
+hourly_drivers <- hourly_drivers[did %in% target_fires_did, ]
 hourly_drivers[, `:=`(rh = ea / esat,
                       `system:index` = NULL, megafire = NULL,
                       ea = NULL,
@@ -82,15 +123,6 @@ vpd <- r_era5[[803:1203]]
 rh <- r_era5[[1204:1604]]
 wind <- r_era5[[1605:2005]]
 
-
-
-## get centroids of daily perimeters
-centroids <-
-  fired_events %>% 
-  dplyr::select(id, geometry) %>%
-  sf::st_make_valid() %>% 
-  sf::st_centroid()
-
 extract_percentile <- function(x) {
   idx <- which.min(x)
   if(length(idx) == 0) {
@@ -102,10 +134,10 @@ extract_percentile <- function(x) {
 
 match_percentile <- function(r, var, drivers_DT) {
   
-  percentile_matrix <- terra::extract(x = r, y = sf::st_coordinates(centroids), method = "simple")
-  percentile_matrix <- cbind(id = centroids$id, percentile_matrix)
+  percentile_matrix <- terra::extract(x = r, y = sf::st_coordinates(fired_daily_centroids), method = "simple")
+  percentile_matrix <- cbind(did = fired_daily_centroids$did, percentile_matrix)
   percentile_matrix <- as.data.table(percentile_matrix)
-  percentile_matrix <- percentile_matrix[drivers_DT[, c("id", ..var)], on = "id"][, id := NULL]
+  percentile_matrix <- percentile_matrix[drivers_DT[, c("did", ..var)], on = "did"][, did := NULL]
   percentile_matrix[, names(r) := lapply(names(r), FUN = function(i) {return(abs(get(i) - get(var)))})]
   data.table::set(x = percentile_matrix, j = var, value = NULL)
   percentile_matrix[, paste0(var, "_percentile") := apply(.SD, 1, extract_percentile)]
@@ -126,8 +158,9 @@ hourly_drivers_summarized <-
   hourly_drivers %>%
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   group_by(id, date, did) %>%
-  summarize(wind_anisotropy = var(sin(wind_dir_rad)),
-            wind_terrain_anisotropy = var(sin(wind_aspect_alignment_rad)),
+  summarize(wind_anisotropy = sd(cos(wind_dir_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
+            wind_terrain_anisotropy = sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
+            wind_terrain_alignment = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
             max_wind_speed = max(wind_speed),
             min_wind_speed = min(wind_speed),
             max_wind_speed_pct = max(wind_speed_percentile),
@@ -151,20 +184,22 @@ hourly_drivers_summarized <-
   ungroup()
 #### --- end hourly drivers prep
 
-
 #### -- daily drivers prep
 
 # GRIDMET Drought product doesn't seem to have the spi1y or spi270d layers for 2018 (checked on Earth Engine, too-- those layers are masked)
 # so we want to be able to remove those columns so we can bind the whole dataset together
-names_of_incomplete_vars <- names(daily_drivers_list[[1]])[which(!(names(daily_drivers_list[[1]]) %in% names(daily_drivers_list[[19]])))]
+landsat_dem_daily_drivers <- data.table::rbindlist(landsat_dem_daily_drivers_list)
+landsat_dem_daily_drivers <- landsat_dem_daily_drivers[did %in% target_fires_did]
+landsat_dem_daily_drivers[, `:=`(.geo = NULL, `system:index` = NULL, megafire = NULL)]
 
-lapply(daily_drivers_list[-19], FUN = function(x) {
-  data.table::set(x = x, j = names_of_incomplete_vars, value = NULL)
-  invisible()
-})
+# The spi1y and spi270d data are missing for every event in 2018 so we use fill = TRUE to fill in NA's there
+# names_of_incomplete_vars <- names(daily_drivers_list[[1]])[which(!(names(daily_drivers_list[[1]]) %in% names(daily_drivers_list[[19]])))]
+lcms_gridmet_accessibility_daily_drivers <- data.table::rbindlist(lcms_gridmet_accessibility_daily_drivers_list, fill = TRUE)
+lcms_gridmet_accessibility_daily_drivers <- lcms_gridmet_accessibility_daily_drivers[did %in% target_fires_did]
+lcms_gridmet_accessibility_daily_drivers[, `:=`(.geo = NULL, `system:index` = NULL, megafire = NULL, pdsi_z = z, z = NULL, gridmet_datetime = NULL, gridmet_drought_datetime = NULL)]
 
-daily_drivers <- data.table::rbindlist(daily_drivers_list)
-daily_drivers[, `:=`(.geo = NULL, `system:index` = NULL, pdsi_z = z, z = NULL)]
+daily_drivers <- merge(landsat_dem_daily_drivers, lcms_gridmet_accessibility_daily_drivers, on = c("did", "id", "date"), all = TRUE)
+daily_drivers[, forest_structure_rumple := ndvi_surf_area / ndvi_proj_area]
 
 # get some of the human factors in tidy shape
 # Took 48 minutes; would have taken ~3 hours with a simple for loop
@@ -227,10 +262,10 @@ if(!file.exists("data/out/other-fires-summary.csv")) {
 }
 
 other_fires_summary <- 
-  read.csv(file = "data/out/other-fires-summary.csv") %>% 
+  read.csv(file = "data/out/other-fires-summary.csv") %>%
+  dplyr::filter(did %in% target_fires_did) %>% 
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   as_tibble()
-
 # end_time <- Sys.time()
 # print(difftime(end_time, start_time, units = "mins"))
 
@@ -276,27 +311,50 @@ daily_drivers_out <-
   dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("lcms"), .fns = ~ .x*30*30/10000)) %>% 
   dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("csp_ergo_landforms"), .fns = ~ .x / proj_area_ha, .names = "{.col}_prop")) %>% 
   dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("lcms"), .fns = ~ .x / proj_area_ha, .names = "{.col}_prop")) %>% 
-  dplyr::select(-gridmet_datetime, -gridmet_drought_datetime, -surf_area, -proj_area, -megafire) %>% 
-  dplyr::select(did, id, date, everything())
+   dplyr::select(did, id, date, everything())
 
 #### --- end daily drivers prep
 
-#### --- join daily drivers and hourly drivers summarized to daily time steps
+#### --- original FIRED California data at event scale
 
-other_fires_summary
-hourly_drivers_summarized
-daily_drivers_out
+fired_daily_orig <-
+  sf::st_read("data/out/fired_daily_ca.gpkg") %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::filter(did %in% target_fires_did) %>% 
+  dplyr::select(did, lc_name) %>% 
+  dplyr::rename(daily_modis_lc = lc_name)
+
+fired_event_orig <- 
+  sf::st_read("data/out/fired_events_ca.gpkg") %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::filter(id %in% target_fires_id) %>% 
+  dplyr::select(id, lc_name) %>% 
+  dplyr::rename(event_modis_lc = lc_name)
+
+#### --- join daily drivers, current fires/fires-to-date data, and hourly drivers summarized to daily time steps
+
+# other_fires_summary
+# hourly_drivers_summarized
+# daily_drivers_out
+# fired_daily_orig
+# fired_event_orig
 
 out_sf <- 
   fired_daily %>% 
+  dplyr::left_join(fired_event_orig) %>% 
+  dplyr::left_join(fired_daily_orig) %>% 
   dplyr::left_join(other_fires_summary) %>% 
   dplyr::left_join(hourly_drivers_summarized) %>% 
-  dplyr::left_join(daily_drivers_out)
+  dplyr::left_join(daily_drivers_out) %>%
+  dplyr::mutate(x_3310 = sf::st_coordinates(sf::st_centroid(sf::st_geometry(.)))[, "X"],
+                y_3310 = sf::st_coordinates(sf::st_centroid(sf::st_geometry(.)))[, "Y"]) %>% 
+  dplyr::filter(date >= lubridate::ymd("2003-01-01") & date <= lubridate::ymd("2020-12-31")) %>% 
+  dplyr::select(dplyr::everything())
 
 out <- 
   out_sf %>% 
   sf::st_drop_geometry() %>% 
   as.data.table()
 
-sf::st_write(obj = out_sf, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california.gpkg")
+sf::st_write(obj = out_sf, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california.gpkg", delete_dsn = TRUE)
 data.table::fwrite(x = out, file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california.csv")

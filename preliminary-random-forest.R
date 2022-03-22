@@ -33,19 +33,12 @@ events_resolve <-
   events %>% 
   sf::st_join(y = resolve)
 
-events_resolve %>% 
-  st_drop_geometry %>% 
-  group_by(megafire, nnh_name) %>% 
-  tally()
-
 target_fires <-
   fires %>%
-  dplyr::filter(tot_hect >= 120) %>% 
-  sf::st_join(y = resolve)
+  dplyr::filter(tot_hect >= 120)
 
 fires_working <-
   target_fires %>% 
-  dplyr::mutate(rumple_index = surf_area / proj_area) %>% 
   sf::st_drop_geometry() %>% 
   dplyr::select(-lcms_landuse_01, -lcms_landuse_02, -lcms_landuse_04, -lcms_landuse_07,
                 -lcms_landcover_02, -lcms_landcover_06, -lcms_landcover_02, -lcms_landcover_12, -lcms_landcover_13, -lcms_landcover_14, -lcms_landcover_15, 

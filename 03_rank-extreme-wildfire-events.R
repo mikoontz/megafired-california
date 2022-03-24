@@ -11,15 +11,20 @@ library(plotly)
 
 daily <- 
   sf::st_read("data/out/fired_daily_ca.gpkg") %>% 
-  dplyr::mutate(lc_name = as.factor(lc_name))
+  dplyr::mutate(lc_name = as.factor(lc_name),
+                date = lubridate::ymd(date)) %>% 
+  dplyr::select(did, id, date, ignition_date, ignition_day, ignition_month, ignition_year, last_date, event_day, event_duration, daily_area_ha, cum_area_ha, cum_area_ha_tminus1)
 
-events <- sf::st_read("data/out/fired_events_ca.gpkg")
+events <- 
+  sf::st_read("data/out/fired_events_ca.gpkg") %>% 
+  dplyr::select(id, ignition_date, ignition_day, ignition_month, ignition_year, last_date, event_duration, total_area_ha)
 
 fired_frap_mtbs_join <- read.csv(file = "data/out/fired-frap-mtbs-join.csv")
 
 modis_afd <- 
   data.table::fread("data/out/mcd14ml_ca.csv", colClasses = c(acq_time = "character")) %>% 
-  sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE)
+  sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
+  dplyr::mutate(acq_date = lubridate::ymd(acq_date))
 
 n_workers <- 10
 
@@ -39,7 +44,7 @@ fired_with_afd <-
   sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE)
 
 # Total fire size
-biggest_size <-
+biggest_size_event_scale <-
   events %>% 
   dplyr::select(id, total_area_ha) %>% 
   st_drop_geometry() %>% 
@@ -47,103 +52,129 @@ biggest_size <-
 
 # 90th percentile FRP of the fire to try to account for
 # saturation of individual FRP measurements
-biggest_frp <-
+biggest_frp_daily_scale <-
   fired_with_afd %>% 
   st_drop_geometry() %>%
   # filter(confidence > 90 & pixel_area < 2) %>% 
   filter(confidence > 50 & pixel_area < 2) %>%
   group_by(id, acq_date) %>% 
   dplyr::summarize(frp_90 = quantile(x = frp_per_area, probs = 0.9, na.rm = TRUE, names = FALSE)) %>%
-  dplyr::ungroup() %>% 
+  dplyr::ungroup()
+
+biggest_frp_event_scale <-
+  biggest_frp_daily_scale %>% 
   dplyr::group_by(id) %>% 
   dplyr::filter(frp_90 == max(frp_90)) %>% 
   dplyr::ungroup() %>% 
   dplyr::select(id, frp_90, acq_date) %>% 
   dplyr::rename(acq_date_frp = acq_date)
 
-biggest_frp
+biggest_frp_event_scale
 
-ggplot(daily, aes(x = cum_area_ha_tminus1, y = daily_area_ha, color = lc_name)) +
-  geom_point()
+# Here, we model the expected area of increase as a function of the fire's size the previous day
+# We use a random effect for the individual fires, and fit a smooth for each landcover type
+# We noticed some weirdness with the lc_name variable (plurality of fires come up as croplands, which
+# doesn't seem right) so we'll try with Resolve Ecoregions instead
+resolve <- 
+  sf::st_read("data/raw/resolve-ecoregions-2017_california.geojson") %>% 
+  sf::st_transform(3310) %>% 
+  dplyr::select(BIOME_NAME, ECO_NAME) %>% 
+  dplyr::rename_all(.funs = tolower)
 
-# biggest deviation from expected area of increase (i.e., fastest)
-# fm1 <- mgcv::gam(daily_area_ha ~ s(cum_area_ha_tminus1, by = lc_name) + s(id, bs = "re"), 
-#                  method = "REML",
-#                  data = daily)
+events <- sf::st_join(x = events, y = resolve, largest = TRUE)
+
+events_resolve_simple <-
+  events_resolve %>% 
+  dplyr::select(id, biome_name, eco_name) %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::mutate(eco_name = as.factor(eco_name),
+                biome_name = as.factor(biome_name))
+
+daily <-
+  daily %>% 
+  dplyr::left_join(events_resolve_simple, by = "id")
 
 # use the log scale to better approximate predicted growth (can't be negative this way!)
 # Add 0.1 to all cumulative area burned so that the value for each fire's first day
 # isn't NaN when taking log(0) 
-fm1 <- mgcv::gam(log(daily_area_ha) ~ s(log(cum_area_ha_tminus1 + 0.1), by = lc_name) + s(id, bs = "re"), 
+fm1 <- mgcv::gam(log(daily_area_ha) ~ s(log(cum_area_ha_tminus1 + 0.1), by = eco_name) + s(id, bs = "re"), 
                  method = "REML",
                  data = daily)
 
-biggest_area_of_increase_residual <-
+ggplot(daily_for_model, aes(x = log(cum_area_ha_tminus1 + 0.1), y = log(daily_area_ha), color = eco_name)) +
+  geom_point() +
+  geom_smooth()
+
+# By biome seems to make a little more sense, because there are only 4
+fm2 <- mgcv::gam(log(daily_area_ha) ~ s(log(cum_area_ha_tminus1 + 0.1), by = biome_name) + s(id, bs = "re"), 
+                 method = "REML",
+                 data = daily)
+
+ggplot(daily_for_model, aes(x = log(cum_area_ha_tminus1 + 0.1), y = log(daily_area_ha), color = biome_name)) +
+  geom_point() +
+  geom_smooth()
+
+biggest_area_of_increase_residual_daily_scale <-
   daily %>% 
-  mutate(preds_raw = predict(fm1),
-         preds = exp(preds_raw),
-         area_of_increase_residual = residuals(fm1)) %>% 
-  dplyr::select(id, area_of_increase_residual, event_day, daily_area_ha, preds, cum_area_ha_tminus1, date,
-                preds_raw) %>%
-  dplyr::rename(acq_date_aoir = date,
-                predicted_aoi = preds,
-                event_day_aoir = event_day,
-                predicted_aoi_log = preds_raw) %>% 
-  st_drop_geometry() %>% 
+  mutate(predicted_aoi_log = as.numeric(predict(fm2)),
+         predicted_aoi = exp(predicted_aoi_log),
+         aoir_modeled = residuals(fm2),
+         aoir = daily_area_ha - predicted_aoi) %>% 
+  dplyr::select(id, date, event_day, daily_area_ha, aoir, aoir_modeled, predicted_aoi, cum_area_ha_tminus1,
+                predicted_aoi_log) %>%
+  st_drop_geometry()
+
+biggest_area_of_increase_residual_event_scale <-
+  biggest_area_of_increase_residual_daily_scale %>% 
   group_by(id) %>% 
-  filter(area_of_increase_residual == max(area_of_increase_residual)) %>% 
-  dplyr::rename(modeled_max_aoir = area_of_increase_residual,
-                actual_aoi_during_max_aoir = daily_area_ha) %>% 
-  dplyr::mutate(aoir_max = actual_aoi_during_max_aoir - predicted_aoi) %>% 
+  filter(aoir_modeled == max(aoir_modeled)) %>% 
+  dplyr::rename(modeled_max_aoir = aoir_modeled,
+                aoir_max = aoir,
+                actual_aoi_during_max_aoir = daily_area_ha,
+                acq_date_aoir = date,
+                event_day_aoir = event_day) %>% 
   dplyr::ungroup()
 
-biggest_area_of_increase_residual
-
-aoi_gg <- 
-  ggplot(daily, aes(x = (cum_area_ha_tminus1 + 0.1), y = daily_area_ha)) + 
-  geom_point() +
-  geom_smooth() +
-  scale_x_log10() +
-  scale_y_log10() +
-  labs(x = expression("Cumulative area burned on day" ~ italic("t-1") ~ "(ha)"),
-       y = expression("Area of increase on day" ~ italic("t") ~ "(ha)")) +
-  theme_bw()
-
-aoi_gg
-
-ggsave(filename = "figs/modeled-area-of-increase-vs-cumulative-area-burned.png", dpi = 300, width = 5, height = 5, units = "in")
+# Some of these variables come with the `daily` dataset, so no need to have them
+# be redundant here
+biggest_area_of_increase_residual_daily_scale <-
+  biggest_area_of_increase_residual_daily_scale %>% 
+  dplyr::select(-daily_area_ha, -event_day, -cum_area_ha_tminus1)
 
 # biggest area of increase
-biggest_area_of_increase <-
+# biggest area of increase doesn't need a daily-scale dataset because the
+# raw value of daily_area_ha is already the response variable that
+# we'd be looking for at a daily time step
+biggest_area_of_increase_event_scale <-
   daily %>% 
-  dplyr::select(id, daily_area_ha, event_day, date) %>% 
-  dplyr::rename(acq_date_aoi = date,
-                event_day_aoi = event_day) %>%
+  dplyr::select(id, date, event_day, daily_area_ha) %>% 
   st_drop_geometry() %>% 
   group_by(id) %>% 
   filter(daily_area_ha == max(daily_area_ha)) %>% 
   # One fire had it's maximum area of increase on two separate days (the minimum possible area of increase-- one pixel) so just take the first day that happens
   # using arrange() then slice(1)
-  dplyr::arrange(event_day_aoi) %>% 
+  dplyr::arrange(event_day) %>% 
   dplyr::slice(1) %>% 
-  dplyr::rename(aoi_max = daily_area_ha) %>% 
+  dplyr::rename(aoi_max = daily_area_ha,
+                acq_date_aoi = date,
+                event_day_aoi = event_day) %>%
   dplyr::ungroup()
 
-# join all together
+# Event-scale ranking by joining all the event-scale data together
 events
-biggest_size
-biggest_frp
-biggest_area_of_increase_residual
-biggest_area_of_increase
+biggest_size_event_scale
+biggest_frp_event_scale
+biggest_area_of_increase_residual_event_scale
+biggest_area_of_increase_event_scale
 
 # code if using daily 90th percentile FRP
-ranking_ewe <-
+ranking_ewe_events <-
   events %>% 
   dplyr::select(-total_area_ha) %>% 
-  left_join(biggest_size) %>% 
-  left_join(biggest_frp) %>% 
-  left_join(biggest_area_of_increase_residual) %>%
-  left_join(biggest_area_of_increase) %>% 
+  left_join(biggest_size_event_scale) %>% 
+  left_join(biggest_frp_event_scale) %>% 
+  left_join(biggest_area_of_increase_residual_event_scale) %>%
+  left_join(biggest_area_of_increase_event_scale) %>% 
   mutate(frp_90 = ifelse(is.na(frp_90), yes = 0, no = frp_90)) %>%
   mutate(size_rank = rank(-total_area_ha)) %>% 
   mutate(frp_rank = rank(-frp_90)) %>% 
@@ -152,23 +183,51 @@ ranking_ewe <-
   left_join(fired_frap_mtbs_join, by = c(id = "id_fired")) %>% 
   sf::st_drop_geometry()
 
-pairs(x = st_drop_geometry(ranking_ewe[, c("total_area_ha", "frp_90", "aoir_max")]))
-
-ranked_ewe <- 
-  ranking_ewe %>% 
+ranked_ewe_events <- 
+  ranking_ewe_events %>% 
   dplyr::filter(ignition_year <= 2020) %>% 
   dplyr::select(id, total_area_ha, frp_90, aoir_max) %>%
   mutate(mecdf = pmap_dbl(., .f = function(id, total_area_ha, frp_90, aoir_max) {
     mean(.[, "total_area_ha"] <= total_area_ha & .[, "frp_90"] <= frp_90 & .[, "aoir_max"] <= aoir_max)
   })) %>% 
   mutate(ewe_rank = rank(-mecdf)) %>% 
-  left_join(ranking_ewe) %>%
+  left_join(ranking_ewe_events) %>%
   dplyr::arrange(ewe_rank) %>% 
   as_tibble() %>% 
   dplyr::select(id, name_frap, ignition_date, ignition_year, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, mecdf, everything())
 
-ranked_ewe_out <- 
-  ranked_ewe %>% 
-  dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, last_date, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, mecdf, total_area_ha, frp_90, aoir_max, aoi_max, predicted_aoi, actual_aoi_during_max_aoir, cum_area_ha_tminus1, acq_date_frp, acq_date_aoir, acq_date_aoi, event_day_aoir, event_day_aoi, event_duration, modeled_max_aoir)
+ranked_ewe_events_out <- 
+  ranked_ewe_events %>% 
+  dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, last_date, mecdf, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, total_area_ha, frp_90, aoir_max, aoi_max, predicted_aoi, actual_aoi_during_max_aoir, cum_area_ha_tminus1, acq_date_frp, acq_date_aoir, acq_date_aoi, event_day_aoir, event_day_aoi, event_duration, modeled_max_aoir, eco_name, biome_name)
 
-write.csv(x = ranked_ewe_out, file = "data/out/extreme-wildfire-events-ranking.csv", row.names = FALSE)
+write.csv(x = ranked_ewe_events_out, file = "data/out/extreme-wildfire-events-ranking.csv", row.names = FALSE)
+
+## Daily-scale data
+# Event-scale ranking by joining all the event-scale data together
+daily
+biggest_frp_daily_scale
+biggest_area_of_increase_residual_daily_scale
+
+ranking_ewe_daily <-
+  daily %>% 
+  left_join(biggest_frp_daily_scale, by = c(id = "id", date = "acq_date")) %>% 
+  left_join(biggest_area_of_increase_residual_daily_scale, by = c("id", "date")) %>% 
+  left_join(fired_frap_mtbs_join, by = c(id = "id_fired")) %>% 
+  sf::st_drop_geometry()
+
+ranked_ewe_daily <- 
+  ranking_ewe_daily %>% 
+  dplyr::filter(ignition_year <= 2020) %>% 
+  as_tibble() %>% 
+  dplyr::select(id, name_frap, ignition_date, ignition_year, everything())
+
+ranked_ewe_events_simple <-
+  ranked_ewe_events_out %>% 
+  dplyr::select(id, mecdf, total_area_ha, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank)
+
+ranked_ewe_daily_out <- 
+  ranked_ewe_daily %>% 
+  dplyr::select(id, date, did, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, biome_name, eco_name, last_date, event_day, event_duration, daily_area_ha, cum_area_ha, cum_area_ha_tminus1, frp_90, aoir, predicted_aoi, aoir_modeled, predicted_aoi_log) %>% 
+  dplyr::left_join(ranked_ewe_events_simple)
+
+write.csv(x = ranked_ewe_daily_out, file = "data/out/extreme-wildfire-daily-ranking.csv", row.names = FALSE)

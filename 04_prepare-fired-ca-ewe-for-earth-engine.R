@@ -67,7 +67,7 @@ fired_daily <-
          geometry = geom) %>% 
   dplyr::select(-ig_utm_x, -ig_utm_y)
 
-ewe <- 
+ewe_events <- 
   read.csv("data/out/extreme-wildfire-events-ranking.csv") %>% 
   dplyr::filter(ignition_year <= 2020) %>% 
   dplyr::rename(olap_frap = overlapping_pct_frap, 
@@ -92,20 +92,39 @@ fired_events_ee <-
   fired_events %>% 
   dplyr::filter(ig_year <= 2020) %>% 
   dplyr::select(id) %>% 
-  dplyr::left_join(ewe)
+  dplyr::left_join(ewe_events)
+
+# daily product join
+ewe_daily <- 
+  read.csv("data/out/extreme-wildfire-daily-ranking.csv") %>% 
+  dplyr::filter(ignition_year <= 2020) %>% 
+  dplyr::rename(olap_frap = overlapping_pct_frap, 
+                ig_date = ignition_date, 
+                ig_year = ignition_year, 
+                ig_month = ignition_month, 
+                tot_hect = total_area_ha,
+                aoi_ha = daily_area_ha,
+                pred_aoi = predicted_aoi,
+                pred_aoi_l = predicted_aoi_log,
+                aoir_mod = aoir_modeled,
+                c_area_ha = cum_area_ha,
+                c_area_tm1 = cum_area_ha_tminus1,
+                event_dur = event_duration) %>% 
+  dplyr::mutate(megafire = ifelse(mecdf >= 0.9, yes = "megafire", "non-megafire")) %>% 
+  dplyr::select(id, megafire, everything())
 
 fired_daily_ee <-
   fired_daily %>% 
   dplyr::filter(ig_year <= 2020) %>% 
-  dplyr::select(id, did, date) %>% 
-  dplyr::left_join(ewe)
+  dplyr::select(did) %>% 
+  dplyr::left_join(ewe_daily)
 
 sf::st_write(obj = fired_events_ee, dsn = "data/out/fired_events_ca_ewe_rank.gpkg", delete_dsn = TRUE)
 sf::st_write(obj = fired_daily_ee, dsn = "data/out/fired_daily_ca_ewe_rank.gpkg", delete_dsn = TRUE)
 
 sf::st_write(obj = fired_events_ee, dsn = "data/out/fired_events_ca_ewe_rank/fired_events_ca_ewe_rank.shp", delete_dsn = TRUE)
 sf::st_write(obj = fired_daily_ee, dsn = "data/out/fired_daily_ca_ewe_rank/fired_daily_ca_ewe_rank.shp", delete_dsn = TRUE)
-
+nchar(names(fired_daily_ee))
 ggplot(fired_events_ee, aes(x = ig_month)) +
   geom_histogram() +
   facet_wrap(facets = "megafire")

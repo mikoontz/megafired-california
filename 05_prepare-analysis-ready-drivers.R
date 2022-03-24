@@ -140,7 +140,7 @@ match_percentile <- function(r, var, drivers_DT) {
   percentile_matrix <- percentile_matrix[drivers_DT[, c("did", ..var)], on = "did"][, did := NULL]
   percentile_matrix[, names(r) := lapply(names(r), FUN = function(i) {return(abs(get(i) - get(var)))})]
   data.table::set(x = percentile_matrix, j = var, value = NULL)
-  percentile_matrix[, paste0(var, "_percentile") := apply(.SD, 1, extract_percentile)]
+  percentile_matrix[, paste0(var, "_pct") := apply(.SD, 1, extract_percentile)]
   
   data.table::set(x = percentile_matrix, j = names(r), value = NULL)
   
@@ -163,24 +163,24 @@ hourly_drivers_summarized <-
             wind_terrain_alignment = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
             max_wind_speed = max(wind_speed),
             min_wind_speed = min(wind_speed),
-            max_wind_speed_pct = max(wind_speed_percentile),
-            min_wind_speed_pct = min(wind_speed_percentile),
+            max_wind_speed_pct = max(wind_speed_pct),
+            min_wind_speed_pct = min(wind_speed_pct),
             max_rh = max(rh),
             min_rh = min(rh),
-            max_rh_pct = max(rh_percentile),
-            min_rh_pct = min(rh_percentile),
+            max_rh_pct = max(rh_pct),
+            min_rh_pct = min(rh_pct),
             max_temp = max(temperature_2m - 273.15),
             min_temp = min(temperature_2m - 273.15),
-            max_temp_pct = max(temperature_2m_percentile),
-            min_temp_pct = min(temperature_2m_percentile),
+            max_temp_pct = max(temperature_2m_pct),
+            min_temp_pct = min(temperature_2m_pct),
             max_soil_water = max(volumetric_soil_water_layer_1),
             min_soil_water = min(volumetric_soil_water_layer_1),
-            max_soil_water_pct = max(volumetric_soil_water_layer_1_percentile),
-            min_soil_water_pct = min(volumetric_soil_water_layer_1_percentile),
+            max_soil_water_pct = max(volumetric_soil_water_layer_1_pct),
+            min_soil_water_pct = min(volumetric_soil_water_layer_1_pct),
             max_vpd = max(vpd_hPa),
             min_vpd = min(vpd_hPa),
-            max_vpd_pct = max(vpd_hPa_percentile),
-            min_vpd_pct = min(vpd_hPa_percentile)) %>%
+            max_vpd_pct = max(vpd_hPa_pct),
+            min_vpd_pct = min(vpd_hPa_pct)) %>%
   ungroup()
 #### --- end hourly drivers prep
 
@@ -305,9 +305,10 @@ daily_drivers_out <-
   daily_drivers %>% 
   dplyr::mutate(surf_area_ha = surf_area / 10000,
                 proj_area_ha = proj_area / 10000,
+                rumple_index = surf_area / proj_area,
                 road_density_mpha = ((road_length_m) / (proj_area_ha)),
                 date = lubridate::ymd(date)) %>% 
-  dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("csp_ergo_landforms"), .fns = ~ .x*10.2*10.2/10000)) %>% 
+  dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("csp_ergo_landforms"), .fns = ~ .x*30*30/10000)) %>% 
   dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("lcms"), .fns = ~ .x*30*30/10000)) %>% 
   dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("csp_ergo_landforms"), .fns = ~ .x / proj_area_ha, .names = "{.col}_prop")) %>% 
   dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("lcms"), .fns = ~ .x / proj_area_ha, .names = "{.col}_prop")) %>% 
@@ -356,5 +357,15 @@ out <-
   sf::st_drop_geometry() %>% 
   as.data.table()
 
-sf::st_write(obj = out_sf, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california.gpkg", delete_dsn = TRUE)
-data.table::fwrite(x = out, file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california.csv")
+
+
+# Version 4 fixes an issue created in joining the daily scale driver data to the daily scale fire data
+# where the event-scale fire data were mistakenly joined instead. This led to an issue where each
+# day's area of increase, for instance, actually represented the maximum area of increase for the
+# whole fire event, copied over for each day of that fire. We also use the Resolve biomes to separate
+# out the different fires (based on which biome the whole fire footprint overlapped the most) which
+# comes into play when calculating the area of increase residual (that is, the model is based on
+# estimating area of increase as a function of cumulative area, and we fit a smooth for each biome
+# now instead of each lc_name from MODIS, which seems to be not the correct data)
+sf::st_write(obj = out_sf, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_v4.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = out, file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_v4.csv")

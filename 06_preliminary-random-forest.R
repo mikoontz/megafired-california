@@ -34,7 +34,7 @@ fires_working <-
   dplyr::select(-lcms_landuse_01, -lcms_landuse_02, -lcms_landuse_04, -lcms_landuse_07,
                 -lcms_landcover_02, -lcms_landcover_06, -lcms_landcover_02, -lcms_landcover_13, -lcms_landcover_14, -lcms_landcover_15, 
                 -lcms_change_05,
-                -name_frap, -olap_frap, -ig_date, -last_date, -date, -ends_with("rank"), -frp_90, -pred_aoi, -c_area_tm1, -event_dur, -aoir_mod, -event_modis_lc, -daily_modis_lc,
+                -name_frap, -olap_frap, -ig_date, -last_date, -date, -ends_with("rank"), -frp_90, -pred_aoi, -c_area_tm1, -event_dur, -event_modis_lc, -daily_modis_lc,
                 -max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
                 -ndvi_proj_area, -ndvi_surf_area, -proj_area, -surf_area, -road_length_m,
                 -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi"), -surf_area_ha, -proj_area_ha, -starts_with("lcms_landuse"),
@@ -109,22 +109,122 @@ data <- na.omit(data)
 sum(apply(scale(data[, predictor.variable.names]), 2, is.nan))
 sum(apply(scale(data[, predictor.variable.names]), 2, is.infinite))
 
-# Columns must not yield NaN or Inf when scaled. You can check each condition with sum(apply(scale(df), 2, is.nan)) and sum(apply(scale(df), 2, is.infinite)). If higher than 0, you can find what columns are giving issues with sapply(as.data.frame(scale(df)), function(x)any(is.nan(x))) and sapply(as.data.frame(scale(df)), function(x)any(is.infinite(x))). Any column yielding TRUE will generate issues while trying to fit models with spatialRF.
+xy <- data[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+ "npl", "road_density_mpha",
+ "rumple_index", "elevation",
+ "max_wind_speed_pct", "min_wind_speed_pct",
+ "max_vpd_pct", "min_vpd_pct",
+ "spei1y", "fm100_pct",
+ "ndvi", "forest_structure_rumple", "trees_prop", "grass_prop", "shrubs_prop", "barren_prop", "fuel_fast_loss_prop", "fuel_slow_loss_prop", "fuel_gain_prop",
+ "wind_terrain_alignment"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = data[, predictor.variable.names],
+  cor.threshold = 0.65,
+  preference.order = preference.order
+) %>% 
+spatialRF::auto_vif(
+  vif.threshold = 2.5,
+  preference.order = preference.order
+)
+
+ftr_eng_01 <- spatialRF::the_feature_engineer(data = data, 
+                                              dependent.variable.name = "aoir_mod", 
+                                              predictor.variable.names = predictor.variable.names_reduced, 
+                                              xy = xy)
+# Fitting and evaluating a model without interactions.
+# Testing 21 candidate interactions.
+# Interactions identified: 2
+# ┌─────────────────────────────────────────┬───────────────────────┬───────────────────────┬─────────────────────────┐
+# │ Interaction                             │ Importance (% of max) │ R-squared improvement │ Max cor with predictors │
+# ├─────────────────────────────────────────┼───────────────────────┼───────────────────────┼─────────────────────────┤
+# │ forest_structure_rumple..pca..fuel_slow │                 100.0 │                 0.021 │                   0.22  │
+# │ _loss_prop                              │                       │                       │                         │
+# ├─────────────────────────────────────────┼───────────────────────┼───────────────────────┼─────────────────────────┤
+# │ forest_structure_rumple..pca..road_dens │                  94.5 │                 0.025 │                   0.182 │
+# │ ity_mpha                                │                       │                       │                         │
+# └─────────────────────────────────────────┴───────────────────────┴───────────────────────┴─────────────────────────┘
+# Comparing models with and without interactions via spatial cross-validation.
+# notch went outside hinges. Try setting notch=FALSE.
+
+#adding interaction column to the training data
+data_for_model <- ftr_eng_01$data
+
+#adding interaction name to predictor.variable.names
+predictor.variable.names_model <- ftr_eng_01$predictor.variable.names
+
+distance.thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+desert_xeric_shrubland <- data_for_model[data_for_model$biome_name == "Deserts & Xeric Shrublands", ]
+
+desert_xeric_shrubland_sf <-
+  desert_xeric_shrubland %>% 
+  sf::st_as_sf(coords = c("x_3310", "y_3310"), crs = 3310, remove = FALSE)
+
+desert_xeric_shrubland_dist_mat <- sf::st_distance(x = desert_xeric_shrubland_sf, y = desert_xeric_shrubland_sf)
+
+desert_xeric_shrubland_rf <- spatialRF::rf(data = desert_xeric_shrubland, 
+                                           dependent.variable.name = "aoir_mod", 
+                                           predictor.variable.names = predictor.variable.names_model, 
+                                           distance.matrix = units::drop_units(desert_xeric_shrubland_dist_mat),
+                                           distance.thresholds = distance.thresholds)
+
+
+ftr_eng_02 <- spatialRF::the_feature_engineer(data = data, 
+                                              dependent.variable.name = "aoi_log", 
+                                              predictor.variable.names = predictor.variable.names_reduced, 
+                                              xy = xy)
+
+ftr_eng_03 <- spatialRF::the_feature_engineer(data = data, 
+                                              dependent.variable.name = "aoir_mod", 
+                                              predictor.variable.names = predictor.variable.names_reduced, 
+                                              xy = xy)
+
+#adding interaction column to the training data
+data_for_model <- desert_xeric_shrubland <- data[data$biome_name == "Deserts & Xeric Shrublands", ]
+
+
+#adding interaction name to predictor.variable.names
+predictor.variable.names_model <- ftr_eng_03$predictor.variable.names
+
+desert_xeric_shrubland_rf_03 <- spatialRF::rf(data = desert_xeric_shrubland, 
+                                           dependent.variable.name = "aoir_mod", 
+                                           predictor.variable.names = predictor.variable.names_reduced, 
+                                           distance.matrix = units::drop_units(desert_xeric_shrubland_dist_mat),
+                                           distance.thresholds = distance.thresholds)
+
+
+ggplot(data, aes(x = forest_structure_rumple, y = fuel_slow_loss_prop, color = aoi_log)) + 
+  geom_point()
+
+ggplot(data, aes(x = forest_structure_rumple, y = aoi_log)) + 
+  geom_point() +
+  geom_smooth()
+
+ggplot(data, aes(x = fuel_slow_loss_prop, y = aoi_log, color = forest_structure_rumple)) + 
+  geom_point() +
+  geom_smooth() +
+  scale_color_viridis_c()
+
+
+
+
+
+mediterranean_forest_woodland_scrub <- data_for_model[data_for_model$biome_name == "Mediterranean Forests, Woodlands & Scrub", ]
+temperate_conifer_forests <- data_for_model[data_for_model$biome_name == "Temperate Conifer Forests", ]
+temperate_grass_savanna_shrub <- data_for_model[data_for_model$biome_name == "Temperate Grasslands, Savannas & Shrublands", ]
+
 
 rf1 <- spatialRF::rf(data = data, dependent.variable.name = "aoir", predictor.variable.names = predictor.variable.names, distance.matrix = NULL)
-rf2 <- spatialRF::rf(data = data, dependent.variable.name = "aoi_ha", predictor.variable.names = predictor.variable.names, distance.matrix = NULL)
+
+
 
 summary(rf1)
 
-desert_xeric_shrubland <- data[data$biome_name == "Deserts & Xeric Shrublands", ]
-mediterranean_forest_woodland_scrub <- data[data$biome_name == "Mediterranean Forests, Woodlands & Scrub", ]
-temperate_conifer_forests <- data[data$biome_name == "Temperate Conifer Forests", ]
-temperate_grass_savanna_shrub <- data[data$biome_name == "Temperate Grasslands, Savannas & Shrublands", ]
-
-desert_xeric_shrubland_rf <- spatialRF::rf(data = desert_xeric_shrubland, 
-                                           dependent.variable.name = "aoir", 
-                                           predictor.variable.names = predictor.variable.names, 
-                                           distance.matrix = NULL)
 
 mediterranean_forest_woodland_scrub_rf <- spatialRF::rf(data = mediterranean_forest_woodland_scrub, 
                                                         dependent.variable.name = "aoir", 
@@ -140,3 +240,18 @@ temperate_grass_savanna_shrub_rf <- spatialRF::rf(data = temperate_grass_savanna
                                                   dependent.variable.name = "aoir", 
                                                   predictor.variable.names = predictor.variable.names, 
                                                   distance.matrix = NULL)
+
+
+data(plant_richness_df)
+data(distance_matrix)
+
+
+desert_xeric_shrubland_rf <- spatialRF::rf(data = desert_xeric_shrubland, 
+                                           dependent.variable.name = "aoir", 
+                                           predictor.variable.names = predictor.variable.names, 
+                                           distance.matrix = desert_xeric_shrubland_dist_mat)
+
+
+?st_distance
+mode(desert_xeric_shrubland_dist_mat)
+class(distance_matrix)

@@ -4,32 +4,17 @@ library(sf)
 library(data.table)
 library(tidyr)
 library(terra)
-library(fasterize)
 library(spatialRF)
 
 # read in fire data
 fires <-
   data.table::fread("data/out/analysis-ready/FIRED-daily-scale-drivers_california_v4.csv") %>%
-  sf::st_as_sf(coords = c("x_3310", "y_3310"), crs = 3310, remove = FALSE)
-
-events <-
-  sf::st_read("data/out/fired_events_ca_ewe_rank.gpkg") %>%
-  sf::st_transform(3310) %>%
-  sf::st_centroid() %>%
-  dplyr::rename(geometry = geom) %>%
-  dplyr::mutate(x_3310 = sf::st_coordinates(.)[, "X"],
-                y_3310 = sf::st_coordinates(.)[, "Y"]) %>%
-  dplyr::filter(tot_hect >= 120) %>%
-  dplyr::filter(ig_date >= lubridate::ymd("2003-01-01") & ig_date <= lubridate::ymd("2020-12-31"))
-
-
-target_fires <-
-  fires %>%
+  sf::st_as_sf(coords = c("x_3310", "y_3310"), crs = 3310, remove = FALSE) %>% 
   dplyr::filter(tot_hect >= 120) %>% 
   dplyr::filter(ig_date >= lubridate::ymd("2003-01-01") & ig_date <= lubridate::ymd("2020-12-31"))
 
 fires_working <-
-  target_fires %>% 
+  fires %>% 
   sf::st_drop_geometry() %>% 
   dplyr::select(-lcms_landuse_01, -lcms_landuse_02, -lcms_landuse_04, -lcms_landuse_07,
                 -lcms_landcover_02, -lcms_landcover_06, -lcms_landcover_02, -lcms_landcover_13, -lcms_landcover_14, -lcms_landcover_15, 
@@ -41,6 +26,44 @@ fires_working <-
                 -npl_at_ignition,
                 -tot_hect, -mecdf)
 
+# # CSP ERGO Landforms based on 10m NED DEM
+# csp_ergo_landforms_desc <-
+#   tribble(~value, ~color,	~description, 
+#           "11", "#141414", "Peak/ridge (warm)",
+#           "12", "#383838", "Peak/ridge",
+#           "13", "#808080"," Peak/ridge (cool)",
+#           "14", "#EBEB8F", "Mountain/divide",
+#           "15", "#F7D311", "Cliff",
+#           "21", "#AA0000", "Upper slope (warm)",
+#           "22", "#D89382", "Upper slope",
+#           "23", "#DDC9C9", "Upper slope (cool)",
+#           "24", "#DCCDCE", "Upper slope (flat)",
+#           "31", "#1C6330", "Lower slope (warm)",
+#           "32", "#68AA63", "Lower slope",
+#           "33", "#B5C98E", "Lower slope (cool)",
+#           "34", "#E1F0E5", "Lower slope (flat)",
+#           "41", "#a975ba", "Valley",
+#           "42", "#6f198c", "Valley (narrow)") 
+# 
+# peak_ridge_prop = csp_ergo_landforms_11_prop + csp_ergo_landforms_12_prop + csp_ergo_landforms_13_prop + csp_ergo_landforms_14_prop + csp_ergo_landforms_15_prop
+# upper_slope_prop = csp_ergo_landforms_21_prop + csp_ergo_landforms_22_prop + csp_ergo_landforms_23_prop + csp_ergo_landforms_24_prop
+# lower_slope_prop = csp_ergo_landforms_31_prop + csp_ergo_landforms_32_prop + csp_ergo_landforms_33_prop + csp_ergo_landforms_34_prop
+# valley_prop = csp_ergo_landforms_41_prop + csp_ergo_landforms_42_prop
+# 
+# # Landscape Change Monitoring System: Change
+# lcms_change_desc <-
+#   tribble(value, 	~color, ~description,
+#           "01", "#3d4551", "Stable",
+#           "02", "#f39268", "Slow Loss",
+#           "03", "#d54309", "Fast Loss",
+#           "04", "#00a398", "Gain",
+#           "05", "#1B1716", "Non-Processing Area Mask") 
+# 
+# fuel_stable_prop = lcms_change_01_prop,
+# fuel_slow_loss_prop = lcms_change_02_prop,
+# fuel_fast_loss_prop = lcms_change_03_prop,
+# fuel_gain_prop = lcms_change_04_prop
+# 
 # # Landscape Change Monitoring System: Landcover
 # lcms_landcover_desc <-
 #   tribble(~value, ~color, ~description,
@@ -59,6 +82,11 @@ fires_working <-
 #           "13",	"#ffffff", "Snow or Ice",
 #           "14",	"#4780f3", "Water",
 #           "15",	"#1B1716", "Non-Processing Area Mask")
+# 
+# trees_prop = lcms_landcover_01_prop + lcms_landcover_03_prop + lcms_landcover_04_prop + lcms_landcover_05_prop
+# shrubs_prop = lcms_landcover_07_prop + lcms_landcover_08_prop + lcms_landcover_09_prop
+# grass_prop = lcms_landcover_10_prop + lcms_landcover_11_prop
+# barren_prop = lcms_landcover_12_prop
 
 data <- 
   fires_working %>% 
@@ -75,7 +103,6 @@ data <-
                 fuel_fast_loss_prop = lcms_change_03_prop,
                 fuel_gain_prop = lcms_change_04_prop) %>% 
   dplyr::select(-starts_with("csp_ergo_landforms"), -starts_with("lcms_change"), -starts_with("lcms_landcover")) %>% 
-  # dplyr::left_join(y = events_resolve) %>%
   dplyr::mutate(megafire = ifelse(megafire == "megafire", 1, 0)) %>% 
   as.data.frame()
 

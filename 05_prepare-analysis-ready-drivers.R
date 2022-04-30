@@ -26,7 +26,7 @@ landsat_dem_daily_drivers_list <-
 
 ## read in various forms of the FIRED data
 fired_daily <-
-  sf::st_read("data/out/fired_daily_ca_ewe_rank.gpkg") %>% 
+  sf::st_read("data/out/fired_daily_ca_ewe_rank_v5.gpkg") %>% 
   dplyr::rename(geometry = geom) %>% 
   dplyr::mutate(date = lubridate::ymd(date),
                 ig_date = lubridate::ymd(ig_date)) %>% 
@@ -38,7 +38,7 @@ fired_daily_centroids <-
   sf::st_centroid()
 
 fired_events <- 
-  sf::st_read("data/out/fired_events_ca_ewe_rank.gpkg") %>% 
+  sf::st_read("data/out/fired_events_ca_ewe_rank_v5.gpkg") %>% 
   dplyr::rename(geometry = geom) %>% 
   sf::st_transform(3310)
 
@@ -367,5 +367,8 @@ out <-
 # comes into play when calculating the area of increase residual (that is, the model is based on
 # estimating area of increase as a function of cumulative area, and we fit a smooth for each biome
 # now instead of each lc_name from MODIS, which seems to be not the correct data)
-sf::st_write(obj = out_sf, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_v4.gpkg", delete_dsn = TRUE)
-data.table::fwrite(x = out, file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_v4.csv")
+
+# Version 5 re-implements the area of increase residual model to *not* account for across-fire
+# variation with a random intercept offset of FIRED id. 
+sf::st_write(obj = out_sf, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_v5.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = out, file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_v5.csv")

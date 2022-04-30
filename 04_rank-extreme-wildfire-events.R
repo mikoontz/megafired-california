@@ -81,7 +81,7 @@ resolve <-
   dplyr::select(BIOME_NAME, ECO_NAME) %>% 
   dplyr::rename_all(.funs = tolower)
 
-events <- sf::st_join(x = events, y = resolve, largest = TRUE)
+events_resolve <- sf::st_join(x = events, y = resolve, largest = TRUE)
 
 events_resolve_simple <-
   events_resolve %>% 
@@ -97,28 +97,55 @@ daily <-
 # use the log scale to better approximate predicted growth (can't be negative this way!)
 # Add 0.1 to all cumulative area burned so that the value for each fire's first day
 # isn't NaN when taking log(0) 
-fm1 <- mgcv::gam(log(daily_area_ha) ~ s(log(cum_area_ha_tminus1 + 0.1), by = eco_name) + s(id, bs = "re"), 
+# fm1 <- mgcv::gam(log(daily_area_ha) ~ s(log(cum_area_ha_tminus1 + 0.1), by = eco_name) + s(id, bs = "re"), 
+#                  method = "REML",
+#                  data = daily)
+# 
+# ggplot(daily_for_model, aes(x = log(cum_area_ha_tminus1 + 0.1), y = log(daily_area_ha), color = eco_name)) +
+#   geom_point() +
+#   geom_smooth()
+# 
+# # By biome seems to make a little more sense, because there are only 4
+# fm2 <- mgcv::gam(log(daily_area_ha) ~ s(log(cum_area_ha_tminus1 + 0.1), by = biome_name) + s(id, bs = "re"), 
+#                  method = "REML",
+#                  data = daily)
+
+# By biome seems to make a little more sense, because there are only 4. Don't include a random effect of
+# fire ID, because we want the residual to be based on an *across-fire* model not a *within-fire* model
+fm3 <- mgcv::gam(log(daily_area_ha) ~ s(log(cum_area_ha_tminus1 + 0.1), by = biome_name), 
                  method = "REML",
                  data = daily)
 
-ggplot(daily_for_model, aes(x = log(cum_area_ha_tminus1 + 0.1), y = log(daily_area_ha), color = eco_name)) +
+
+ggplot(daily, aes(x = log(cum_area_ha_tminus1 + 0.1), y = log(daily_area_ha), color = biome_name)) +
   geom_point() +
   geom_smooth()
 
-# By biome seems to make a little more sense, because there are only 4
-fm2 <- mgcv::gam(log(daily_area_ha) ~ s(log(cum_area_ha_tminus1 + 0.1), by = biome_name) + s(id, bs = "re"), 
-                 method = "REML",
-                 data = daily)
-
-ggplot(daily_for_model, aes(x = log(cum_area_ha_tminus1 + 0.1), y = log(daily_area_ha), color = biome_name)) +
-  geom_point() +
-  geom_smooth()
+# biggest_area_of_increase_residual_daily_scale <-
+#   daily %>% 
+#   mutate(predicted_aoi_log = as.numeric(predict(fm1)),
+#          predicted_aoi = exp(predicted_aoi_log),
+#          aoir_modeled = residuals(fm2),
+#          aoir = daily_area_ha - predicted_aoi) %>% 
+#   dplyr::select(id, date, event_day, daily_area_ha, aoir, aoir_modeled, predicted_aoi, cum_area_ha_tminus1,
+#                 predicted_aoi_log) %>%
+#   st_drop_geometry()
+# 
+# biggest_area_of_increase_residual_daily_scale <-
+#   daily %>% 
+#   mutate(predicted_aoi_log = as.numeric(predict(fm2)),
+#          predicted_aoi = exp(predicted_aoi_log),
+#          aoir_modeled = residuals(fm2),
+#          aoir = daily_area_ha - predicted_aoi) %>% 
+#   dplyr::select(id, date, event_day, daily_area_ha, aoir, aoir_modeled, predicted_aoi, cum_area_ha_tminus1,
+#                 predicted_aoi_log) %>%
+#   st_drop_geometry()
 
 biggest_area_of_increase_residual_daily_scale <-
   daily %>% 
-  mutate(predicted_aoi_log = as.numeric(predict(fm2)),
+  mutate(predicted_aoi_log = as.numeric(predict(fm3)),
          predicted_aoi = exp(predicted_aoi_log),
-         aoir_modeled = residuals(fm2),
+         aoir_modeled = residuals(fm3),
          aoir = daily_area_ha - predicted_aoi) %>% 
   dplyr::select(id, date, event_day, daily_area_ha, aoir, aoir_modeled, predicted_aoi, cum_area_ha_tminus1,
                 predicted_aoi_log) %>%
@@ -169,7 +196,7 @@ biggest_area_of_increase_event_scale
 
 # code if using daily 90th percentile FRP
 ranking_ewe_events <-
-  events %>% 
+  events_resolve %>% 
   dplyr::select(-total_area_ha) %>% 
   left_join(biggest_size_event_scale) %>% 
   left_join(biggest_frp_event_scale) %>% 
@@ -200,7 +227,7 @@ ranked_ewe_events_out <-
   ranked_ewe_events %>% 
   dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, last_date, mecdf, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, total_area_ha, frp_90, aoir_max, aoi_max, predicted_aoi, actual_aoi_during_max_aoir, cum_area_ha_tminus1, acq_date_frp, acq_date_aoir, acq_date_aoi, event_day_aoir, event_day_aoi, event_duration, modeled_max_aoir, eco_name, biome_name)
 
-write.csv(x = ranked_ewe_events_out, file = "data/out/extreme-wildfire-events-ranking.csv", row.names = FALSE)
+write.csv(x = ranked_ewe_events_out, file = "data/out/extreme-wildfire-events-ranking_v5.csv", row.names = FALSE)
 
 ## Daily-scale data
 # Event-scale ranking by joining all the event-scale data together
@@ -230,4 +257,4 @@ ranked_ewe_daily_out <-
   dplyr::select(id, date, did, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, biome_name, eco_name, last_date, event_day, event_duration, daily_area_ha, cum_area_ha, cum_area_ha_tminus1, frp_90, aoir, predicted_aoi, aoir_modeled, predicted_aoi_log) %>% 
   dplyr::left_join(ranked_ewe_events_simple)
 
-write.csv(x = ranked_ewe_daily_out, file = "data/out/extreme-wildfire-daily-ranking.csv", row.names = FALSE)
+write.csv(x = ranked_ewe_daily_out, file = "data/out/extreme-wildfire-daily-ranking_v5.csv", row.names = FALSE)

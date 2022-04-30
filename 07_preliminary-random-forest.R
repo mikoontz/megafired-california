@@ -822,7 +822,9 @@ spatialRF::print_evaluation(tcf_nonspatial)
 
 
 ##### ----- ASSESSING SPATIAL AUTOCORRELATION
-spatialRF::plot_moran(model = tcf_nonspatial, verbose = FALSE)
+tcf_nonspatial <- readr::read_rds(file = "data/out/rf/rf-nonspatial-with-importance-and-spatial-cross-validation_aoir-mod_pred-set-01_temperate-conifer-forest.rds")
+
+# spatialRF::plot_moran(model = tcf_nonspatial, verbose = FALSE)
 
 (start_time <- Sys.time())
 tcf_spatial <- spatialRF::rf_spatial(
@@ -841,10 +843,7 @@ readr::write_rds(x = tcf_spatial, file = "data/out/rf/rf-spatial_aoir-mod_pred-s
 
 
 
-
-
-
-
+temperate_conifer_forests
 
 
 

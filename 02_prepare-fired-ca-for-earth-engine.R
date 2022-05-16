@@ -34,6 +34,17 @@ fired_daily_multipart <-
 
 rownames(fired_daily_multipart) <- 1:nrow(fired_daily_multipart)
 
+fired_daily_multipart_biggest <-
+  fired_daily_multipart %>% 
+  dplyr::mutate(area = sf::st_area(.)) %>% 
+  dplyr::group_by(did, id, date) %>% 
+  dplyr::arrange(desc(area)) %>% 
+  dplyr::slice(1) %>% 
+  dplyr::select(-area)
+
+dir.create(path = "data/out/fired_daily_ca_epsg3310_2003-2020_biggest-poly", showWarnings = FALSE, recursive = TRUE)
+sf::st_write(obj = fired_daily_multipart_biggest, dsn = "data/out/fired_daily_ca_epsg3310_2003-2020_biggest-poly/fired_daily_ca_epsg3310_2003-2020_biggest-poly.shp", delete_dsn = TRUE)
+
 fired_daily_centroids <-
   fired_daily %>% 
   sf::st_centroid()
@@ -43,8 +54,7 @@ fired_daily_centroids <-
 ca <- 
   USAboundaries::us_states(resolution = "high", states = "California") %>% 
   sf::st_transform(3310) %>% 
-  sf::st_geometry() %>% 
-  sf::st_set_agr(value = "constant")
+  sf::st_geometry()
 
 target_fires <- 
   fired_daily_centroids %>% 

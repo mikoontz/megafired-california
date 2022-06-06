@@ -10,27 +10,21 @@ library(randomForestExplainer)
 library(pdp)
 
 # read in fire data
+fired_daily_response <- 
+  data.table::fread(input = "data/out/extreme-wildfire-daily-ranking_v2.csv") %>% 
+  dplyr::select(did, id, date, aoir_modeled, biome_name) %>% 
+  dplyr::rename(aoir_mod = aoir_modeled)
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.csv"
+
 fires <-
-  data.table::fread("data/out/analysis-ready/FIRED-daily-scale-drivers_california_v4.csv") %>%
-  dplyr::filter(tot_hect >= 120) %>% 
-  dplyr::filter(ig_date >= lubridate::ymd("2003-01-01") & ig_date <= lubridate::ymd("2020-12-31")) %>% 
-  dplyr::select(-(starts_with("lcms_landuse")), # remove all landuse raw area coverage and proportion values
-                -(starts_with("lcms_landcover") & !ends_with("prop")), # remove all landcover raw area coverage values in favor of proportions
-                -(starts_with("lcms_change") & !ends_with("prop")), # remove all change raw area coverage values in favor of proportions
-                -(starts_with("csp") & !ends_with("prop")), # remove all CSP landform raw area coverage values in favor of proportions
-                -lcms_landcover_02_prop, -lcms_landcover_06_prop, -lcms_landcover_02_prop, -lcms_landcover_13_prop, -lcms_landcover_14_prop, -lcms_landcover_15_prop, 
-                -lcms_change_05_prop,
-                -name_frap, -olap_frap, -ig_date, -last_date, -date, -ends_with("rank"), -frp_90, -pred_aoi, -c_area_tm1, -event_dur, -event_modis_lc, -daily_modis_lc,
-                -max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
-                -ndvi_proj_area, -ndvi_surf_area, -proj_area, -surf_area, -road_length_m,
-                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi"), -surf_area_ha, -proj_area_ha,
-                -npl_at_ignition,
-                -tot_hect, -mecdf) %>% 
-  # add shannon diversity index of landcover and of landforms
-  # -sum p_i log(b) p_i
-  dplyr::mutate(landcover_diversity = vegan::diversity(cbind(lcms_landcover_01_prop, lcms_landcover_03_prop, lcms_landcover_04_prop, lcms_landcover_05_prop, lcms_landcover_07_prop, lcms_landcover_08_prop, lcms_landcover_09_prop, lcms_landcover_10_prop, lcms_landcover_11_prop, lcms_landcover_12_prop)),
-                landform_diversity = vegan::diversity(cbind(csp_ergo_landforms_11_prop, csp_ergo_landforms_12_prop, csp_ergo_landforms_13_prop, csp_ergo_landforms_14_prop, csp_ergo_landforms_15_prop, csp_ergo_landforms_21_prop, csp_ergo_landforms_22_prop, csp_ergo_landforms_23_prop, csp_ergo_landforms_24_prop, csp_ergo_landforms_31_prop, csp_ergo_landforms_32_prop, csp_ergo_landforms_33_prop, csp_ergo_landforms_34_prop, csp_ergo_landforms_41_prop, csp_ergo_landforms_42_prop)),
-                change_diversity = vegan::diversity(cbind(lcms_change_01_prop, lcms_change_02_prop, lcms_change_03_prop, lcms_change_04_prop)))
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -ends_with("rtma"), -ends_with("rtma_pct"),
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response, by = c("did", "id", "date", "biome_name"))
 
 # # CSP ERGO Landforms based on 10m NED DEM
 # csp_ergo_landforms_desc <-
@@ -81,52 +75,93 @@ fires <-
 # 
 #
 # Keeping all categories of landcover, change, and landforms in the dataset:
+# fires_working <- 
+#   fires %>% 
+#   dplyr::rename(peak_ridge_warm = csp_ergo_landforms_11,
+#                 peak_ridge = csp_ergo_landforms_12,
+#                 peak_ridge_cool = csp_ergo_landforms_13,
+#                 mountain_divide = csp_ergo_landforms_14,
+#                 cliff = csp_ergo_landforms_15,
+#                 upper_slope_warm = csp_ergo_landforms_21,
+#                 upper_slope = csp_ergo_landforms_22,
+#                 upper_slope_cool = csp_ergo_landforms_23,
+#                 upper_slope_flat = csp_ergo_landforms_24,
+#                 lower_slope_warm = csp_ergo_landforms_31,
+#                 lower_slope = csp_ergo_landforms_32,
+#                 lower_slope_cool = csp_ergo_landforms_33,
+#                 lower_slope_flat = csp_ergo_landforms_34,
+#                 valley = csp_ergo_landforms_41,
+#                 valley_narrow = csp_ergo_landforms_42) %>% 
+#   dplyr::rename(trees = lcms_landcover_01,
+#                 shrubs_trees_mix = lcms_landcover_03,
+#                 grass_forbs_herb_trees_mix = lcms_landcover_04,
+#                 barren_trees_mix = lcms_landcover_05,
+#                 shrubs = lcms_landcover_07,
+#                 grass_forb_herb_shrub_mix = lcms_landcover_08,
+#                 barren_shrub_mix = lcms_landcover_09,
+#                 grass_forb_herb = lcms_landcover_10,
+#                 barren_grass_forb_herb_mix = lcms_landcover_11,
+#                 barren = lcms_landcover_12) %>% 
+#   dplyr::rename(fuel_stable = lcms_change_01,
+#                 fuel_slow_loss = lcms_change_02,
+#                 fuel_fast_loss = lcms_change_03,
+#                 fuel_gain = lcms_change_04) %>% 
+#   as.data.frame()
+
+# fires_working <- 
+#   fires %>% 
+#   dplyr::rename(upper_slope_warm = csp_ergo_landforms_21,
+#                 upper_slope = csp_ergo_landforms_22,
+#                 lower_slope_warm = csp_ergo_landforms_31,
+#                 lower_slope = csp_ergo_landforms_32) %>% 
+#   dplyr::rename(trees = lcms_landcover_01,
+#                 grass_forbs_herb_trees_mix = lcms_landcover_04) %>% 
+#   dplyr::rename(fuel_stable = lcms_change_01,
+#                 fuel_gain = lcms_change_04) %>% 
+#   as.data.frame()
+
 fires_working <- 
   fires %>% 
-  dplyr::rename(peak_ridge_warm_prop = csp_ergo_landforms_11_prop,
-                peak_ridge_prop = csp_ergo_landforms_12_prop,
-                peak_ridge_cool_prop = csp_ergo_landforms_13_prop,
-                mountain_divide_prop = csp_ergo_landforms_14_prop,
-                cliff_prop = csp_ergo_landforms_15_prop,
-                upper_slope_warm_prop = csp_ergo_landforms_21_prop,
-                upper_slope_prop = csp_ergo_landforms_22_prop,
-                upper_slope_cool_prop = csp_ergo_landforms_23_prop,
-                upper_slope_flat_prop = csp_ergo_landforms_24_prop,
-                lower_slope_warm_prop = csp_ergo_landforms_31_prop,
-                lower_slope_prop = csp_ergo_landforms_32_prop,
-                lower_slope_cool_prop = csp_ergo_landforms_33_prop,
-                lower_slope_flat_prop = csp_ergo_landforms_34_prop,
-                valley_prop = csp_ergo_landforms_41_prop,
-                valley_narrow_prop = csp_ergo_landforms_42_prop) %>% 
-  dplyr::rename(trees_prop = lcms_landcover_01_prop,
-                shrubs_trees_mix_prop = lcms_landcover_03_prop,
-                grass_forbs_herb_trees_mix_prop = lcms_landcover_04_prop,
-                barren_trees_mix_prop = lcms_landcover_05_prop,
-                shrubs_prop = lcms_landcover_07_prop,
-                grass_forb_herb_shrub_mix_prop = lcms_landcover_08_prop,
-                barren_shrub_mix_prop = lcms_landcover_09_prop,
-                grass_forb_herb_prop = lcms_landcover_10_prop,
-                barren_grass_forb_herb_mix_prop = lcms_landcover_11_prop,
-                barren_prop = lcms_landcover_12_prop) %>% 
-  dplyr::rename(fuel_stable_prop = lcms_change_01_prop,
-                fuel_slow_loss_prop = lcms_change_02_prop,
-                fuel_fast_loss_prop = lcms_change_03_prop,
-                fuel_gain_prop = lcms_change_04_prop) %>% 
-  dplyr::mutate(megafire = ifelse(megafire == "megafire", 1, 0)) %>% 
   as.data.frame()
 
-human_drivers <- c("npl", "concurrent_fires", "cumu_count", "cumu_area_ha", "friction", "friction_walking_only", "road_density_mpha")
-topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm_prop", "peak_ridge_prop", "peak_ridge_cool_prop", "mountain_divide_prop", "cliff_prop", "upper_slope_warm_prop", "upper_slope_prop", "upper_slope_cool_prop", "upper_slope_flat_prop", "lower_slope_warm_prop", "lower_slope_prop", "lower_slope_cool_prop", "lower_slope_flat_prop", "valley_prop", "valley_narrow_prop", "landform_diversity")
-weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct", 
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
                      "max_temp_pct", "min_temp_pct", 
-                     "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
-                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", "fm100_pct", "fm1000_pct")
-fuel_drivers <- c("ndvi", "fuel_stable_prop", "fuel_slow_loss_prop", "fuel_fast_loss_prop", "fuel_gain_prop", "forest_structure_rumple", "trees_prop", "shrubs_trees_mix_prop", "grass_forbs_herb_trees_mix_prop", "barren_trees_mix_prop", "shrubs_prop", "grass_forb_herb_shrub_mix_prop", "barren_shrub_mix_prop", "grass_forb_herb_prop", "barren_grass_forb_herb_mix_prop", "barren_prop", "landcover_diversity", "change_diversity")
+                     "max_rh_pct", "min_rh_pct", 
+                     "max_vpd_pct", "min_vpd_pct", 
+                     "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "upper_slope",  "lower_slope", "landform_diversity")
+fuel_drivers <- c("ndvi", "change_diversity", "veg_structure_rumple", "landcover_diversity")
 interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+# human_drivers <- c("npl", "npl_at_ignition", "concurrent_fires", "friction")
+# weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+#                      "max_temp_pct", "min_temp_pct", 
+#                      "max_rh_pct", "min_rh_pct", 
+#                      "max_vpd_pct", "min_vpd_pct", 
+#                      "max_soil_water_pct", "min_soil_water_pct",
+#                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+#                      "fm100_pct", "fm1000_pct")
+# topography_drivers <- c("elevation", "rumple_index", "upper_slope_warm", "upper_slope",  "lower_slope_warm", "lower_slope", "landform_diversity")
+# fuel_drivers <- c("ndvi", "fuel_stable", "fuel_gain", "change_diversity", "veg_structure_rumple", "trees", "grass_forbs_herb_trees_mix", "landcover_diversity")
+# interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+# human_drivers <- c("npl", "concurrent_fires", "cumu_count", "cumu_area_ha", "friction", "friction_walking_only", "road_density_mpha")
+# topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "upper_slope_flat", "lower_slope_warm", "lower_slope", "lower_slope_cool", "lower_slope_flat", "valley", "valley_narrow", "landform_diversity")
+# topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "upper_slope_flat", "lower_slope_warm", "lower_slope", "lower_slope_cool", "lower_slope_flat", "valley", "valley_narrow")
+# weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct", 
+#                      "max_temp_pct", "min_temp_pct", 
+#                      "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
+#                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", "fm100_pct", "fm1000_pct")
+# fuel_drivers <- c("ndvi", "fuel_stable", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "forest_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity", "change_diversity")
+# fuel_drivers <- c("ndvi", "fuel_stable", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren")
+# interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
 
 predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
 
-other_names <- c("did", "id", "megafire", "ig_year", "ig_month", "biome_name", "eco_name", "event_day", "aoi_ha", "c_area_ha", "aoir", "aoir_mod", "pred_aoi_l", "x_3310", "y_3310")
+# other_names <- c("did", "id", "megafire", "ig_year", "ig_month", "biome_name", "eco_name", "event_day", "aoi_ha", "c_area_ha", "aoir", "aoir_mod", "pred_aoi_l", "x_3310", "y_3310")
 
 # No NAs
 apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
@@ -153,17 +188,17 @@ fires_working <-
   dplyr::select(-all_of(zero_variance_columns))
 
 # No NaN or Inf when scaling
-sum(apply(scale(data[, predictor.variable.names]), 2, is.nan))
-sum(apply(scale(data[, predictor.variable.names]), 2, is.infinite))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
 
 # Reduce collinearity in the predictors
 preference.order <- c(
-  "npl", "road_density_mpha",
+  "npl", 
   "rumple_index", "elevation",
   "max_wind_speed_pct", "min_wind_speed_pct",
   "max_vpd_pct", "min_vpd_pct",
-  "spei1y", "fm100_pct",
-  "ndvi", "forest_structure_rumple", "change_diversity", "fuel_slow_loss_prop", "fuel_fast_loss_prop",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
   "wind_terrain_alignment"
 )
 
@@ -178,30 +213,84 @@ predictor.variable.names_reduced <- spatialRF::auto_cor(
   )
 
 cor_mat <- cor(fires_working[, predictor.variable.names])
-sort(cor_mat[, colnames(cor_mat) == "change_diversity"])
-sort(cor_mat[, colnames(cor_mat) == "grass_forb_herb_prop"])
-sort(cor_mat[, colnames(cor_mat) == "fuel_fast_loss_prop"])
 sort(cor_mat[, colnames(cor_mat) == "fm1000_pct"])
-
-predictor.variable.names_reduced
+# # sort(cor_mat[, colnames(cor_mat) == "change_diversity"])
+# sort(cor_mat[, colnames(cor_mat) == "grass_forb_herb_prop"])
+# sort(cor_mat[, colnames(cor_mat) == "fuel_fast_loss_prop"])
+# sort(cor_mat[, colnames(cor_mat) == "fm1000_pct"])
+# 
+# predictor.variable.names_reduced
 
 ##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
 data <- fires_working
-xy <- data[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
 
-desert_xeric_shrubland <- data[data$biome_name == "Deserts & Xeric Shrublands", ]
-xy_desert_xeric_shrubland <- desert_xeric_shrubland[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+# desert_xeric_shrubland <- data[data$biome_name == "Deserts & Xeric Shrublands", ]
+# xy_desert_xeric_shrubland <- desert_xeric_shrubland[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+# 
+# mediterranean_forest_woodland_scrub <- data[data$biome_name == "Mediterranean Forests, Woodlands & Scrub", ]
+# xy_mediterranean_forest_woodland_scrub <- mediterranean_forest_woodland_scrub[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+# 
+# temperate_conifer_forests <- data[data$biome_name == "Temperate Conifer Forests", ]
+# xy_temperate_conifer_forests <- temperate_conifer_forests[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+# 
+# temperate_grass_savanna_shrub <- data[data$biome_name == "Temperate Grasslands, Savannas & Shrublands", ]
+# xy_temperate_grass_savanna_shrub <- temperate_grass_savanna_shrub[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
 
-mediterranean_forest_woodland_scrub <- data[data$biome_name == "Mediterranean Forests, Woodlands & Scrub", ]
-xy_mediterranean_forest_woodland_scrub <- mediterranean_forest_woodland_scrub[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+#### ------ 
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
 
-temperate_conifer_forests <- data[data$biome_name == "Temperate Conifer Forests", ]
-xy_temperate_conifer_forests <- temperate_conifer_forests[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+tcf_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
 
-temperate_grass_savanna_shrub <- data[data$biome_name == "Temperate Grasslands, Savannas & Shrublands", ]
-xy_temperate_grass_savanna_shrub <- temperate_grass_savanna_shrub[, c("x_3310", "y_3310")] %>% setNames(c("x", "y"))
+tcf_dist_mat <- 
+  sf::st_distance(x = tcf_sf, 
+                  y = tcf_sf) %>% 
+  units::drop_units()
 
+random_seed <- 1848
 
+(start_time <- Sys.time())
+tcf_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "area_log10",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = tcf_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+tcf_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    tcf_nonspatial,
+    quantiles = c(0.10, 0.5, 0.9),
+    ncol = 5
+  )
+
+tcf_nonspatial_response_curves_accentuate_gg
+
+(start_time <- Sys.time())
+tcf_nonspatial_repeat <- spatialRF::rf_repeat(
+  model = tcf_nonspatial, 
+  repetitions = 30,
+  seed = random_seed,
+  verbose = FALSE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+spatialRF::plot_response_curves(
+  tcf_nonspatial_repeat, 
+  quantiles = 0.5,
+  ncol = 3
+)
+
+#############################################
 ##### ---- FEATURE ENGINEERING
 dir.create("data/out/rf", showWarnings = FALSE)
 

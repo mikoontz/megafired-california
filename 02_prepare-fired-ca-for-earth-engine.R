@@ -3,9 +3,10 @@ library(dplyr)
 library(stringr)
 library(USAboundaries)
 
-dir.create("data/out/fired_daily_ca_epsg3310_2003-2020_subgeo", recursive = TRUE, showWarnings = FALSE)
-dir.create("data/out/fired_daily_ca_epsg3310_2003-2020", recursive = TRUE, showWarnings = FALSE)
-dir.create("data/out/fired_events_ca_epsg3310_2003-2020", recursive = TRUE, showWarnings = FALSE)
+dir.create(path = "data/out/fired_daily_ca_epsg3310_2003-2020_subgeo", recursive = TRUE, showWarnings = FALSE)
+dir.create(path = "data/out/fired_daily_ca_epsg3310_2003-2020", recursive = TRUE, showWarnings = FALSE)
+dir.create(path = "data/out/fired_events_ca_epsg3310_2003-2020", recursive = TRUE, showWarnings = FALSE)
+dir.create(path = "data/out/fired_daily_ca_epsg3310_2003-2020_biggest-poly", recursive = TRUE, showWarnings = FALSE)
 
 fired_events <- 
   sf::st_read("data/out/fired_events_ca.gpkg") %>% 
@@ -14,7 +15,6 @@ fired_events <-
   sf::st_set_agr(value = "constant") %>% 
   dplyr::select(id) %>% 
   dplyr::rename(geometry = geom)
-  
 
 fired_daily <-
   sf::st_read("data/out/fired_daily_ca.gpkg") %>% 
@@ -41,9 +41,6 @@ fired_daily_multipart_biggest <-
   dplyr::arrange(desc(area)) %>% 
   dplyr::slice(1) %>% 
   dplyr::select(-area)
-
-dir.create(path = "data/out/fired_daily_ca_epsg3310_2003-2020_biggest-poly", showWarnings = FALSE, recursive = TRUE)
-sf::st_write(obj = fired_daily_multipart_biggest, dsn = "data/out/fired_daily_ca_epsg3310_2003-2020_biggest-poly/fired_daily_ca_epsg3310_2003-2020_biggest-poly.shp", delete_dsn = TRUE)
 
 fired_daily_centroids <-
   fired_daily %>% 
@@ -75,22 +72,49 @@ fired_daily_multipart_out <-
   fired_daily_multipart %>%
   dplyr::filter(did %in% target_fires_did)
 
+fired_daily_multipart_biggest_out <-
+  fired_daily_multipart_biggest %>% 
+  dplyr::filter(did %in% target_fires_did)
+
 sf::st_write(obj = fired_events_out, dsn = "data/out/fired_events_ca_epsg3310_2003-2020/fired_events_ca_epsg3310_2003-2020.shp", delete_dsn = TRUE)
 sf::st_write(obj = fired_daily_out, dsn = "data/out/fired_daily_ca_epsg3310_2003-2020/fired_daily_ca_epsg3310_2003-2020.shp", delete_dsn = TRUE)
 sf::st_write(obj = fired_daily_multipart_out, dsn = "data/out/fired_daily_ca_epsg3310_2003-2020_subgeo/fired_daily_ca_epsg3310_2003-2020_subgeo.shp", delete_dsn = TRUE)
+sf::st_write(obj = fired_daily_multipart_biggest_out, dsn = "data/out/fired_daily_ca_epsg3310_2003-2020_biggest-poly/fired_daily_ca_epsg3310_2003-2020_biggest-poly.shp", delete_dsn = TRUE)
 
 sf::st_write(obj = fired_events_out, dsn = "data/out/fired_events_ca_epsg3310_2003-2020.gpkg", delete_dsn = TRUE)
 sf::st_write(obj = fired_daily_out, dsn = "data/out/fired_daily_ca_epsg3310_2003-2020.gpkg", delete_dsn = TRUE)
 sf::st_write(obj = fired_daily_multipart_out, dsn = "data/out/fired_daily_ca_epsg3310_2003-2020_subgeo.gpkg", delete_dsn = TRUE)
+sf::st_write(obj = fired_daily_multipart_biggest_out, dsn = "data/out/fired_daily_ca_epsg3310_2003-2020_biggest-poly.gpkg", delete_dsn = TRUE)
 
-# Expand the daily fire perimeters such that they are placed on top of 1000 random points (within each Resolve Biome)
 
+### --- Use the Resolve ecoregions to join to the daily fire polygons and the events
 resolve <- 
   sf::st_read("data/raw/resolve-ecoregions-2017_california.geojson") %>% 
   sf::st_transform(3310) %>% 
   dplyr::select(BIOME_NAME, ECO_NAME) %>% 
   dplyr::rename_all(.funs = tolower) %>% 
   sf::st_set_agr(value = "constant")
+
+events_resolve_geo <- sf::st_join(x = fired_events_out, y = resolve, largest = TRUE)
+daily_resolve_geo <- sf::st_join(x = fired_daily_out, y = resolve, largest = TRUE)
+
+events_resolve_out <- 
+  events_resolve_geo %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::as_tibble()
+
+daily_resolve_out <- 
+  daily_resolve_geo %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::rename(biome_name_daily = biome_name, eco_name_daily = eco_name) %>% 
+  dplyr::left_join(sf::st_drop_geometry(events_resolve_out), by = "id") %>% 
+  dplyr::as_tibble() %>% 
+  dplyr::select(did, id, date, samp_id, biome_name, eco_name, biome_name_daily, eco_name_daily)
+
+write.csv(x = events_resolve_out, file = "data/out/fired_events_resolve.csv", row.names = FALSE)
+write.csv(x = daily_resolve_out, file = "data/out/fired_daily_resolve.csv", row.names = FALSE)
+
+# Expand the daily fire perimeters such that they are placed on top of 1000 random points (within each Resolve Biome)
 
 ca_or_nv_az <- 
   USAboundaries::us_states(resolution = "high", states = c("California", "Oregon", "Nevada", "Arizona")) %>% 
@@ -100,10 +124,11 @@ ca_or_nv_az <-
   sf::st_geometry()
 
 # join Resolve ecoregion and biomes to FIRED data at the event scale
-events_resolve_geo <- sf::st_join(x = fired_events_out, y = resolve, largest = TRUE)
-events_resolve <- sf::st_drop_geometry(events_resolve_geo)
 
-fired_daily_working <- dplyr::left_join(x = fired_daily_out, y = events_resolve, by = "id") %>% sf::st_set_agr(value = "constant")
+fired_daily_working <- 
+  fired_daily_out %>% 
+  dplyr::left_join(daily_resolve_out, by = c("did", "id", "date", "samp_id")) %>% 
+  dplyr::select(-biome_name_daily, -eco_name_daily)
 
 fired_tcf <-
   fired_daily_working %>% 

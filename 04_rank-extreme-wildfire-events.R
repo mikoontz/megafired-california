@@ -7,9 +7,8 @@ library(ggplot2)
 library(purrr)
 library(data.table)
 library(patchwork)
-library(plotly)
 
-daily <- 
+daily_orig <- 
   sf::st_read("data/out/fired_daily_ca.gpkg") %>% 
   dplyr::mutate(lc_name = as.factor(lc_name),
                 date = lubridate::ymd(date)) %>% 
@@ -18,6 +17,33 @@ daily <-
 events <- 
   sf::st_read("data/out/fired_events_ca.gpkg") %>% 
   dplyr::select(id, ignition_date, ignition_day, ignition_month, ignition_year, last_date, event_duration, total_area_ha)
+
+# We use Resolve Ecoregions within California to divide up the state into different kinds of fire-prone regions
+# resolve <- 
+#   sf::st_read("data/raw/resolve-ecoregions-2017_california.geojson") %>% 
+#   sf::st_transform(3310) %>% 
+#   dplyr::select(BIOME_NAME, ECO_NAME) %>% 
+#   dplyr::rename_all(.funs = tolower)
+
+events_resolve <- 
+  read.csv("data/out/fired_events_resolve.csv") %>% 
+  dplyr::mutate(eco_name = as.factor(eco_name),
+                biome_name = as.factor(biome_name)) %>% 
+  dplyr::as_tibble()
+
+daily_resolve <-
+  read.csv("data/out/fired_daily_resolve.csv") %>% 
+  dplyr::mutate(eco_name = as.factor(eco_name),
+                biome_name = as.factor(biome_name)) %>% 
+  dplyr::as_tibble() %>% 
+  dplyr::mutate(date = as.Date(date))
+
+daily <-
+  daily_orig %>% 
+  dplyr::left_join(daily_resolve, by = c("did", "id", "date")) %>% 
+  dplyr::filter(!is.na(biome_name))
+
+daily 
 
 fired_frap_mtbs_join <- read.csv(file = "data/out/fired-frap-mtbs-join.csv")
 
@@ -75,24 +101,6 @@ biggest_frp_event_scale
 # We use a random effect for the individual fires, and fit a smooth for each landcover type
 # We noticed some weirdness with the lc_name variable (plurality of fires come up as croplands, which
 # doesn't seem right) so we'll try with Resolve Ecoregions instead
-resolve <- 
-  sf::st_read("data/raw/resolve-ecoregions-2017_california.geojson") %>% 
-  sf::st_transform(3310) %>% 
-  dplyr::select(BIOME_NAME, ECO_NAME) %>% 
-  dplyr::rename_all(.funs = tolower)
-
-events_resolve <- sf::st_join(x = events, y = resolve, largest = TRUE)
-
-events_resolve_simple <-
-  events_resolve %>% 
-  dplyr::select(id, biome_name, eco_name) %>% 
-  sf::st_drop_geometry() %>% 
-  dplyr::mutate(eco_name = as.factor(eco_name),
-                biome_name = as.factor(biome_name))
-
-daily <-
-  daily %>% 
-  dplyr::left_join(events_resolve_simple, by = "id")
 
 # use the log scale to better approximate predicted growth (can't be negative this way!)
 # Add 0.1 to all cumulative area burned so that the value for each fire's first day
@@ -196,23 +204,24 @@ biggest_area_of_increase_event_scale
 
 # code if using daily 90th percentile FRP
 ranking_ewe_events <-
-  events_resolve %>% 
+  events %>% 
   dplyr::select(-total_area_ha) %>% 
-  left_join(biggest_size_event_scale) %>% 
-  left_join(biggest_frp_event_scale) %>% 
-  left_join(biggest_area_of_increase_residual_event_scale) %>%
-  left_join(biggest_area_of_increase_event_scale) %>% 
-  mutate(frp_90 = ifelse(is.na(frp_90), yes = 0, no = frp_90)) %>%
-  mutate(size_rank = rank(-total_area_ha)) %>% 
-  mutate(frp_rank = rank(-frp_90)) %>% 
-  mutate(aoir_rank = rank(-aoir_max)) %>% 
-  mutate(aoi_rank = rank(-aoi_max)) %>% 
-  left_join(fired_frap_mtbs_join, by = c(id = "id_fired")) %>% 
+  dplyr::left_join(events_resolve) %>%
+  dplyr::filter(!is.na(biome_name)) %>% 
+  dplyr::left_join(biggest_size_event_scale) %>% 
+  dplyr::left_join(biggest_frp_event_scale) %>% 
+  dplyr::left_join(biggest_area_of_increase_residual_event_scale) %>%
+  dplyr::left_join(biggest_area_of_increase_event_scale) %>% 
+  dplyr::mutate(frp_90 = ifelse(is.na(frp_90), yes = 0, no = frp_90)) %>%
+  dplyr::mutate(size_rank = rank(-total_area_ha)) %>% 
+  dplyr::mutate(frp_rank = rank(-frp_90)) %>% 
+  dplyr::mutate(aoir_rank = rank(-aoir_max)) %>% 
+  dplyr::mutate(aoi_rank = rank(-aoi_max)) %>% 
+  dplyr::left_join(fired_frap_mtbs_join, by = c(id = "id_fired")) %>% 
   sf::st_drop_geometry()
 
 ranked_ewe_events <- 
   ranking_ewe_events %>% 
-  dplyr::filter(ignition_year <= 2020) %>% 
   dplyr::select(id, total_area_ha, frp_90, aoir_max) %>%
   mutate(mecdf = pmap_dbl(., .f = function(id, total_area_ha, frp_90, aoir_max) {
     mean(.[, "total_area_ha"] <= total_area_ha & .[, "frp_90"] <= frp_90 & .[, "aoir_max"] <= aoir_max)
@@ -227,8 +236,6 @@ ranked_ewe_events_out <-
   ranked_ewe_events %>% 
   dplyr::select(id, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, last_date, mecdf, ewe_rank, size_rank, frp_rank, aoir_rank, aoi_rank, total_area_ha, frp_90, aoir_max, aoi_max, predicted_aoi, actual_aoi_during_max_aoir, cum_area_ha_tminus1, acq_date_frp, acq_date_aoir, acq_date_aoi, event_day_aoir, event_day_aoi, event_duration, modeled_max_aoir, eco_name, biome_name)
 
-write.csv(x = ranked_ewe_events_out, file = "data/out/extreme-wildfire-events-ranking_v5.csv", row.names = FALSE)
-
 ## Daily-scale data
 # Event-scale ranking by joining all the event-scale data together
 daily
@@ -237,16 +244,15 @@ biggest_area_of_increase_residual_daily_scale
 
 ranking_ewe_daily <-
   daily %>% 
-  left_join(biggest_frp_daily_scale, by = c(id = "id", date = "acq_date")) %>% 
-  left_join(biggest_area_of_increase_residual_daily_scale, by = c("id", "date")) %>% 
-  left_join(fired_frap_mtbs_join, by = c(id = "id_fired")) %>% 
+  dplyr::left_join(biggest_frp_daily_scale, by = c(id = "id", date = "acq_date")) %>% 
+  dplyr::left_join(biggest_area_of_increase_residual_daily_scale, by = c("id", "date")) %>% 
+  dplyr::left_join(fired_frap_mtbs_join, by = c(id = "id_fired")) %>% 
   sf::st_drop_geometry()
 
 ranked_ewe_daily <- 
   ranking_ewe_daily %>% 
-  dplyr::filter(ignition_year <= 2020) %>% 
   as_tibble() %>% 
-  dplyr::select(id, name_frap, ignition_date, ignition_year, everything())
+  dplyr::select(did, id, date, name_frap, ignition_date, ignition_year, everything())
 
 ranked_ewe_events_simple <-
   ranked_ewe_events_out %>% 
@@ -254,7 +260,10 @@ ranked_ewe_events_simple <-
 
 ranked_ewe_daily_out <- 
   ranked_ewe_daily %>% 
-  dplyr::select(id, date, did, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, biome_name, eco_name, last_date, event_day, event_duration, daily_area_ha, cum_area_ha, cum_area_ha_tminus1, frp_90, aoir, predicted_aoi, aoir_modeled, predicted_aoi_log) %>% 
+  dplyr::select(did, id, date, name_frap, overlapping_pct_frap, ignition_date, ignition_year, ignition_month, biome_name, eco_name, last_date, event_day, event_duration, daily_area_ha, cum_area_ha, cum_area_ha_tminus1, frp_90, aoir, predicted_aoi, aoir_modeled, predicted_aoi_log) %>% 
   dplyr::left_join(ranked_ewe_events_simple)
 
-write.csv(x = ranked_ewe_daily_out, file = "data/out/extreme-wildfire-daily-ranking_v5.csv", row.names = FALSE)
+# Version 2 reformulates the area of increase model to remove the fire-level random effect
+# It also removes some of the fire events outside of California and which burn outside of 2003 to 2020
+write.csv(x = ranked_ewe_events_out, file = "data/out/extreme-wildfire-events-ranking_v2.csv", row.names = FALSE)
+write.csv(x = ranked_ewe_daily_out, file = "data/out/extreme-wildfire-daily-ranking_v2.csv", row.names = FALSE)

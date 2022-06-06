@@ -65,7 +65,17 @@ dxs <-
 
 # Generate the variously-sized circle geometries that will be used to collect driver data
 # at random points across California
-areas_to_represent <- c(250 * 250, 10^5, 10^5.5, 10^6, 10^6.5, 10^7, 10^7.5, 10^8, 10^8.5, 10^9)
+# Lower bound is just smaller than the area of the smallest fire footprint (~21 ha)
+lwr <- 
+  fired_daily %>% 
+  sf::st_area() %>% 
+  as.numeric() %>% 
+  min() %>% 
+  log10() %>% 
+  round(digits = 4)
+
+lwr <- floor(lwr * 1000) / 1000
+areas_to_represent <- 10^(seq(from = lwr, to = 9, length.out = 10))
 radii <- sqrt(areas_to_represent / pi)
 num_pts <- 1000
 
@@ -175,15 +185,40 @@ plot(st_geometry(ca), add = TRUE)
 plot(st_geometry(test_dxs))
 plot(st_geometry(ca), add = TRUE)
 
+dev.off()
+
+random_poly_did <- "random-poly-05-2003-01-01"
+plot_data <- rbind(mutate(test_tcf[test_tcf$did == random_poly_did, ], biome_name = unique(tcf$biome_name)),
+                   mutate(test_tgss[test_tgss$did == random_poly_did, ], biome_name = unique(tgss$biome_name)),
+                   mutate(test_mfws[test_mfws$did == random_poly_did, ], biome_name = unique(mfws$biome_name)),
+                   mutate(test_dxs[test_dxs$did == random_poly_did, ], biome_name = unique(dxs$biome_name)))
+
+ggplot() +
+  geom_sf(data = plot_data, mapping = aes(color = biome_name), fill = NA) +
+  geom_sf(data = ca, fill = NA) +
+  theme_bw() +
+  labs(color = "Biome name")
+
+ca_resolve <- sf::st_intersection(x = resolve[, "biome_name"], y = ca)
+plot(ca_resolve)
+plot(ca_or_nv_az, add = TRUE)
+
+ggplot() +
+  geom_sf(data = ca_resolve, mapping = aes(fill = biome_name)) +
+  theme_bw() +
+  labs(fill = "Biome name")
+
+# v1 used too small of polygons at the smaller sizes (first two sizes were both smaller than the smallest fire footprint!)
+# v2 corrects this and uses 10 different sizes starting 
 # Write to disk
-sf::st_write(obj = fire_independent_tcf, dsn = "data/out/fire-independent-polygons_tcf_ca.gpkg", delete_dsn = TRUE)
-sf::st_write(obj = fire_independent_tcf, dsn = "data/out/fire-independent-polygons_tcf_ca/fire-independent-polygons_tcf_ca.shp", delete_dsn = TRUE)
+sf::st_write(obj = fire_independent_tcf, dsn = "data/out/fire-independent-polygons_tcf_ca_v2.gpkg", delete_dsn = TRUE)
+sf::st_write(obj = fire_independent_tcf, dsn = "data/out/fire-independent-polygons_tcf_ca/fire-independent-polygons_tcf_ca_v2.shp", delete_dsn = TRUE)
 
-sf::st_write(obj = fire_independent_tgss, dsn = "data/out/fire-independent-polygons_tgss_ca.gpkg", delete_dsn = TRUE)
-sf::st_write(obj = fire_independent_tgss, dsn = "data/out/fire-independent-polygons_tgss_ca/fire-independent-polygons_tgss_ca.shp", delete_dsn = TRUE)
+sf::st_write(obj = fire_independent_tgss, dsn = "data/out/fire-independent-polygons_tgss_ca_v2.gpkg", delete_dsn = TRUE)
+sf::st_write(obj = fire_independent_tgss, dsn = "data/out/fire-independent-polygons_tgss_ca/fire-independent-polygons_tgss_ca_v2.shp", delete_dsn = TRUE)
 
-sf::st_write(obj = fire_independent_mfws, dsn = "data/out/fire-independent-polygons_mfws_ca.gpkg", delete_dsn = TRUE)
-sf::st_write(obj = fire_independent_mfws, dsn = "data/out/fire-independent-polygons_mfws_ca/fire-independent-polygons_mfws_ca.shp", delete_dsn = TRUE)
+sf::st_write(obj = fire_independent_mfws, dsn = "data/out/fire-independent-polygons_mfws_ca_v2.gpkg", delete_dsn = TRUE)
+sf::st_write(obj = fire_independent_mfws, dsn = "data/out/fire-independent-polygons_mfws_ca/fire-independent-polygons_mfws_ca_v2.shp", delete_dsn = TRUE)
 
-sf::st_write(obj = fire_independent_dxs, dsn = "data/out/fire-independent-polygons_dxs_ca.gpkg", delete_dsn = TRUE)
-sf::st_write(obj = fire_independent_dxs, dsn = "data/out/fire-independent-polygons_dxs_ca/fire-independent-polygons_dxs_ca.shp", delete_dsn = TRUE)
+sf::st_write(obj = fire_independent_dxs, dsn = "data/out/fire-independent-polygons_dxs_ca_v2.gpkg", delete_dsn = TRUE)
+sf::st_write(obj = fire_independent_dxs, dsn = "data/out/fire-independent-polygons_dxs_ca/fire-independent-polygons_dxs_ca_v2.shp", delete_dsn = TRUE)

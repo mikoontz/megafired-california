@@ -209,7 +209,7 @@ ggplot() +
   labs(fill = "Biome name")
 
 # v1 used too small of polygons at the smaller sizes (first two sizes were both smaller than the smallest fire footprint!)
-# v2 corrects this and uses 10 different sizes starting 
+# v2 corrects this and uses 10 different sizes starting at the smallest fire polygon size
 # Write to disk
 sf::st_write(obj = fire_independent_tcf, dsn = "data/out/fire-independent-polygons_tcf_ca_v2.gpkg", delete_dsn = TRUE)
 sf::st_write(obj = fire_independent_tcf, dsn = "data/out/fire-independent-polygons_tcf_ca/fire-independent-polygons_tcf_ca_v2.shp", delete_dsn = TRUE)

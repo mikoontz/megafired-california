@@ -176,9 +176,9 @@ get_quantiles <- function(x, probs) {
   data.frame(quantile = probs, value = quantiles)
 }
 
-### --- 
+### ---
 
-find_nonzero_medians <- function(fire_independent_drivers_out) {
+summarize_fire_independent_scaling <- function(fire_independent_drivers_out) {
   
   area_quants_static <-
     fire_independent_drivers_out$out_static %>%
@@ -194,115 +194,25 @@ find_nonzero_medians <- function(fire_independent_drivers_out) {
     tidyr::unpack(cols = "summary") %>% 
     dplyr::mutate(quantile = as.factor(quantile))
   
-  # # Narrow valleys
-  # ggplot() +
-  #   geom_point(data = out_static[out_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10, y = value)) +
-  #   geom_point(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-  #   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-  #   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-  #   scale_color_viridis_d() +
-  #   ggtitle(unique(out_static$driver_desc[out_static$driver == "csp_ergo_landforms_42"]))
-  # 
-  # # Valleys
-  # ggplot() +
-  #   geom_point(data = out_static[out_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10, y = value)) +
-  #   geom_point(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-  #   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-  #   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-  #   scale_color_viridis_d() +
-  #   ggtitle(unique(out_static$driver_desc[out_static$driver == "csp_ergo_landforms_41"]))
-  # 
-  # # Vegetation structure rumple index
-  # ggplot() +
-  #   geom_point(data = out_fluc[out_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10, y = value)) +
-  #   geom_point(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-  #   geom_smooth(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-  #   geom_smooth(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple" & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-  #   facet_wrap(facets = "ig_year") +
-  #   scale_color_viridis_d() +
-  #   ggtitle(unique(out_fluc$driver_desc[out_fluc$driver == "veg_structure_rumple"]))
-  # 
-  # 
-  # # Veg structure rumple index for a single year
-  # ggplot() +
-  #   geom_point(data = out_fluc[out_fluc$ig_year == 2019 & out_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10, y = value)) +
-  #   geom_point(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-  #   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-  #   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple" & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-  #   scale_color_viridis_d() +
-  #   ggtitle(unique(out_fluc$driver_desc[out_fluc$driver == "veg_structure_rumple"]))
-  # 
-  # # All static drivers, but just the medians
-  # static_driver_median_plots <-
-  #   ggplot() +
-  #   geom_point(data = out_static, mapping = aes(x = area_log10, y = value)) +
-  #   geom_smooth(data = area_quants_static[area_quants_static$driver != "proj_area" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-  #   facet_wrap(facets = c("driver_desc"), scales = "free_y") +
-  #   scale_color_viridis_d()
-  # 
-  # ggsave(filename = "figs/fire-independent_static-drivers_median.png", plot = static_driver_median_plots)
-  # 
-  # All fluctuating drivers for an example year (2019), but just the medians
-  # fluc_driver_median_plots <-
-  #   ggplot() +
-  #   geom_point(data = out_fluc[out_fluc$ig_year == 2019, ], mapping = aes(x = area_log10, y = value)) +
-  #   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-  #   facet_wrap(facets = c("driver_desc"), scales = "free_y") +
-  #   scale_color_viridis_d()
-  # 
-  # ggsave(filename = "figs/fire-independent_fluc-drivers_medians.png", plot = fluc_driver_median_plots)
+  return(list(area_quants_static = area_quants_static, area_quants_fluc = area_quants_fluc))
+}
+
+### --- 
+
+find_nonzero_medians <- function(fire_independent_drivers_out) {
   
-  # What is the minimum area_log10_round value for fire independent polygons where the value is > 0 (grouped by driver)?
-  
-  # area_quants_static %>% 
-  #   group_by(driver) %>% 
-  #   filter(value > 0 & quantile == 0) %>% 
-  #   arrange(quantile) %>% 
-  #   slice(1)
-  # 
-  # area_quants_fluc %>% 
-  #   group_by(driver) %>% 
-  #   filter(value > 0 & quantile == 0) %>% 
-  #   arrange(quantile) %>% 
-  #   slice(1)
-  # 
-  # area_quants_static %>% 
-  #   group_by(driver) %>% 
-  #   filter(value > 0 & quantile == 0.5) %>% 
-  #   arrange(quantile) %>% 
-  #   slice(1) %>% 
-  #   ungroup() %>% 
-  #   head(20)
-  # 
-  # area_quants_fluc %>% 
-  #   group_by(driver) %>% 
-  #   filter(value > 0 & quantile == 0.5) %>% 
-  #   arrange(quantile) %>% 
-  #   slice(1) %>% 
-  #   ungroup() %>% 
-  #   print(n = 20)
-  
-  # What are the median proportional landcovers for the big polygons?
-  # area_quants_static %>% 
-  #   group_by(driver) %>% 
-  #   filter(area_log10_round == max(min(area_log10_round)) & quantile == 0.5)
-  # 
-  # area_quants_fluc %>% 
-  #   group_by(driver) %>% 
-  #   filter(area_log10_round == max(area_log10_round) & quantile == 0.5) %>% 
-  #   filter(value == max(value)) %>% 
-  #   arrange(driver)
+  fi_summary <- summarize_fire_independent_scaling(fire_independent_drivers_out = fire_independent_drivers_out)
   
   # Looking for non-zero medians at the smallest fire-independent polygon size
   nonzero_medians_static <-
-    area_quants_static %>% 
+    fi_summary$area_quants_static %>% 
     group_by(driver) %>% 
     filter(area_log10_round == min(area_log10_round) & quantile == 0.5) %>% 
     arrange(driver) %>% 
     dplyr::ungroup()
   
   nonzero_medians_fluc <- 
-    area_quants_fluc %>% 
+    fi_summary$area_quants_fluc %>% 
     group_by(driver) %>% 
     filter(area_log10_round == min(area_log10_round) & quantile == 0.5) %>% 
     filter(value == min(value)) %>% 
@@ -375,8 +285,9 @@ adjust_scale_dependent_drivers <- function(fire_independent_drivers_out, fired_d
   return(out)
 }
 
+###################
 
-
+### --- Temperate Conifer Forests
 tcf_out <- summarize_static_and_fluc_drivers(static_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-tcf-static-drivers_california.csv",
                                              fluc_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-tcf-fluctuating-drivers_california.csv",
                                              fire_independent_polys_fname = "data/out/fire-independent-polygons_tcf_ca_v2.gpkg"
@@ -418,6 +329,397 @@ tcf_drivers_adjusted <-
   adjust_scale_dependent_drivers(fire_independent_drivers_out = tcf_out, 
                                  fired_daily_drivers = tcf_drivers)
 
+sf::st_write(obj = tcf_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = sf::st_drop_geometry(tcf_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.csv")
+
+### --- Mediterranean Forests, Woodlands & Scrub
+
+mfws_out <- summarize_static_and_fluc_drivers(static_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-mfws-static-drivers_california.csv",
+                                              fluc_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-mfws-fluctuating-drivers_california.csv",
+                                              fire_independent_polys_fname = "data/out/fire-independent-polygons_mfws_ca_v2.gpkg"
+)
+
+mfws_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = mfws_out)
+
+### What are the drivers within each of the California biomes that have non-zero median values
+### at the smallest polygon size of the fire-independent polygons?
+
+mfws_nonzero_medians_static <- mfws_nonzero_medians$nonzero_medians_static
+mfws_final_static_drivers <- mfws_nonzero_medians_static$driver
+# mfws_static_drivers_exclude <- c("lower_slope", "upper_slope", "friction_walking_only", mfws_nonzero_medians_static$driver[mfws_nonzero_medians_static$value == 0])
+mfws_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", mfws_nonzero_medians_static$driver[mfws_nonzero_medians_static$value == 0])
+mfws_final_static_drivers <- mfws_final_static_drivers[!(mfws_final_static_drivers %in% mfws_static_drivers_exclude)]
+
+# All fluctuating drivers perhaps have high enough expectation of proportional
+# landcovers
+mfws_nonzero_medians_fluc <- mfws_nonzero_medians$nonzero_medians_fluc
+mfws_final_fluc_drivers <- mfws_nonzero_medians_fluc$driver
+mfws_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", mfws_nonzero_medians_fluc$driver[mfws_nonzero_medians_fluc$value == 0])
+mfws_final_fluc_drivers <- mfws_final_fluc_drivers[!(mfws_final_fluc_drivers %in% mfws_fluc_drivers_exclude)]
+
+mfws_out$out_static <- 
+  mfws_out$out_static %>% 
+  dplyr::filter(driver %in% mfws_final_static_drivers)
+
+mfws_out$out_fluc <-
+  mfws_out$out_fluc %>% 
+  dplyr::filter(driver %in% mfws_final_fluc_drivers)
+
+mfws_drivers <-
+  fired_daily_drivers %>% 
+  dplyr::filter(biome_name == "Mediterranean Forests, Woodlands & Scrub") %>% 
+  dplyr::select(-{{mfws_static_drivers_exclude}}) %>% 
+  dplyr::select(-{{mfws_fluc_drivers_exclude}})
+
+mfws_drivers_adjusted <-
+  adjust_scale_dependent_drivers(fire_independent_drivers_out = mfws_out, 
+                                 fired_daily_drivers = mfws_drivers)
+
+sf::st_write(obj = mfws_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v1.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = sf::st_drop_geometry(mfws_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v1.csv")
+
+
+### --- Temperate Grasslands, Savannas & Shrublands
+
+tgss_out <- summarize_static_and_fluc_drivers(static_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-tgss-static-drivers_california.csv",
+                                              fluc_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-tgss-fluctuating-drivers_california.csv",
+                                              fire_independent_polys_fname = "data/out/fire-independent-polygons_tgss_ca_v2.gpkg"
+)
+
+tgss_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = tgss_out)
+
+### What are the drivers within each of the California biomes that have non-zero median values
+### at the smallest polygon size of the fire-independent polygons?
+
+tgss_nonzero_medians_static <- tgss_nonzero_medians$nonzero_medians_static
+tgss_final_static_drivers <- tgss_nonzero_medians_static$driver
+# tgss_static_drivers_exclude <- c("lower_slope", "upper_slope", "friction_walking_only", tgss_nonzero_medians_static$driver[tgss_nonzero_medians_static$value == 0])
+tgss_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", tgss_nonzero_medians_static$driver[tgss_nonzero_medians_static$value == 0])
+tgss_final_static_drivers <- tgss_final_static_drivers[!(tgss_final_static_drivers %in% tgss_static_drivers_exclude)]
+
+# All fluctuating drivers perhaps have high enough expectation of proportional
+# landcovers
+tgss_nonzero_medians_fluc <- tgss_nonzero_medians$nonzero_medians_fluc
+tgss_final_fluc_drivers <- tgss_nonzero_medians_fluc$driver
+tgss_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", tgss_nonzero_medians_fluc$driver[tgss_nonzero_medians_fluc$value == 0])
+tgss_final_fluc_drivers <- tgss_final_fluc_drivers[!(tgss_final_fluc_drivers %in% tgss_fluc_drivers_exclude)]
+
+tgss_out$out_static <- 
+  tgss_out$out_static %>% 
+  dplyr::filter(driver %in% tgss_final_static_drivers)
+
+tgss_out$out_fluc <-
+  tgss_out$out_fluc %>% 
+  dplyr::filter(driver %in% tgss_final_fluc_drivers)
+
+tgss_drivers <-
+  fired_daily_drivers %>% 
+  dplyr::filter(biome_name == "Temperate Grasslands, Savannas & Shrublands") %>% 
+  dplyr::select(-{{tgss_static_drivers_exclude}}) %>% 
+  dplyr::select(-{{tgss_fluc_drivers_exclude}})
+
+tgss_drivers_adjusted <-
+  adjust_scale_dependent_drivers(fire_independent_drivers_out = tgss_out, 
+                                 fired_daily_drivers = tgss_drivers)
+
+sf::st_write(obj = tgss_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v1.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = sf::st_drop_geometry(tgss_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v1.csv")
+
+
+### --- Deserts & Xeric Shrublands
+
+dxs_out <- summarize_static_and_fluc_drivers(static_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-dxs-static-drivers_california.csv",
+                                             fluc_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-dxs-fluctuating-drivers_california.csv",
+                                             fire_independent_polys_fname = "data/out/fire-independent-polygons_dxs_ca_v2.gpkg"
+)
+
+dxs_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = dxs_out)
+
+### What are the drivers within each of the California biomes that have non-zero median values
+### at the smallest polygon size of the fire-independent polygons?
+
+dxs_nonzero_medians_static <- dxs_nonzero_medians$nonzero_medians_static
+dxs_final_static_drivers <- dxs_nonzero_medians_static$driver
+# dxs_static_drivers_exclude <- c("lower_slope", "upper_slope", "friction_walking_only", dxs_nonzero_medians_static$driver[dxs_nonzero_medians_static$value == 0])
+dxs_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", dxs_nonzero_medians_static$driver[dxs_nonzero_medians_static$value == 0])
+dxs_final_static_drivers <- dxs_final_static_drivers[!(dxs_final_static_drivers %in% dxs_static_drivers_exclude)]
+
+# All fluctuating drivers perhaps have high enough expectation of proportional
+# landcovers
+dxs_nonzero_medians_fluc <- dxs_nonzero_medians$nonzero_medians_fluc
+dxs_final_fluc_drivers <- dxs_nonzero_medians_fluc$driver
+dxs_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", dxs_nonzero_medians_fluc$driver[dxs_nonzero_medians_fluc$value == 0])
+dxs_final_fluc_drivers <- dxs_final_fluc_drivers[!(dxs_final_fluc_drivers %in% dxs_fluc_drivers_exclude)]
+
+dxs_out$out_static <- 
+  dxs_out$out_static %>% 
+  dplyr::filter(driver %in% dxs_final_static_drivers)
+
+dxs_out$out_fluc <-
+  dxs_out$out_fluc %>% 
+  dplyr::filter(driver %in% dxs_final_fluc_drivers)
+
+dxs_drivers <-
+  fired_daily_drivers %>% 
+  dplyr::filter(biome_name == "Deserts & Xeric Shrublands") %>% 
+  dplyr::select(-{{dxs_static_drivers_exclude}}) %>% 
+  dplyr::select(-{{dxs_fluc_drivers_exclude}})
+
+dxs_drivers_adjusted <-
+  adjust_scale_dependent_drivers(fire_independent_drivers_out = dxs_out, 
+                                 fired_daily_drivers = dxs_drivers)
+
+sf::st_write(obj = dxs_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v1.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = sf::st_drop_geometry(dxs_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v1.csv")
+
+### ----
+
+plot_fire_independent_scaling <- function(fire_independent_drivers_out, 
+                                          subtitle,
+                                          static_or_fluc = "static",
+                                          lwr_med_upr = c(0.25, 0.50, 0.75),
+                                          drivers_static = c("elevation", "friction", "landform_diversity", "rumple_index"),
+                                          drivers_fluc = c("ndvi", "veg_structure_rumple", "landcover_diversity"),
+                                          target_year = 2019) {
+  
+  fi_summary <- summarize_fire_independent_scaling(fire_independent_drivers_out = fire_independent_drivers_out)
+  
+  fi_data <- 
+    fire_independent_drivers_out %>% 
+    `[[`(grep(names(.), pattern = static_or_fluc))
+  
+  fi_summary_wide <- 
+    fi_summary %>% 
+    `[[`(grep(names(.), pattern = static_or_fluc)) %>% 
+    dplyr::mutate(quantile = as.numeric(as.character(quantile)))
+  
+  if(static_or_fluc == "static") {
+    fi_data <-
+      fi_data %>% 
+      dplyr::filter(driver %in% drivers_static)
+    
+    fi_summary_wide <-
+      fi_summary_wide %>% 
+      dplyr::filter(driver %in% drivers_static & quantile %in% lwr_med_upr) %>% 
+      dplyr::mutate(quant_desc = dplyr::case_when(quantile == min(quantile) ~ "lwr",
+                                                  quantile == max(quantile) ~ "upr",
+                                                  TRUE ~ "med")) %>%
+      dplyr::select(-quantile) %>% 
+      tidyr::pivot_wider(names_from = "quant_desc", values_from = "value")
+    
+  } else if(static_or_fluc == "fluc") {
+    fi_data <- 
+      fi_data %>% 
+      dplyr::filter(driver %in% drivers_fluc & ig_year == target_year)
+    
+    fi_summary_wide <- 
+      fi_summary_wide %>% 
+      dplyr::filter(driver %in% drivers_fluc & ig_year == target_year & quantile %in% lwr_med_upr) %>% 
+      dplyr::mutate(quant_desc = dplyr::case_when(quantile == min(quantile) ~ "lwr",
+                                                  quantile == max(quantile) ~ "upr",
+                                                  TRUE ~ "med")) %>%
+      dplyr::select(-quantile) %>% 
+      tidyr::pivot_wider(names_from = "quant_desc", values_from = "value")
+    
+  }
+  
+  out_plot <-
+    ggplot() +
+    geom_point(data = fi_data, mapping = aes(x = area_log10, y = value)) +
+    geom_line(data = fi_summary_wide, aes(x = area_log10_round, y = med), 
+              col = "red", lwd = 1.25) +
+    geom_ribbon(data = fi_summary_wide, aes(x = area_log10_round, ymin = lwr, ymax = upr), 
+                alpha = 0.1, lwd = 1.25, col = "red", lty = 2) +
+    facet_wrap(facets = c("driver_desc"), scales = "free_y") +
+    scale_color_viridis_d() +
+    theme_bw() +
+    ggtitle(label = "Fire-independent scaling relationships", subtitle = subtitle)
+  
+  
+  return(list(plot = out_plot, fi_summary_wide = fi_summary_wide))
+}
+
+# Temperate Conifer Forests
+
+tcf_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = tcf_out, static_or_fluc = "static", subtitle = "Temperate Conifer Forests")
+tcf_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = tcf_out, static_or_fluc = "fluc", subtitle = "Temperate Conifer Forests")
+
+tcf_plot_static$plot
+tcf_plot_fluc$plot
+
+tcf_plot_static$fi_summary_wide %>% 
+  mutate(range = (upr - lwr) / 2) %>% 
+  group_by(driver, driver_desc) %>% 
+  filter(range == max(range))
+
+tcf_plot_fluc$fi_summary_wide %>% 
+  mutate(range = (upr - lwr) / 2) %>% 
+  group_by(driver, driver_desc) %>% 
+  filter(range == max(range))
+
+# Mediterranean Forests, Woodlands & Scrub
+
+mfws_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = mfws_out, static_or_fluc = "static", subtitle = "Mediterranean Forests, Woodlands & Scrub")
+mfws_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = mfws_out, static_or_fluc = "fluc", subtitle = "Mediterranean Forests, Woodlands & Scrub")
+
+mfws_plot_static$plot
+mfws_plot_fluc$plot
+
+mfws_plot_static$fi_summary_wide %>% 
+  mutate(range = (upr - lwr) / 2) %>% 
+  group_by(driver, driver_desc) %>% 
+  filter(range == max(range))
+
+mfws_plot_fluc$fi_summary_wide %>% 
+  mutate(range = (upr - lwr) / 2) %>% 
+  group_by(driver, driver_desc) %>% 
+  filter(range == max(range))
+
+# Temperate Grasslands, Savannas & Shrublands
+
+tgss_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = tgss_out, static_or_fluc = "static", subtitle = "Temperate Grasslands, Savannas & Shrublands")
+tgss_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = tgss_out, static_or_fluc = "fluc", subtitle = "Temperate Grasslands, Savannas & Shrublands")
+
+tgss_plot_static$plot
+tgss_plot_fluc$plot
+
+tgss_plot_static$fi_summary_wide %>% 
+  mutate(range = (upr - lwr) / 2) %>% 
+  group_by(driver, driver_desc) %>% 
+  filter(range == max(range))
+
+tgss_plot_fluc$fi_summary_wide %>% 
+  mutate(range = (upr - lwr) / 2) %>% 
+  group_by(driver, driver_desc) %>% 
+  filter(range == max(range))
+
+# Deserts & Xeric Shrublands
+
+dxs_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = dxs_out, static_or_fluc = "static", subtitle = "Deserts & Xeric Shrublands")
+dxs_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = dxs_out, static_or_fluc = "fluc", subtitle = "Deserts & Xeric Shrublands")
+
+dxs_plot_static$plot
+dxs_plot_fluc$plot
+
+dxs_plot_static$fi_summary_wide %>% 
+  mutate(range = (upr - lwr) / 2) %>% 
+  group_by(driver, driver_desc) %>% 
+  filter(range == max(range))
+
+dxs_plot_fluc$fi_summary_wide %>% 
+  mutate(range = (upr - lwr) / 2) %>% 
+  group_by(driver, driver_desc) %>% 
+  filter(range == max(range))
+
+
+### --- Plot together
+
+library(patchwork)
+
+static_plots <- (tcf_plot_static$plot + mfws_plot_static$plot) / (tgss_plot_static$plot + dxs_plot_static$plot)
+fluc_plots <- (tcf_plot_fluc$plot + mfws_plot_fluc$plot) / (tgss_plot_fluc$plot + dxs_plot_fluc$plot)
+
+ggsave(filename = "figs/fire-independent-scaling-relationships_static_plot.png", plot = static_plots, width = 12, height = 12)
+ggsave(filename = "figs/fire-independent-scaling-relationships_fluc_plot.png", plot = fluc_plots, width = 12, height = 12)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # Narrow valleys
+# ggplot() +
+#   geom_point(data = out_static[out_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10, y = value)) +
+#   geom_point(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
+#   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
+#   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
+#   scale_color_viridis_d() +
+#   ggtitle(unique(out_static$driver_desc[out_static$driver == "csp_ergo_landforms_42"]))
+# 
+# # Valleys
+# ggplot() +
+#   geom_point(data = out_static[out_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10, y = value)) +
+#   geom_point(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
+#   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
+#   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
+#   scale_color_viridis_d() +
+#   ggtitle(unique(out_static$driver_desc[out_static$driver == "csp_ergo_landforms_41"]))
+# 
+# # Vegetation structure rumple index
+# ggplot() +
+#   geom_point(data = out_fluc[out_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10, y = value)) +
+#   geom_point(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
+#   geom_smooth(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
+#   geom_smooth(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple" & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
+#   facet_wrap(facets = "ig_year") +
+#   scale_color_viridis_d() +
+#   ggtitle(unique(out_fluc$driver_desc[out_fluc$driver == "veg_structure_rumple"]))
+# 
+# 
+# # Veg structure rumple index for a single year
+# ggplot() +
+#   geom_point(data = out_fluc[out_fluc$ig_year == 2019 & out_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10, y = value)) +
+#   geom_point(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
+#   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
+#   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple" & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
+#   scale_color_viridis_d() +
+#   ggtitle(unique(out_fluc$driver_desc[out_fluc$driver == "veg_structure_rumple"]))
+# 
+# # All static drivers, but just the medians
+# static_driver_median_plots <-
+#   ggplot() +
+#   geom_point(data = out_static, mapping = aes(x = area_log10, y = value)) +
+#   geom_smooth(data = area_quants_static[area_quants_static$driver != "proj_area" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
+#   facet_wrap(facets = c("driver_desc"), scales = "free_y") +
+#   scale_color_viridis_d()
+# 
+# ggsave(filename = "figs/fire-independent_static-drivers_median.png", plot = static_driver_median_plots)
+#
+#
+# All fluctuating drivers for an example year (2019), but just the medians
+# fluc_driver_median_plots <-
+#   ggplot() +
+#   geom_point(data = out_fluc[out_fluc$ig_year == 2019, ], mapping = aes(x = area_log10, y = value)) +
+#   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
+#   facet_wrap(facets = c("driver_desc"), scales = "free_y") +
+#   scale_color_viridis_d()
+#
+# ggsave(filename = "figs/fire-independent_fluc-drivers_medians.png", plot = fluc_driver_median_plots)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # naming_conventions <-
@@ -428,5 +730,3 @@ tcf_drivers_adjusted <-
 # 
 # write.csv(x = naming_conventions, file = "data/out/driver-naming-conventions.csv", row.names = FALSE)
 
-sf::st_write(obj = tcf_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.gpkg", delete_dsn = TRUE)
-data.table::fwrite(x = sf::st_drop_geometry(tcf_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.csv")

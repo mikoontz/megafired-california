@@ -17,7 +17,7 @@ fired_events <-
   dplyr::rename(geometry = geom)
 
 fired_daily <-
-  sf::st_read("data/out/fired_daily_ca.gpkg") %>% 
+  sf::st_read("data/out/fired_daily_ca_v2.gpkg") %>% 
   dplyr::filter(ignition_year >= 2003 & ignition_year <= 2020) %>% 
   sf::st_transform(3310) %>% 
   dplyr::mutate(samp_id = 0) %>% 

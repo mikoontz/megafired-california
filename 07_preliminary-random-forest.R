@@ -11,9 +11,7 @@ library(pdp)
 
 # read in fire data
 fired_daily_response <- 
-  data.table::fread(input = "data/out/extreme-wildfire-daily-ranking_v2.csv") %>% 
-  dplyr::select(did, id, date, aoir_modeled, biome_name) %>% 
-  dplyr::rename(aoir_mod = aoir_modeled)
+  data.table::fread(input = "data/out/fired_daily_ca_response-vars.csv")
 
 fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.csv"
 
@@ -24,7 +22,7 @@ fires <-
                 -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
                 -ends_with("rtma"), -ends_with("rtma_pct"),
                 -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
-  dplyr::left_join(fired_daily_response, by = c("did", "id", "date", "biome_name"))
+  dplyr::left_join(fired_daily_response)
 
 # # CSP ERGO Landforms based on 10m NED DEM
 # csp_ergo_landforms_desc <-
@@ -124,6 +122,7 @@ fires_working <-
   fires %>% 
   as.data.frame()
 
+### Set 6
 human_drivers <- c("npl", "concurrent_fires", "friction")
 weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
                      "max_temp_pct", "min_temp_pct", 
@@ -132,10 +131,38 @@ weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotrop
                      "max_soil_water_pct", "min_soil_water_pct",
                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
                      "fm100_pct", "fm1000_pct")
-topography_drivers <- c("elevation", "rumple_index", "upper_slope",  "lower_slope", "landform_diversity")
-fuel_drivers <- c("ndvi", "change_diversity", "veg_structure_rumple", "landcover_diversity")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
 interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
 
+# ### Set 5
+# human_drivers <- c("npl", "concurrent_fires", "friction")
+# weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+#                      "max_temp_pct", "min_temp_pct", 
+#                      "max_rh_pct", "min_rh_pct", 
+#                      "max_vpd_pct", "min_vpd_pct", 
+#                      "max_soil_water_pct", "min_soil_water_pct",
+#                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+#                      "fm100_pct", "fm1000_pct")
+# topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+# fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+# interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+
+### Set 4
+# human_drivers <- c("npl", "concurrent_fires", "friction")
+# weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+#                      "max_temp_pct", "min_temp_pct", 
+#                      "max_rh_pct", "min_rh_pct", 
+#                      "max_vpd_pct", "min_vpd_pct", 
+#                      "max_soil_water_pct", "min_soil_water_pct",
+#                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+#                      "fm100_pct", "fm1000_pct")
+# topography_drivers <- c("elevation", "rumple_index", "upper_slope",  "lower_slope", "landform_diversity")
+# fuel_drivers <- c("ndvi", "change_diversity", "veg_structure_rumple", "landcover_diversity")
+# interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+### Set 3
 # human_drivers <- c("npl", "npl_at_ignition", "concurrent_fires", "friction")
 # weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
 #                      "max_temp_pct", "min_temp_pct", 
@@ -148,8 +175,15 @@ interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "b
 # fuel_drivers <- c("ndvi", "fuel_stable", "fuel_gain", "change_diversity", "veg_structure_rumple", "trees", "grass_forbs_herb_trees_mix", "landcover_diversity")
 # interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
 
+### Set 2
 # human_drivers <- c("npl", "concurrent_fires", "cumu_count", "cumu_area_ha", "friction", "friction_walking_only", "road_density_mpha")
 # topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "upper_slope_flat", "lower_slope_warm", "lower_slope", "lower_slope_cool", "lower_slope_flat", "valley", "valley_narrow", "landform_diversity")
+# fuel_drivers <- c("ndvi", "fuel_stable", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "forest_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity", "change_diversity")
+# fuel_drivers <- c("ndvi", "fuel_stable", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren")
+# interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+### Set 1
+# human_drivers <- c("npl", "concurrent_fires", "cumu_count", "cumu_area_ha", "friction", "friction_walking_only", "road_density_mpha")
 # topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "upper_slope_flat", "lower_slope_warm", "lower_slope", "lower_slope_cool", "lower_slope_flat", "valley", "valley_narrow")
 # weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct", 
 #                      "max_temp_pct", "min_temp_pct", 
@@ -213,7 +247,9 @@ predictor.variable.names_reduced <- spatialRF::auto_cor(
   )
 
 cor_mat <- cor(fires_working[, predictor.variable.names])
+sort(cor_mat[, colnames(cor_mat) == "friction"])
 sort(cor_mat[, colnames(cor_mat) == "fm1000_pct"])
+sort(cor_mat[, colnames(cor_mat) == "npl"])
 # # sort(cor_mat[, colnames(cor_mat) == "change_diversity"])
 # sort(cor_mat[, colnames(cor_mat) == "grass_forb_herb_prop"])
 # sort(cor_mat[, colnames(cor_mat) == "fuel_fast_loss_prop"])
@@ -268,8 +304,19 @@ tcf_nonspatial <- spatialRF::rf(
 tcf_nonspatial_response_curves_accentuate_gg <-
   spatialRF::plot_response_curves(
     tcf_nonspatial,
-    quantiles = c(0.10, 0.5, 0.9),
+    quantiles = c(0.5),
     ncol = 5
+  )
+
+tcf_nonspatial_response_curves_accentuate_gg
+
+tcf_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    tcf_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5,
+    show.data = TRUE,
+    line.color = "red"
   )
 
 tcf_nonspatial_response_curves_accentuate_gg
@@ -289,6 +336,1030 @@ spatialRF::plot_response_curves(
   quantiles = 0.5,
   ncol = 3
 )
+
+
+### ---- Mediterranean Forest, Woodland & Scrub
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v1.csv"
+
+fires <-
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -ends_with("rtma"), -ends_with("rtma_pct"),
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response)
+
+fires_working <- 
+  fires %>% 
+  as.data.frame()
+
+### Set 6
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+                     "max_temp_pct", "min_temp_pct", 
+                     "max_rh_pct", "min_rh_pct", 
+                     "max_vpd_pct", "min_vpd_pct", 
+                     "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+
+# No NAs
+apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires_working[, predictor.variable.names])[which(apply(fires_working[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires_working[!complete.cases(fires_working[, predictor.variable.names]), "id"])
+
+fires_working <- fires_working[!(fires_working$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires_working[, predictor.variable.names])[round(apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(zero_variance_columns))
+
+# No NaN or Inf when scaling
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+  "npl", 
+  "rumple_index", "elevation",
+  "max_wind_speed_pct", "min_wind_speed_pct",
+  "max_vpd_pct", "min_vpd_pct",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
+  "wind_terrain_alignment"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = fires_working[, predictor.variable.names],
+  cor.threshold = 0.75,
+  preference.order = preference.order
+) %>% 
+  spatialRF::auto_vif(
+    vif.threshold = 5,
+    preference.order = preference.order
+  )
+
+
+##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
+data <- fires_working
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+mfws_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+mfws_dist_mat <- 
+  sf::st_distance(x = mfws_sf, 
+                  y = mfws_sf) %>% 
+  units::drop_units()
+
+random_seed <- 1848
+
+(start_time <- Sys.time())
+mfws_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "area_log10",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = mfws_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+mfws_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    mfws_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+mfws_nonspatial_response_curves_accentuate_gg
+
+
+### ---- Temperate Grasslands, Savanna, & Shrub
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v1.csv"
+
+fires <-
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -ends_with("rtma"), -ends_with("rtma_pct"),
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response)
+
+fires_working <- 
+  fires %>% 
+  as.data.frame()
+
+### Set 6
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+                     "max_temp_pct", "min_temp_pct", 
+                     "max_rh_pct", "min_rh_pct", 
+                     "max_vpd_pct", "min_vpd_pct", 
+                     "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+
+# No NAs
+apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires_working[, predictor.variable.names])[which(apply(fires_working[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires_working[!complete.cases(fires_working[, predictor.variable.names]), "id"])
+
+fires_working <- fires_working[!(fires_working$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires_working[, predictor.variable.names])[round(apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(zero_variance_columns))
+
+# No NaN or Inf when scaling
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+  "npl", 
+  "rumple_index", "elevation",
+  "max_wind_speed_pct", "min_wind_speed_pct",
+  "max_vpd_pct", "min_vpd_pct",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
+  "wind_terrain_alignment"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = fires_working[, predictor.variable.names],
+  cor.threshold = 0.75,
+  preference.order = preference.order
+) %>% 
+  spatialRF::auto_vif(
+    vif.threshold = 5,
+    preference.order = preference.order
+  )
+
+
+##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
+data <- fires_working
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+tgss_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+tgss_dist_mat <- 
+  sf::st_distance(x = tgss_sf, 
+                  y = tgss_sf) %>% 
+  units::drop_units()
+
+random_seed <- 1848
+
+(start_time <- Sys.time())
+tgss_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "area_log10",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = tgss_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+tgss_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    tgss_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+tgss_nonspatial_response_curves_accentuate_gg
+
+### ---- Desert and Xeric Shrublands
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v1.csv"
+
+fires <-
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -ends_with("rtma"), -ends_with("rtma_pct"),
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response)
+
+fires_working <- 
+  fires %>% 
+  as.data.frame()
+
+### Set 6
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+                     "max_temp_pct", "min_temp_pct", 
+                     "max_rh_pct", "min_rh_pct", 
+                     "max_vpd_pct", "min_vpd_pct", 
+                     "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+
+# No NAs
+apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires_working[, predictor.variable.names])[which(apply(fires_working[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires_working[!complete.cases(fires_working[, predictor.variable.names]), "id"])
+
+fires_working <- fires_working[!(fires_working$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires_working[, predictor.variable.names])[round(apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(zero_variance_columns))
+
+# No NaN or Inf when scaling
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+  "npl", 
+  "rumple_index", "elevation",
+  "max_wind_speed_pct", "min_wind_speed_pct",
+  "max_vpd_pct", "min_vpd_pct",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
+  "wind_terrain_alignment"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = fires_working[, predictor.variable.names],
+  cor.threshold = 0.75,
+  preference.order = preference.order
+) %>% 
+  spatialRF::auto_vif(
+    vif.threshold = 5,
+    preference.order = preference.order
+  )
+
+
+##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
+data <- fires_working
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+dxs_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+dxs_dist_mat <- 
+  sf::st_distance(x = dxs_sf, 
+                  y = dxs_sf) %>% 
+  units::drop_units()
+
+random_seed <- 1848
+
+(start_time <- Sys.time())
+dxs_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "area_log10",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = dxs_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+dxs_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    dxs_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+ggsave(plot = (tcf_nonspatial_response_curves_accentuate_gg + patchwork::plot_annotation(title = "Temperate Conifer Forests")), 
+       filename = "figs/tcf-rf-nonspatial-response-curves.png")
+ggsave(plot = (mfws_nonspatial_response_curves_accentuate_gg + patchwork::plot_annotation(title  = "Mediterranean Forests, Woodlands & Scrub")), 
+       filename = "figs/mfws-rf-nonspatial-response-curves.png")
+
+ggsave(plot = (tgss_nonspatial_response_curves_accentuate_gg + patchwork::plot_annotation(title  = "Temperate Grasslands, Savannas & Shrublands")),
+       filename = "figs/tgss-rf-nonspatial-response-curves.png")
+ggsave(plot = (dxs_nonspatial_response_curves_accentuate_gg + patchwork::plot_annotation(title  = "Deserts & Xeric Shrublands")),
+       filename = "figs/dxs-rf-nonspatial-response-curves.png")
+
+
+###############################################
+### Using residual of model with sqrt(previous day area) as the response
+
+### Temperate conifer forest
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.csv"
+
+fires <-
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -ends_with("rtma"), -ends_with("rtma_pct"),
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response)
+
+fires_working <- 
+  fires %>% 
+  as.data.frame()
+
+### Set 6
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+                     "max_temp_pct", "min_temp_pct", 
+                     "max_rh_pct", "min_rh_pct", 
+                     "max_vpd_pct", "min_vpd_pct", 
+                     "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+
+# No NAs
+apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires_working[, predictor.variable.names])[which(apply(fires_working[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires_working[!complete.cases(fires_working[, predictor.variable.names]), "id"])
+
+fires_working <- fires_working[!(fires_working$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires_working[, predictor.variable.names])[round(apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(zero_variance_columns))
+
+# No NaN or Inf when scaling
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+  "npl", 
+  "rumple_index", "elevation",
+  "max_wind_speed_pct", "min_wind_speed_pct",
+  "max_vpd_pct", "min_vpd_pct",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
+  "wind_terrain_alignment"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = fires_working[, predictor.variable.names],
+  cor.threshold = 0.75,
+  preference.order = preference.order
+) %>% 
+  spatialRF::auto_vif(
+    vif.threshold = 5,
+    preference.order = preference.order
+  )
+
+##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
+data <- fires_working
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+#### ------ 
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+tcf_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+tcf_dist_mat <- 
+  sf::st_distance(x = tcf_sf, 
+                  y = tcf_sf) %>% 
+  units::drop_units()
+
+random_seed <- 1848
+
+(start_time <- Sys.time())
+tcf_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "aoir_modeled_sqrtarea_tm1",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = tcf_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+tcf_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    tcf_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+tcf_nonspatial_response_curves_accentuate_gg
+
+### ---- Mediterranean Forest, Woodland & Scrub
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v1.csv"
+
+fires <-
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -ends_with("rtma"), -ends_with("rtma_pct"),
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response)
+
+fires_working <- 
+  fires %>% 
+  as.data.frame()
+
+### Set 6
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+                     "max_temp_pct", "min_temp_pct", 
+                     "max_rh_pct", "min_rh_pct", 
+                     "max_vpd_pct", "min_vpd_pct", 
+                     "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+
+# No NAs
+apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires_working[, predictor.variable.names])[which(apply(fires_working[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires_working[!complete.cases(fires_working[, predictor.variable.names]), "id"])
+
+fires_working <- fires_working[!(fires_working$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires_working[, predictor.variable.names])[round(apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(zero_variance_columns))
+
+# No NaN or Inf when scaling
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+  "npl", 
+  "rumple_index", "elevation",
+  "max_wind_speed_pct", "min_wind_speed_pct",
+  "max_vpd_pct", "min_vpd_pct",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
+  "wind_terrain_alignment"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = fires_working[, predictor.variable.names],
+  cor.threshold = 0.75,
+  preference.order = preference.order
+) %>% 
+  spatialRF::auto_vif(
+    vif.threshold = 5,
+    preference.order = preference.order
+  )
+
+
+##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
+data <- fires_working
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+mfws_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+mfws_dist_mat <- 
+  sf::st_distance(x = mfws_sf, 
+                  y = mfws_sf) %>% 
+  units::drop_units()
+
+random_seed <- 1848
+
+(start_time <- Sys.time())
+mfws_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "aoir_modeled_sqrtarea_tm1",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = mfws_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+mfws_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    mfws_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+mfws_nonspatial_response_curves_accentuate_gg
+
+
+### ---- Temperate Grasslands, Savanna, & Shrub
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v1.csv"
+
+fires <-
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -ends_with("rtma"), -ends_with("rtma_pct"),
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response)
+
+fires_working <- 
+  fires %>% 
+  as.data.frame()
+
+### Set 6
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+                     "max_temp_pct", "min_temp_pct", 
+                     "max_rh_pct", "min_rh_pct", 
+                     "max_vpd_pct", "min_vpd_pct", 
+                     "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+
+# No NAs
+apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires_working[, predictor.variable.names])[which(apply(fires_working[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires_working[!complete.cases(fires_working[, predictor.variable.names]), "id"])
+
+fires_working <- fires_working[!(fires_working$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires_working[, predictor.variable.names])[round(apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(zero_variance_columns))
+
+# No NaN or Inf when scaling
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+  "npl", 
+  "rumple_index", "elevation",
+  "max_wind_speed_pct", "min_wind_speed_pct",
+  "max_vpd_pct", "min_vpd_pct",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
+  "wind_terrain_alignment"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = fires_working[, predictor.variable.names],
+  cor.threshold = 0.75,
+  preference.order = preference.order
+) %>% 
+  spatialRF::auto_vif(
+    vif.threshold = 5,
+    preference.order = preference.order
+  )
+
+
+##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
+data <- fires_working
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+tgss_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+tgss_dist_mat <- 
+  sf::st_distance(x = tgss_sf, 
+                  y = tgss_sf) %>% 
+  units::drop_units()
+
+random_seed <- 1848
+
+(start_time <- Sys.time())
+tgss_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "aoir_modeled_sqrtarea_tm1",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = tgss_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+tgss_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    tgss_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+tgss_nonspatial_response_curves_accentuate_gg
+
+### ---- Desert and Xeric Shrublands
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v1.csv"
+
+fires <-
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -ends_with("rtma"), -ends_with("rtma_pct"),
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response)
+
+fires_working <- 
+  fires %>% 
+  as.data.frame()
+
+### Set 6
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 
+                     "max_temp_pct", "min_temp_pct", 
+                     "max_rh_pct", "min_rh_pct", 
+                     "max_vpd_pct", "min_vpd_pct", 
+                     "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+
+# No NAs
+apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires_working[, predictor.variable.names])[which(apply(fires_working[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires_working[!complete.cases(fires_working[, predictor.variable.names]), "id"])
+
+fires_working <- fires_working[!(fires_working$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires_working[, predictor.variable.names])[round(apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(zero_variance_columns))
+
+# No NaN or Inf when scaling
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+  "npl", 
+  "rumple_index", "elevation",
+  "max_wind_speed_pct", "min_wind_speed_pct",
+  "max_vpd_pct", "min_vpd_pct",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
+  "wind_terrain_alignment"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = fires_working[, predictor.variable.names],
+  cor.threshold = 0.75,
+  preference.order = preference.order
+) %>% 
+  spatialRF::auto_vif(
+    vif.threshold = 5,
+    preference.order = preference.order
+  )
+
+
+##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
+data <- fires_working
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+dxs_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+dxs_dist_mat <- 
+  sf::st_distance(x = dxs_sf, 
+                  y = dxs_sf) %>% 
+  units::drop_units()
+
+random_seed <- 1848
+
+(start_time <- Sys.time())
+dxs_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "aoir_modeled_sqrtarea_tm1",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = dxs_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+dxs_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    dxs_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+ggsave(plot = (tcf_nonspatial_response_curves_accentuate_gg + patchwork::plot_annotation(title = "Temperate Conifer Forests")), 
+       filename = "figs/tcf-rf-nonspatial-response-curves_aoir-sqrtarea-tm1.png")
+ggsave(plot = (mfws_nonspatial_response_curves_accentuate_gg + patchwork::plot_annotation(title  = "Mediterranean Forests, Woodlands & Scrub")), 
+       filename = "figs/mfws-rf-nonspatial-response-curves_aoir-sqrtarea-tm1.png")
+
+ggsave(plot = (tgss_nonspatial_response_curves_accentuate_gg + patchwork::plot_annotation(title  = "Temperate Grasslands, Savannas & Shrublands")),
+       filename = "figs/tgss-rf-nonspatial-response-curves_aoir-sqrtarea-tm1.png")
+ggsave(plot = (dxs_nonspatial_response_curves_accentuate_gg + patchwork::plot_annotation(title  = "Deserts & Xeric Shrublands")),
+       filename = "figs/dxs-rf-nonspatial-response-curves_aoir-sqrtarea-tm1.png")
+
+
+
+
+
+######################### RTMA subset (fires 2011 and later)
+
+### Temperate conifer forest
+
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.csv"
+
+fires <-
+  data.table::fread(fired_drivers_fname) %>%
+  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+                -max_wind_speed_pct, -min_wind_speed_pct, -max_rh_pct, -min_rh_pct, -max_temp_pct, -min_temp_pct, -max_soil_water_pct, -min_soil_water_pct, -max_vpd_pct, -min_vpd_pct,
+                -wind_anisotropy, -wind_terrain_anisotropy, -wind_terrain_alignment,
+                -max_wind_speed_rtma, -min_wind_speed_rtma, -max_rh_rtma, -min_rh_rtma, -max_vpd_rtma, -min_vpd_rtma,
+                -max_wind_gust_rtma, -min_wind_gust_rtma, -max_temp_rtma, -min_temp_rtma,
+                -cumu_count, -cumu_area_ha,
+                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
+  dplyr::left_join(fired_daily_response)
+
+fires_working <- 
+  fires %>% 
+  dplyr::filter(date >= as.Date("2011-01-01")) %>% 
+  as.data.frame()
+
+names(fires_working)
+
+### Set 6
+human_drivers <- c("npl", "concurrent_fires", "friction")
+weather_drivers <- c("max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct", "max_wind_gust_rtma_pct", "min_wind_gust_rtma_pct",
+                     "wind_anisotropy_rtma", 
+                     "max_temp_rtma_pct", "min_temp_rtma_pct", 
+                     "max_rh_rtma_pct", "min_rh_rtma_pct", 
+                     "max_vpd_rtma_pct", "min_vpd_rtma_pct", 
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z", 
+                     "fm100_pct", "fm1000_pct")
+topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+interacting_drivers <- c("wind_terrain_anisotropy_rtma", "wind_terrain_alignment_rtma", "bi_pct", "erc_pct")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+
+# No NAs
+apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires_working[, predictor.variable.names])[which(apply(fires_working[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 100)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires_working[!complete.cases(fires_working[, predictor.variable.names]), "id"])
+
+fires_working <- fires_working[!(fires_working$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires_working[, predictor.variable.names])[round(apply(fires_working[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+fires_working <- 
+  fires_working %>% 
+  dplyr::select(-all_of(zero_variance_columns))
+
+# No NaN or Inf when scaling
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.nan))
+sum(apply(scale(fires_working[, predictor.variable.names]), 2, is.infinite))
+
+# Reduce collinearity in the predictors
+preference.order <- c(
+  "npl", 
+  "rumple_index", "elevation",
+  "max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct",
+  "max_vpd_rtma_pct", "min_vpd_rtma_pct",
+  "fm100_pct", "erc_pct", "spei1y",
+  "ndvi", "veg_structure_rumple", "change_diversity",
+  "wind_terrain_alignment_rtma"
+)
+
+predictor.variable.names_reduced <- spatialRF::auto_cor(
+  x = fires_working[, predictor.variable.names],
+  cor.threshold = 0.75,
+  preference.order = preference.order
+) %>% 
+  spatialRF::auto_vif(
+    vif.threshold = 5,
+    preference.order = preference.order
+  )
+
+##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
+data <- fires_working
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+#### ------ 
+distance_thresholds <- c(0, 1000, 5000, 10000, 25000, 50000)
+
+tcf_sf <-
+  data %>% 
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+tcf_dist_mat <- 
+  sf::st_distance(x = tcf_sf, 
+                  y = tcf_sf) %>% 
+  units::drop_units()
+
+random_seed <- 1848
+
+(start_time <- Sys.time())
+tcf_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "aoir_sqrtarea_tm1",
+  predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = tcf_dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+tcf_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    tcf_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+tcf_nonspatial_response_curves_accentuate_gg
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #############################################
 ##### ---- FEATURE ENGINEERING

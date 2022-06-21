@@ -475,7 +475,8 @@ data.table::fwrite(x = sf::st_drop_geometry(dxs_drivers_adjusted), file = "data/
 ### ----
 
 plot_fire_independent_scaling <- function(fire_independent_drivers_out, 
-                                          subtitle,
+                                          title = "Fire-independent scaling relationships",
+                                          subtitle, 
                                           static_or_fluc = "static",
                                           lwr_med_upr = c(0.25, 0.50, 0.75),
                                           drivers_static = c("elevation", "friction", "landform_diversity", "rumple_index"),
@@ -533,7 +534,7 @@ plot_fire_independent_scaling <- function(fire_independent_drivers_out,
     facet_wrap(facets = c("driver_desc"), scales = "free_y") +
     scale_color_viridis_d() +
     theme_bw() +
-    ggtitle(label = "Fire-independent scaling relationships", subtitle = subtitle)
+    ggtitle(label = title, subtitle = subtitle)
   
   
   return(list(plot = out_plot, fi_summary_wide = fi_summary_wide))
@@ -541,8 +542,8 @@ plot_fire_independent_scaling <- function(fire_independent_drivers_out,
 
 # Temperate Conifer Forests
 
-tcf_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = tcf_out, static_or_fluc = "static", subtitle = "Temperate Conifer Forests")
-tcf_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = tcf_out, static_or_fluc = "fluc", subtitle = "Temperate Conifer Forests")
+tcf_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = tcf_out, static_or_fluc = "static", title = "Temperate Conifer Forests", subtitle = NULL)
+tcf_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = tcf_out, static_or_fluc = "fluc", title = "Temperate Conifer Forests", subtitle = NULL)
 
 tcf_plot_static$plot
 tcf_plot_fluc$plot
@@ -559,8 +560,8 @@ tcf_plot_fluc$fi_summary_wide %>%
 
 # Mediterranean Forests, Woodlands & Scrub
 
-mfws_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = mfws_out, static_or_fluc = "static", subtitle = "Mediterranean Forests, Woodlands & Scrub")
-mfws_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = mfws_out, static_or_fluc = "fluc", subtitle = "Mediterranean Forests, Woodlands & Scrub")
+mfws_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = mfws_out, static_or_fluc = "static", title = "Mediterranean Forests, Woodlands & Scrub", subtitle = NULL)
+mfws_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = mfws_out, static_or_fluc = "fluc", title = "Mediterranean Forests, Woodlands & Scrub", subtitle = NULL)
 
 mfws_plot_static$plot
 mfws_plot_fluc$plot
@@ -577,8 +578,8 @@ mfws_plot_fluc$fi_summary_wide %>%
 
 # Temperate Grasslands, Savannas & Shrublands
 
-tgss_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = tgss_out, static_or_fluc = "static", subtitle = "Temperate Grasslands, Savannas & Shrublands")
-tgss_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = tgss_out, static_or_fluc = "fluc", subtitle = "Temperate Grasslands, Savannas & Shrublands")
+tgss_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = tgss_out, static_or_fluc = "static", title = "Temperate Grasslands, Savannas & Shrublands", subtitle = NULL)
+tgss_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = tgss_out, static_or_fluc = "fluc", title = "Temperate Grasslands, Savannas & Shrublands", subtitle = NULL)
 
 tgss_plot_static$plot
 tgss_plot_fluc$plot
@@ -595,8 +596,8 @@ tgss_plot_fluc$fi_summary_wide %>%
 
 # Deserts & Xeric Shrublands
 
-dxs_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = dxs_out, static_or_fluc = "static", subtitle = "Deserts & Xeric Shrublands")
-dxs_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = dxs_out, static_or_fluc = "fluc", subtitle = "Deserts & Xeric Shrublands")
+dxs_plot_static <- plot_fire_independent_scaling(fire_independent_drivers_out = dxs_out, static_or_fluc = "static", title = "Deserts & Xeric Shrublands", subtitle = NULL)
+dxs_plot_fluc <- plot_fire_independent_scaling(fire_independent_drivers_out = dxs_out, static_or_fluc = "fluc", title = "Deserts & Xeric Shrublands", subtitle = NULL)
 
 dxs_plot_static$plot
 dxs_plot_fluc$plot
@@ -617,7 +618,9 @@ dxs_plot_fluc$fi_summary_wide %>%
 library(patchwork)
 
 static_plots <- (tcf_plot_static$plot + mfws_plot_static$plot) / (tgss_plot_static$plot + dxs_plot_static$plot)
+static_plots <- static_plots + patchwork::plot_annotation(title = "Fire-independent scaling relationships (static drivers)")
 fluc_plots <- (tcf_plot_fluc$plot + mfws_plot_fluc$plot) / (tgss_plot_fluc$plot + dxs_plot_fluc$plot)
+fluc_plots <- fluc_plots + patchwork::plot_annotation(title = "Fire-independent scaling relationships (fluctuating drivers)")
 
 ggsave(filename = "figs/fire-independent-scaling-relationships_static_plot.png", plot = static_plots, width = 12, height = 12)
 ggsave(filename = "figs/fire-independent-scaling-relationships_fluc_plot.png", plot = fluc_plots, width = 12, height = 12)

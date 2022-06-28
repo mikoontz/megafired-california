@@ -6,10 +6,11 @@ library(data.table)
 library(ggplot2)
 library(lubridate)
 library(vegan)
+library(patchwork)
 
 ### ---- Read in FIRED data and FIRED drivers data
 fired_daily_orig <-
-  sf::st_read("data/out/fired_daily_ca.gpkg") %>% 
+  sf::st_read("data/out/fired_daily_ca_v2.gpkg") %>% 
   sf::st_drop_geometry() %>% 
   dplyr::mutate(date = as.Date(date)) %>%
   dplyr::rename(ig_year = ignition_year) %>% 
@@ -43,6 +44,8 @@ fired_daily_drivers <-
   dplyr::mutate(flat = csp_ergo_landforms_24 + csp_ergo_landforms_34) %>% 
   dplyr::mutate(landcover_diversity = vegan::diversity(cbind(lcms_landcover_01, lcms_landcover_03, lcms_landcover_04, lcms_landcover_05, lcms_landcover_07, lcms_landcover_08, lcms_landcover_09, lcms_landcover_10, lcms_landcover_11, lcms_landcover_12)),
                 change_diversity = vegan::diversity(cbind(lcms_change_01, lcms_change_02, lcms_change_03, lcms_change_04)))
+
+write.csv(tibble::enframe(names(fired_daily_drivers)), file = "data/out/drivers.csv", row.names = FALSE)
 
 ### --- manipulate the information coming from fire-independent polygons
 summarize_static_and_fluc_drivers <- function(static_drivers_fname, fluc_drivers_fname, fire_independent_polys_fname) {
@@ -194,7 +197,16 @@ summarize_fire_independent_scaling <- function(fire_independent_drivers_out) {
     tidyr::unpack(cols = "summary") %>% 
     dplyr::mutate(quantile = as.factor(quantile))
   
-  return(list(area_quants_static = area_quants_static, area_quants_fluc = area_quants_fluc))
+  area_quants_fluc_noyear <-
+    fire_independent_drivers_out$out_fluc %>%
+    group_by(area_log10_round, driver, driver_desc) %>% 
+    summarize(summary = get_quantiles(value, probs = c(seq(0, 1, by = 0.025)))) %>% 
+    tidyr::unpack(cols = "summary") %>% 
+    dplyr::mutate(quantile = as.factor(quantile))
+  
+  return(list(area_quants_static = area_quants_static, 
+              area_quants_fluc = area_quants_fluc, 
+              area_quants_fluc_noyear = area_quants_fluc_noyear))
 }
 
 ### --- 
@@ -271,11 +283,18 @@ adjust_scale_dependent_drivers <- function(fire_independent_drivers_out, fired_d
     dplyr::ungroup() %>% 
     dplyr::mutate(diff_median = value - E_value)
   
+  # Let's keep the raw values as well
   fired_drivers_wide <-
     fired_drivers_long %>% 
-    dplyr::select(-fired_area_log10, -value, -E_value, -driver_desc) %>% 
-    tidyr::pivot_wider(id_cols = c(did, ig_year), names_from = "driver", values_from = diff_median)
+    dplyr::select(-fired_area_log10, -E_value, -driver_desc) %>% 
+    dplyr::rename(adj = diff_median,
+                  raw = value) %>% 
+    tidyr::pivot_wider(id_cols = c(did, ig_year), names_from = "driver", values_from = c(raw, adj))
   
+  # # Raw value names are prefixed by "raw_" while the corrected variables just have the driver as the column name
+  # idx <- substr(names(fired_drivers_wide), start = 1, stop = 11) == "diff_median"
+  # names(fired_drivers_wide)[idx] <- substr(names(fired_drivers_wide), start = 13, stop = nchar(names(fired_drivers_wide)))[idx]
+  # 
   out <- 
     fired_daily_drivers_biome %>% 
     dplyr::select(-(fired_drivers_long$driver)) %>% 
@@ -290,8 +309,14 @@ adjust_scale_dependent_drivers <- function(fire_independent_drivers_out, fired_d
 ### --- Temperate Conifer Forests
 tcf_out <- summarize_static_and_fluc_drivers(static_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-tcf-static-drivers_california.csv",
                                              fluc_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-tcf-fluctuating-drivers_california.csv",
-                                             fire_independent_polys_fname = "data/out/fire-independent-polygons_tcf_ca_v2.gpkg"
-)
+                                             fire_independent_polys_fname = "data/out/fire-independent-polygons_tcf_ca_v2.gpkg")
+
+tcf_fi_summary <- summarize_fire_independent_scaling(fire_independent_drivers_out = tcf_out)
+
+tcf_fi_summary_combined <- rbind(dplyr::mutate(tcf_fi_summary$area_quants_static, fluc_or_static = "static"),
+                                 dplyr::mutate(tcf_fi_summary$area_quants_fluc_noyear, fluc_or_static = "fluc"))
+
+data.table::fwrite(x = tcf_fi_summary_combined, file = "data/out/fire-independent-area-scaling-summary_tcf.csv")
 
 tcf_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = tcf_out)
 
@@ -300,15 +325,24 @@ tcf_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = tcf_o
 
 tcf_nonzero_medians_static <- tcf_nonzero_medians$nonzero_medians_static
 tcf_final_static_drivers <- tcf_nonzero_medians_static$driver
+# version 0 (draft)
 # tcf_static_drivers_exclude <- c("lower_slope", "upper_slope", "friction_walking_only", tcf_nonzero_medians_static$driver[tcf_nonzero_medians_static$value == 0])
-tcf_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", tcf_nonzero_medians_static$driver[tcf_nonzero_medians_static$value == 0])
+# version 1 (likely to revert to this)
+# tcf_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", tcf_nonzero_medians_static$driver[tcf_nonzero_medians_static$value == 0])
+# version 2 (leave everything in, drop in next step if needed)
+tcf_static_drivers_exclude <- c()
+
 tcf_final_static_drivers <- tcf_final_static_drivers[!(tcf_final_static_drivers %in% tcf_static_drivers_exclude)]
 
 # All fluctuating drivers perhaps have high enough expectation of proportional
 # landcovers
 tcf_nonzero_medians_fluc <- tcf_nonzero_medians$nonzero_medians_fluc
 tcf_final_fluc_drivers <- tcf_nonzero_medians_fluc$driver
-tcf_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", tcf_nonzero_medians_fluc$driver[tcf_nonzero_medians_fluc$value == 0])
+# version 1 (likely to revert to this)
+# tcf_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", tcf_nonzero_medians_fluc$driver[tcf_nonzero_medians_fluc$value == 0])
+# version 2 (leave it all in and remove variables next step if needed)
+tcf_fluc_drivers_exclude <- c()
+
 tcf_final_fluc_drivers <- tcf_final_fluc_drivers[!(tcf_final_fluc_drivers %in% tcf_fluc_drivers_exclude)]
 
 tcf_out$out_static <- 
@@ -327,17 +361,25 @@ tcf_drivers <-
 
 tcf_drivers_adjusted <-
   adjust_scale_dependent_drivers(fire_independent_drivers_out = tcf_out, 
-                                 fired_daily_drivers = tcf_drivers)
+                                 fired_daily_drivers_biome = tcf_drivers)
 
-sf::st_write(obj = tcf_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.gpkg", delete_dsn = TRUE)
-data.table::fwrite(x = sf::st_drop_geometry(tcf_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v1.csv")
+# version 3 keeps the raw variable values too, with the column prefixed by "raw_"
+# version 2 keeps all variables in the dataset, with some to be excluded later if needed
+sf::st_write(obj = tcf_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v3.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = sf::st_drop_geometry(tcf_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v3.csv")
 
 ### --- Mediterranean Forests, Woodlands & Scrub
 
 mfws_out <- summarize_static_and_fluc_drivers(static_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-mfws-static-drivers_california.csv",
                                               fluc_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-mfws-fluctuating-drivers_california.csv",
-                                              fire_independent_polys_fname = "data/out/fire-independent-polygons_mfws_ca_v2.gpkg"
-)
+                                              fire_independent_polys_fname = "data/out/fire-independent-polygons_mfws_ca_v2.gpkg")
+
+mfws_fi_summary <- summarize_fire_independent_scaling(fire_independent_drivers_out = mfws_out)
+
+mfws_fi_summary_combined <- rbind(dplyr::mutate(mfws_fi_summary$area_quants_static, fluc_or_static = "static"),
+                                 dplyr::mutate(mfws_fi_summary$area_quants_fluc_noyear, fluc_or_static = "fluc"))
+
+data.table::fwrite(x = mfws_fi_summary_combined, file = "data/out/fire-independent-area-scaling-summary_mfws.csv")
 
 mfws_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = mfws_out)
 
@@ -346,15 +388,24 @@ mfws_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = mfws
 
 mfws_nonzero_medians_static <- mfws_nonzero_medians$nonzero_medians_static
 mfws_final_static_drivers <- mfws_nonzero_medians_static$driver
+# version 0 (draft)
 # mfws_static_drivers_exclude <- c("lower_slope", "upper_slope", "friction_walking_only", mfws_nonzero_medians_static$driver[mfws_nonzero_medians_static$value == 0])
-mfws_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", mfws_nonzero_medians_static$driver[mfws_nonzero_medians_static$value == 0])
+# version 1
+# mfws_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", mfws_nonzero_medians_static$driver[mfws_nonzero_medians_static$value == 0])
+# version 2 (keep it all)
+mfws_static_drivers_exclude <- c()
+
 mfws_final_static_drivers <- mfws_final_static_drivers[!(mfws_final_static_drivers %in% mfws_static_drivers_exclude)]
 
 # All fluctuating drivers perhaps have high enough expectation of proportional
 # landcovers
 mfws_nonzero_medians_fluc <- mfws_nonzero_medians$nonzero_medians_fluc
 mfws_final_fluc_drivers <- mfws_nonzero_medians_fluc$driver
-mfws_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", mfws_nonzero_medians_fluc$driver[mfws_nonzero_medians_fluc$value == 0])
+# version 1
+# mfws_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", mfws_nonzero_medians_fluc$driver[mfws_nonzero_medians_fluc$value == 0])
+# version 2
+mfws_fluc_drivers_exclude <- c()
+
 mfws_final_fluc_drivers <- mfws_final_fluc_drivers[!(mfws_final_fluc_drivers %in% mfws_fluc_drivers_exclude)]
 
 mfws_out$out_static <- 
@@ -373,18 +424,27 @@ mfws_drivers <-
 
 mfws_drivers_adjusted <-
   adjust_scale_dependent_drivers(fire_independent_drivers_out = mfws_out, 
-                                 fired_daily_drivers = mfws_drivers)
+                                 fired_daily_drivers_biome = mfws_drivers)
 
-sf::st_write(obj = mfws_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v1.gpkg", delete_dsn = TRUE)
-data.table::fwrite(x = sf::st_drop_geometry(mfws_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v1.csv")
+# version 3 keeps the raw variable values too, with the column prefixed by "raw_"
+# version 2 keeps all variables in the dataset, corrected for fire-independent
+# relationships
+sf::st_write(obj = mfws_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v3.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = sf::st_drop_geometry(mfws_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v3.csv")
 
 
 ### --- Temperate Grasslands, Savannas & Shrublands
 
 tgss_out <- summarize_static_and_fluc_drivers(static_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-tgss-static-drivers_california.csv",
                                               fluc_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-tgss-fluctuating-drivers_california.csv",
-                                              fire_independent_polys_fname = "data/out/fire-independent-polygons_tgss_ca_v2.gpkg"
-)
+                                              fire_independent_polys_fname = "data/out/fire-independent-polygons_tgss_ca_v2.gpkg")
+
+tgss_fi_summary <- summarize_fire_independent_scaling(fire_independent_drivers_out = tgss_out)
+
+tgss_fi_summary_combined <- rbind(dplyr::mutate(tgss_fi_summary$area_quants_static, fluc_or_static = "static"),
+                                  dplyr::mutate(tgss_fi_summary$area_quants_fluc_noyear, fluc_or_static = "fluc"))
+
+data.table::fwrite(x = tgss_fi_summary_combined, file = "data/out/fire-independent-area-scaling-summary_tgss.csv")
 
 tgss_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = tgss_out)
 
@@ -393,15 +453,24 @@ tgss_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = tgss
 
 tgss_nonzero_medians_static <- tgss_nonzero_medians$nonzero_medians_static
 tgss_final_static_drivers <- tgss_nonzero_medians_static$driver
+# version 0 (draft)
 # tgss_static_drivers_exclude <- c("lower_slope", "upper_slope", "friction_walking_only", tgss_nonzero_medians_static$driver[tgss_nonzero_medians_static$value == 0])
-tgss_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", tgss_nonzero_medians_static$driver[tgss_nonzero_medians_static$value == 0])
+# version 1
+# tgss_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", tgss_nonzero_medians_static$driver[tgss_nonzero_medians_static$value == 0])
+# version 2 (keep all variables in)                                 
+tgss_static_drivers_exclude <- c()
+
 tgss_final_static_drivers <- tgss_final_static_drivers[!(tgss_final_static_drivers %in% tgss_static_drivers_exclude)]
 
 # All fluctuating drivers perhaps have high enough expectation of proportional
 # landcovers
 tgss_nonzero_medians_fluc <- tgss_nonzero_medians$nonzero_medians_fluc
 tgss_final_fluc_drivers <- tgss_nonzero_medians_fluc$driver
-tgss_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", tgss_nonzero_medians_fluc$driver[tgss_nonzero_medians_fluc$value == 0])
+# version 1
+# tgss_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", tgss_nonzero_medians_fluc$driver[tgss_nonzero_medians_fluc$value == 0])
+# version 2
+tgss_fluc_drivers_exclude <- c()
+
 tgss_final_fluc_drivers <- tgss_final_fluc_drivers[!(tgss_final_fluc_drivers %in% tgss_fluc_drivers_exclude)]
 
 tgss_out$out_static <- 
@@ -420,18 +489,27 @@ tgss_drivers <-
 
 tgss_drivers_adjusted <-
   adjust_scale_dependent_drivers(fire_independent_drivers_out = tgss_out, 
-                                 fired_daily_drivers = tgss_drivers)
+                                 fired_daily_drivers_biome = tgss_drivers)
 
-sf::st_write(obj = tgss_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v1.gpkg", delete_dsn = TRUE)
-data.table::fwrite(x = sf::st_drop_geometry(tgss_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v1.csv")
+# version 3 keeps the raw variable values too, with the column prefixed by "raw_"
+# version 2 leaves all variables in the dataset in their fire-independent
+# scaling relationship corrected form
+sf::st_write(obj = tgss_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v3.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = sf::st_drop_geometry(tgss_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v3.csv")
 
 
 ### --- Deserts & Xeric Shrublands
 
 dxs_out <- summarize_static_and_fluc_drivers(static_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-dxs-static-drivers_california.csv",
                                              fluc_drivers_fname = "data/out/ee/fire-independent-drivers/fire-independent-dxs-fluctuating-drivers_california.csv",
-                                             fire_independent_polys_fname = "data/out/fire-independent-polygons_dxs_ca_v2.gpkg"
-)
+                                             fire_independent_polys_fname = "data/out/fire-independent-polygons_dxs_ca_v2.gpkg")
+
+dxs_fi_summary <- summarize_fire_independent_scaling(fire_independent_drivers_out = dxs_out)
+
+dxs_fi_summary_combined <- rbind(dplyr::mutate(dxs_fi_summary$area_quants_static, fluc_or_static = "static"),
+                                  dplyr::mutate(dxs_fi_summary$area_quants_fluc_noyear, fluc_or_static = "fluc"))
+
+data.table::fwrite(x = dxs_fi_summary_combined, file = "data/out/fire-independent-area-scaling-summary_dxs.csv")
 
 dxs_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = dxs_out)
 
@@ -440,15 +518,24 @@ dxs_nonzero_medians <- find_nonzero_medians(fire_independent_drivers_out = dxs_o
 
 dxs_nonzero_medians_static <- dxs_nonzero_medians$nonzero_medians_static
 dxs_final_static_drivers <- dxs_nonzero_medians_static$driver
+# version 0 (draft)
 # dxs_static_drivers_exclude <- c("lower_slope", "upper_slope", "friction_walking_only", dxs_nonzero_medians_static$driver[dxs_nonzero_medians_static$value == 0])
-dxs_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", dxs_nonzero_medians_static$driver[dxs_nonzero_medians_static$value == 0])
+# version 1
+# dxs_static_drivers_exclude <- c("csp_ergo_landforms_21", "csp_ergo_landforms_22", "csp_ergo_landforms_31", "csp_ergo_landforms_32", "friction_walking_only", dxs_nonzero_medians_static$driver[dxs_nonzero_medians_static$value == 0])
+# version 2
+dxs_static_drivers_exclude <- c()
+
 dxs_final_static_drivers <- dxs_final_static_drivers[!(dxs_final_static_drivers %in% dxs_static_drivers_exclude)]
 
 # All fluctuating drivers perhaps have high enough expectation of proportional
 # landcovers
 dxs_nonzero_medians_fluc <- dxs_nonzero_medians$nonzero_medians_fluc
 dxs_final_fluc_drivers <- dxs_nonzero_medians_fluc$driver
-dxs_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", dxs_nonzero_medians_fluc$driver[dxs_nonzero_medians_fluc$value == 0])
+# version 1
+# dxs_fluc_drivers_exclude <- c("lcms_change_01", "lcms_change_04", "lcms_landcover_01", "lcms_landcover_04", dxs_nonzero_medians_fluc$driver[dxs_nonzero_medians_fluc$value == 0])
+# version 2 (keep all variables)
+dxs_fluc_drivers_exclude <- c()
+
 dxs_final_fluc_drivers <- dxs_final_fluc_drivers[!(dxs_final_fluc_drivers %in% dxs_fluc_drivers_exclude)]
 
 dxs_out$out_static <- 
@@ -467,10 +554,19 @@ dxs_drivers <-
 
 dxs_drivers_adjusted <-
   adjust_scale_dependent_drivers(fire_independent_drivers_out = dxs_out, 
-                                 fired_daily_drivers = dxs_drivers)
+                                 fired_daily_drivers_biome = dxs_drivers)
 
-sf::st_write(obj = dxs_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v1.gpkg", delete_dsn = TRUE)
-data.table::fwrite(x = sf::st_drop_geometry(dxs_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v1.csv")
+# version 3 keeps the raw variable values too, with the column prefixed by "raw_"
+# version 2 corrects all variables for fire-independent scaling relationships
+# without excluding any a priori
+sf::st_write(obj = dxs_drivers_adjusted, dsn = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v3.gpkg", delete_dsn = TRUE)
+data.table::fwrite(x = sf::st_drop_geometry(dxs_drivers_adjusted), file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v3.csv")
+
+### Synchronize with AWS s3
+system2(command = "aws", args = "s3 sync data/out/ s3://california-megafires/data/out/", stdout = TRUE)  
+
+
+
 
 ### ----
 
@@ -615,121 +711,11 @@ dxs_plot_fluc$fi_summary_wide %>%
 
 ### --- Plot together
 
-library(patchwork)
-
 static_plots <- (tcf_plot_static$plot + mfws_plot_static$plot) / (tgss_plot_static$plot + dxs_plot_static$plot)
 static_plots <- static_plots + patchwork::plot_annotation(title = "Fire-independent scaling relationships (static drivers)")
 fluc_plots <- (tcf_plot_fluc$plot + mfws_plot_fluc$plot) / (tgss_plot_fluc$plot + dxs_plot_fluc$plot)
 fluc_plots <- fluc_plots + patchwork::plot_annotation(title = "Fire-independent scaling relationships (fluctuating drivers)")
 
-ggsave(filename = "figs/fire-independent-scaling-relationships_static_plot.png", plot = static_plots, width = 12, height = 12)
-ggsave(filename = "figs/fire-independent-scaling-relationships_fluc_plot.png", plot = fluc_plots, width = 12, height = 12)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# # Narrow valleys
-# ggplot() +
-#   geom_point(data = out_static[out_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10, y = value)) +
-#   geom_point(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-#   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-#   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_42" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-#   scale_color_viridis_d() +
-#   ggtitle(unique(out_static$driver_desc[out_static$driver == "csp_ergo_landforms_42"]))
-# 
-# # Valleys
-# ggplot() +
-#   geom_point(data = out_static[out_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10, y = value)) +
-#   geom_point(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-#   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-#   geom_smooth(data = area_quants_static[area_quants_static$driver == "csp_ergo_landforms_41" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-#   scale_color_viridis_d() +
-#   ggtitle(unique(out_static$driver_desc[out_static$driver == "csp_ergo_landforms_41"]))
-# 
-# # Vegetation structure rumple index
-# ggplot() +
-#   geom_point(data = out_fluc[out_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10, y = value)) +
-#   geom_point(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-#   geom_smooth(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-#   geom_smooth(data = area_quants_fluc[area_quants_fluc$driver == "veg_structure_rumple" & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-#   facet_wrap(facets = "ig_year") +
-#   scale_color_viridis_d() +
-#   ggtitle(unique(out_fluc$driver_desc[out_fluc$driver == "veg_structure_rumple"]))
-# 
-# 
-# # Veg structure rumple index for a single year
-# ggplot() +
-#   geom_point(data = out_fluc[out_fluc$ig_year == 2019 & out_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10, y = value)) +
-#   geom_point(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-#   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple", ], mapping = aes(x = area_log10_round, y = value, color = quantile)) +
-#   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$driver == "veg_structure_rumple" & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-#   scale_color_viridis_d() +
-#   ggtitle(unique(out_fluc$driver_desc[out_fluc$driver == "veg_structure_rumple"]))
-# 
-# # All static drivers, but just the medians
-# static_driver_median_plots <-
-#   ggplot() +
-#   geom_point(data = out_static, mapping = aes(x = area_log10, y = value)) +
-#   geom_smooth(data = area_quants_static[area_quants_static$driver != "proj_area" & area_quants_static$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-#   facet_wrap(facets = c("driver_desc"), scales = "free_y") +
-#   scale_color_viridis_d()
-# 
-# ggsave(filename = "figs/fire-independent_static-drivers_median.png", plot = static_driver_median_plots)
-#
-#
-# All fluctuating drivers for an example year (2019), but just the medians
-# fluc_driver_median_plots <-
-#   ggplot() +
-#   geom_point(data = out_fluc[out_fluc$ig_year == 2019, ], mapping = aes(x = area_log10, y = value)) +
-#   geom_smooth(data = area_quants_fluc[area_quants_fluc$ig_year == 2019 & area_quants_fluc$quantile == 0.5, ], mapping = aes(x = area_log10_round, y = value), color = "red") +
-#   facet_wrap(facets = c("driver_desc"), scales = "free_y") +
-#   scale_color_viridis_d()
-#
-# ggsave(filename = "figs/fire-independent_fluc-drivers_medians.png", plot = fluc_driver_median_plots)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# naming_conventions <-
-#   fired_drivers_long %>%
-#   dplyr::group_by(driver, driver_desc) %>%
-#   dplyr::tally() %>%
-#   dplyr::select(-n)
-# 
-# write.csv(x = naming_conventions, file = "data/out/driver-naming-conventions.csv", row.names = FALSE)
+ggsave(filename = "figs/fire-independent-scaling-relationships_static_plot_v2.png", plot = static_plots, width = 12, height = 12)
+ggsave(filename = "figs/fire-independent-scaling-relationships_fluc_plot_v2.png", plot = fluc_plots, width = 12, height = 12)
 

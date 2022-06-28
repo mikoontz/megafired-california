@@ -8,7 +8,6 @@ system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_
 system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_daily_ca_epsg3310_2003-2020.gpkg data/out/fired_daily_ca_epsg3310_2003-2020.gpkg")
 system2(command = "aws", args = "s3 cp s3://california-megafires/data/raw/resolve-ecoregions-2017_california.geojson data/raw/resolve-ecoregions-2017_california.geojson")
 
-
 fired_daily_resolve <- read.csv("data/out/fired_daily_resolve.csv")
 
 fired_daily <-
@@ -72,7 +71,8 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
                   x_samp = sf::st_coordinates(.)[, "X"],
                   y_samp = sf::st_coordinates(.)[, "Y"]) %>% 
     sf::st_drop_geometry() %>% 
-    dplyr::as_tibble()
+    dplyr::as_tibble() %>% 
+    dplyr::mutate(set = sample(1:n_sets, size = nrow(.), replace = TRUE))
   
   # Pack each row representing the the actual fire spread geometries with a data.frame
   # that represents the new set of n_pts centroids for those fire spread geometries, then
@@ -83,88 +83,89 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
     dplyr::mutate(samps = list(biome_sample_points)) %>% 
     tidyr::unnest(cols = "samps")
   
-  # What are the new centroids for each of those geometries?
-  samps_geo <-
-    fired_biome_with_samps %>% 
-    sf::st_drop_geometry() %>% 
-    sf::st_as_sf(coords = c("x_samp", "y_samp"), crs = 3310) %>%
-    sf::st_geometry()
-  
-  # What are the old centroids of the actual locations of the fire/day combinations? 
-  fired_centroids <- 
-    fired_biome_with_samps %>% 
-    sf::st_drop_geometry() %>% 
-    sf::st_as_sf(coords = c("centroid_x", "centroid_y"), crs = 3310) %>% 
-    sf::st_geometry()
-  
-  # What does the affine transformation look like to slide each fire/day combination
-  # geometry from its actual location to the new centroid (1 of n_pts)?
-  affine_transformation <- samps_geo - fired_centroids
-  
-  # Apply the 6.2 million affine transformations to the original fire/day combination
-  # geometries and set the CRS to what we know it is: EPSG3310
-  new_fired_geo <- (sf::st_geometry(fired_biome_with_samps) + affine_transformation) %>% sf::st_set_crs(3310)
-  
-  # Updated sf object of 6.2 million geometires now has each fire/day combination geometry
-  # located at 1 of 1,000 sample points within the Temperate Conifer Forest biome
-  fired_biome_with_new_geo <- sf::st_set_geometry(x = fired_biome_with_samps, value = new_fired_geo)
-  fired_biome_with_new_geo_simple <-
-    fired_biome_with_new_geo %>% 
-    dplyr::select(did, id, date, samp_id)
-  
   # Split data (randomly) into more manageable sizes 
   # The random set assignments should be at the "sample id" level, such that all samp_id with a
   # given value will go into the same set (and therefore all FIRED polygons will be represented at
   # that particular random location)
-  biome_sample_points <-
-    biome_sample_points %>% 
-    dplyr::mutate(set = sample(1:n_sets, size = nrow(.), replace = TRUE))
-  
-  grouping <- biome_sample_points$set[fired_biome_with_new_geo_simple$samp_id]
   set_names <- stringr::str_pad(string = as.character(1:n_sets), width = 2, side = "left", pad = "0")
-  l <- split(x = fired_biome_with_new_geo_simple, f = grouping)
-  
-  # write to disk
   fnames <- paste0("fired_daily_random-locations_", short_name, "_v4_", set_names)
+  l <- split(x = fired_biome_with_samps, f = fired_biome_with_samps$set)
   
-  pblapply(X = 1:n_sets, cl = n_sets, FUN = function(i) {
+  out <- pblapply(X = 1:n_sets, cl = n_sets, FUN = function(i) {
+    
+    # What are the new centroids for each of those geometries?
+    samps_geo <-
+      l[[i]] %>% 
+      sf::st_drop_geometry() %>% 
+      sf::st_as_sf(coords = c("x_samp", "y_samp"), crs = 3310) %>%
+      sf::st_geometry()
+    
+    # What are the old centroids of the actual locations of the fire/day combinations? 
+    fired_centroids <- 
+      l[[i]] %>% 
+      sf::st_drop_geometry() %>% 
+      sf::st_as_sf(coords = c("centroid_x", "centroid_y"), crs = 3310) %>% 
+      sf::st_geometry()
+    
+    # What does the affine transformation look like to slide each fire/day combination
+    # geometry from its actual location to the new centroid (1 of n_pts)?
+    affine_transformation <- samps_geo - fired_centroids
+    
+    # Apply the 6.2 million affine transformations to the original fire/day combination
+    # geometries and set the CRS to what we know it is: EPSG3310
+    new_fired_geo <- 
+      (sf::st_geometry(l[[i]]) + affine_transformation) %>% 
+      sf::st_set_crs(3310)
+    
+    # Updated sf object of 6.2 million geometires now has each fire/day combination geometry
+    # located at 1 of 1,000 sample points within the Temperate Conifer Forest biome
+    fired_biome_with_new_geo <- sf::st_set_geometry(x = l[[i]], value = new_fired_geo)
+    fired_biome_with_new_geo_simple <-
+      fired_biome_with_new_geo %>% 
+      dplyr::select(did, id, date, samp_id)
+    
+    # write to disk
     dir.create(file.path("data", "out", "fired_daily_random-locations", fnames[i]), recursive = TRUE, showWarnings = FALSE)
-    sf::st_write(obj = l[[i]], 
+    sf::st_write(obj = fired_biome_with_new_geo_simple, 
                  dsn = file.path("data", "out", "fired_daily_random-locations", fnames[i], paste0(fnames[i], ".shp")), 
                  delete_dsn = file.exists(file.path("data", "out", "fired_daily_random-locations", fnames[i], paste0(fnames[i], ".shp"))))
+    
+    # v2 used 1,000 points
+    # v3 used 1,000 points and the simplified sf object with just did, date, id, samp_id
+    # v4 randomizes which of the n_pts go into which of the n_sets sets.
+    return(fired_biome_with_new_geo_simple)
   })
-  
-  # v2 used 1,000 points
-  # v3 used 1,000 points and the simplified sf object with just did, date, id, samp_id
-  # v4 randomizes which of the n_pts go into which of the n_sets sets.
-  
-  return(NULL)
+  return(out)
 }
 
 
 (start_time <- Sys.time())
-set_fire_independent_locations(biome = "Temperate Conifer Forests", short_name = "tcf", 
-                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+tcf <-
+  set_fire_independent_locations(biome = "Temperate Conifer Forests", short_name = "tcf", 
+                                 buffer = 50000, seed = 1224, n_sets = 2, n_pts = 5)
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 # Time difference of 86.65956 mins for 1,000 points in the Temperate Conifer Forest
 
 (start_time <- Sys.time())
-set_fire_independent_locations(biome = "Mediterranean Forests, Woodlands & Scrub", short_name = "mfws", 
-                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+mfws <- 
+  set_fire_independent_locations(biome = "Mediterranean Forests, Woodlands & Scrub", short_name = "mfws", 
+                                 buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
 
 (start_time <- Sys.time())
-set_fire_independent_locations(biome = "Temperate Grasslands, Savannas & Shrublands", short_name = "tgss", 
-                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+tgss <- 
+  set_fire_independent_locations(biome = "Temperate Grasslands, Savannas & Shrublands", short_name = "tgss", 
+                                 buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
 (start_time <- Sys.time())
-set_fire_independent_locations(biome = "Deserts & Xeric Shrublands", short_name = "dxs", 
-                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+dxs <- 
+  set_fire_independent_locations(biome = "Deserts & Xeric Shrublands", short_name = "dxs", 
+                                 buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 

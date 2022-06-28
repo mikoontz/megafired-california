@@ -18,17 +18,7 @@ fired_daily <-
   dplyr::left_join(fired_daily_resolve) %>% 
   sf::st_set_agr(value = "constant")
 
-## determine the fires that we want to work with based on filtering criteria
-# We only want fire/day combinations whose centroids are within California 
 # Expand the daily fire perimeters such that they are placed on top of 1000 random points (within each Resolve Biome)
-resolve <- 
-  sf::st_read("data/raw/resolve-ecoregions-2017_california.geojson") %>% 
-  sf::st_transform(3310) %>% 
-  dplyr::select(BIOME_NAME, ECO_NAME) %>% 
-  dplyr::rename_all(.funs = tolower) %>% 
-  sf::st_set_agr(value = "constant") %>% 
-  sf::st_intersection(y = ca)
-
 ca <-   
   USAboundaries::us_states(resolution = "high", states = "California") %>% 
   sf::st_transform(3310) %>% 
@@ -41,6 +31,14 @@ ca_or_nv_az <-
   sf::st_set_agr(value = "constant") %>% 
   sf::st_union() %>% 
   sf::st_geometry()
+
+resolve <- 
+  sf::st_read("data/raw/resolve-ecoregions-2017_california.geojson") %>% 
+  sf::st_transform(3310) %>% 
+  dplyr::select(BIOME_NAME, ECO_NAME) %>% 
+  dplyr::rename_all(.funs = tolower) %>% 
+  sf::st_set_agr(value = "constant") %>% 
+  sf::st_intersection(y = ca)
 
 set_fire_independent_locations <- function(biome, short_name, buffer = 50000, seed = 1224, n_sets = 5, n_pts = 1000) {
   

@@ -140,7 +140,7 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
 (start_time <- Sys.time())
 tcf <-
   set_fire_independent_locations(biome = "Temperate Conifer Forests", short_name = "tcf", 
-                                 buffer = 50000, seed = 1224, n_sets = 2, n_pts = 5)
+                                 buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
 
 system2(command = "aws", args = "s3 sync s3://california-megafires/data/out/fired_daily_random-locations data/out/data/out/fired_daily_random-locations")
 

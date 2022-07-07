@@ -25,7 +25,8 @@ driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
 run_rf_for_biome <- function(fired_drivers_fname,
                              biome_shortname,
                              distance_thresholds = c(0, 1000, 5000, 10000, 25000, 50000),
-                             random_seed = 1848) {
+                             random_seed = 1848,
+                             spatial = FALSE) {
   fires <-
     data.table::fread(fired_drivers_fname) %>%
     dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
@@ -133,13 +134,20 @@ run_rf_for_biome <- function(fired_drivers_fname,
   )
   (end_time <- Sys.time())
   (difftime(time1 = end_time, time2 = start_time, units = "mins"))
+ 
+  readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_nonspatial.rds")))
+
+    biome_spatial <- biome_nonspatial
   
+  if (spatial) {
   biome_spatial <- spatialRF::rf_spatial(
     model = biome_nonspatial,
     method = "mem.moran.sequential", #default method
     verbose = FALSE,
     seed = random_seed
   )
+  readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_spatial.rds")))
+}
   
   biome_response_curves_gg <-
     spatialRF::plot_response_curves(
@@ -147,10 +155,7 @@ run_rf_for_biome <- function(fired_drivers_fname,
       quantiles = c(0.5),
       ncol = 5
     )
-  
-  readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_nonspatial.rds")))
-  readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_spatial.rds")))
-  
+
   system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_nonspatial.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_nonspatial.rds"), stdout = TRUE)  
   system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_spatial.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_spatial.rds"), stdout = TRUE)  
 

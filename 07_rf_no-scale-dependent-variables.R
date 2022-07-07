@@ -147,6 +147,7 @@ run_rf_for_biome <- function(fired_drivers_fname,
     seed = random_seed
   )
   readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_spatial.rds")))
+  system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_spatial.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_spatial.rds"), stdout = TRUE)  
 }
   
   biome_response_curves_gg <-
@@ -157,8 +158,7 @@ run_rf_for_biome <- function(fired_drivers_fname,
     )
 
   system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_nonspatial.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_nonspatial.rds"), stdout = TRUE)  
-  system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_spatial.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_spatial.rds"), stdout = TRUE)  
-
+  
   out <- list(model = biome_spatial, nonspatial_model = biome_nonspatial, plot = biome_response_curves_gg)
   
   return(out)

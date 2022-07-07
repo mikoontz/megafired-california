@@ -136,11 +136,9 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
   return(out)
 }
 
-
 (start_time <- Sys.time())
-tcf <-
-  set_fire_independent_locations(biome = "Temperate Conifer Forests", short_name = "tcf", 
-                                 buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+set_fire_independent_locations(biome = "Temperate Conifer Forests", short_name = "tcf", 
+                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
 
 system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
@@ -149,9 +147,8 @@ system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s
 # Time difference of 86.65956 mins for 1,000 points in the Temperate Conifer Forest
 
 (start_time <- Sys.time())
-mfws <- 
-  set_fire_independent_locations(biome = "Mediterranean Forests, Woodlands & Scrub", short_name = "mfws", 
-                                 buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+set_fire_independent_locations(biome = "Mediterranean Forests, Woodlands & Scrub", short_name = "mfws", 
+                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
 
 system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
@@ -160,9 +157,8 @@ system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s
 
 
 (start_time <- Sys.time())
-tgss <- 
-  set_fire_independent_locations(biome = "Temperate Grasslands, Savannas & Shrublands", short_name = "tgss", 
-                                 buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+set_fire_independent_locations(biome = "Temperate Grasslands, Savannas & Shrublands", short_name = "tgss", 
+                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
 
 system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
@@ -170,12 +166,10 @@ system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
 (start_time <- Sys.time())
-dxs <- 
-  set_fire_independent_locations(biome = "Deserts & Xeric Shrublands", short_name = "dxs", 
-                                 buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+set_fire_independent_locations(biome = "Deserts & Xeric Shrublands", short_name = "dxs", 
+                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
 
 system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
-

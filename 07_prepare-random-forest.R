@@ -22,6 +22,7 @@ driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
 
 #### ---- Temperate Conifer Forests ---- ####
 fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v3.csv"
+fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v4.csv"
 
 fires <-
   data.table::fread(fired_drivers_fname) %>%
@@ -33,7 +34,8 @@ fires <-
                 -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
   dplyr::left_join(fired_daily_response) %>% 
   dplyr::mutate(sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha),
-                ewe = ifelse(area_ha > 800, yes = 1, no = 0)) %>% 
+                area_log10_pct = ecdf(area_log10)(area_log10),
+                ewe = ifelse(area_log10_pct >= 0.95, yes = 1, no = 0)) %>% 
   as.data.frame()
 
 idx <- substr(names(fires), start = 1, stop = 4) == "adj_"
@@ -171,7 +173,7 @@ data <- fires
 #                   y = tcf_sf) %>% 
 #   units::drop_units()
 # 
-# random_seed <- 1848
+random_seed <- 1848
 # 
 
 data <-
@@ -192,44 +194,66 @@ tcf_nonspatial <- spatialRF::rf(
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
-# (start_time <- Sys.time())
-# tcf_nonspatial <- spatialRF::rf(
-#   data = data,
-#   dependent.variable.name = "area_log10",
-#   predictor.variable.names = predictor.variable.names_reduced,
-#   # distance.matrix = tcf_dist_mat,
-#   distance.thresholds = distance_thresholds,
-#   # xy = xy, #not needed by rf, but other functions read it from the model
-#   seed = random_seed,
-#   verbose = TRUE
-# )
-# (end_time <- Sys.time())
-# (difftime(time1 = end_time, time2 = start_time, units = "mins"))
-# 
-# (start_time <- Sys.time())
-# tcf_nonspatial <- spatialRF::rf(
-#   data = data,
-#   dependent.variable.name = "ewe",
-#   predictor.variable.names = predictor.variable.names_reduced,
-#   # distance.matrix = tcf_dist_mat,
-#   distance.thresholds = distance_thresholds,
-#   # xy = xy, #not needed by rf, but other functions read it from the model
-#   seed = random_seed,
-#   verbose = TRUE
-# )
-# (end_time <- Sys.time())
-# (difftime(time1 = end_time, time2 = start_time, units = "mins"))
-# 
-# unique(tcf_nonspatial$ranger.arguments$case.weights)
-# 
-# tcf_nonspatial_response_curves_accentuate_gg <-
-#   spatialRF::plot_response_curves(
-#     tcf_nonspatial,
-#     quantiles = c(0.5),
-#     ncol = 5
-#   )
-# 
-# tcf_nonspatial_response_curves_accentuate_gg
+(start_time <- Sys.time())
+tcf_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "area_log10",
+  predictor.variable.names = predictor.variable.names_reduced,
+  # distance.matrix = tcf_dist_mat,
+  # distance.thresholds = distance_thresholds,
+  # xy = xy, #not needed by rf, but other functions read it from the model
+  # seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+(start_time <- Sys.time())
+tcf_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "ewe",
+  predictor.variable.names = predictor.variable.names_reduced,
+  # distance.matrix = tcf_dist_mat,
+  # distance.thresholds = distance_thresholds,
+  # xy = xy, #not needed by rf, but other functions read it from the model
+  # seed = random_seed,
+  ranger.arguments = list(classification = TRUE),
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+(start_time <- Sys.time())
+tcf_nonspatial <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "ewe",
+  predictor.variable.names = predictor.variable.names_reduced,
+  # distance.matrix = tcf_dist_mat,
+  distance.thresholds = distance_thresholds,
+  # xy = xy, #not needed by rf, but other functions read it from the model
+  # seed = random_seed,
+  verbose = TRUE
+)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+
+unique(tcf_nonspatial$ranger.arguments$case.weights)
+
+tcf_nonspatial_response_curves_accentuate_gg <-
+  spatialRF::plot_response_curves(
+    tcf_nonspatial,
+    quantiles = c(0.5),
+    ncol = 5
+  )
+
+tcf_nonspatial_response_curves_accentuate_gg
+
+preds <- predict(object = tcf_nonspatial, data = data)
+sum(preds$predictions)
+data$preds = preds$predictions
+
+which(data$preds - data$ewe != 0)
+data[which(data$preds == 1), ]
 # 
 # readr::write_rds(x = tcf_nonspatial, file = "data/out/rf/tcf-nonspatial.rds")
 # 

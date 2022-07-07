@@ -9,13 +9,13 @@ library(data.table)
 library(patchwork)
 
 daily_orig <- 
-  sf::st_read("data/out/fired_daily_ca.gpkg") %>% 
+  sf::st_read("data/out/fired_daily_ca_v2.gpkg") %>% 
   dplyr::mutate(lc_name = as.factor(lc_name),
                 date = lubridate::ymd(date)) %>% 
   dplyr::select(did, id, date, ignition_date, ignition_day, ignition_month, ignition_year, last_date, event_day, event_duration, daily_area_ha, cum_area_ha, cum_area_ha_tminus1)
 
 events <- 
-  sf::st_read("data/out/fired_events_ca.gpkg") %>% 
+  sf::st_read("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
   dplyr::select(id, ignition_date, ignition_day, ignition_month, ignition_year, last_date, event_duration, total_area_ha)
 
 # We use Resolve Ecoregions within California to divide up the state into different kinds of fire-prone regions

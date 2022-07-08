@@ -177,32 +177,36 @@ run_rf_for_biome <- function(fired_drivers_fname,
 tcf <- run_rf_for_biome(fired_drivers_fname = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v3.csv",
                         biome_shortname = "tcf",
                         distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000),
-                        random_seed = 1240)
-mfws <- run_rf_for_biome(fired_drivers_fname = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v3.csv",
-                         biome_shortname = "mfws",
-                         distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000),
-                         random_seed = 1240)
-tgss <- run_rf_for_biome(fired_drivers_fname = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v3.csv",
-                         biome_shortname = "tgss",
-                         distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000),
-                         random_seed = 1240)
-dxs <- run_rf_for_biome(fired_drivers_fname = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v3.csv",
-                        biome_shortname = "dxs",
-                        distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000),
-                        random_seed = 1240)
+                        random_seed = 1755, 
+                        spatial = TRUE)
+# mfws <- run_rf_for_biome(fired_drivers_fname = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v3.csv",
+#                          biome_shortname = "mfws",
+#                          distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000),
+#                          random_seed = 1755, 
+#                          spatial = TRUE)
+# tgss <- run_rf_for_biome(fired_drivers_fname = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v3.csv",
+#                          biome_shortname = "tgss",
+#                          distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000),
+#                          random_seed = 1755, 
+#                          spatial = TRUE)
+# dxs <- run_rf_for_biome(fired_drivers_fname = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v3.csv",
+#                         biome_shortname = "dxs",
+#                         distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000),
+#                         random_seed = 1755, 
+#                         spatial = TRUE)
 
 
-response_tcf <- patchwork::patchworkGrob(x = tcf$plot + patchwork::plot_annotation(title = paste0("Temperate Conifer Forests (oob R^2 = ", round(tcf$model$r.squared, 2), ")")) & theme(legend.position = "none"))
-response_mfws <-  patchwork::patchworkGrob(x = mfws$plot + patchwork::plot_annotation(title = paste0("Mediterranean Forests, Woodlands & Scrub (oob R^2 = ", round(mfws$model$r.squared, 2), ")")) & theme(legend.position = "none"))
-response_tgss <- patchwork::patchworkGrob(x = tgss$plot + patchwork::plot_annotation(title = paste0("Temperate Grasslands, Savannas & Shrublands (oob R^2 = ", round(tgss$model$r.squared, 2), ")")) & theme(legend.position = "none"))
-response_dxs <- patchwork::patchworkGrob(x = dxs$plot + patchwork::plot_annotation(title = paste0("Deserts & Xeric Shrublands (oob R^2 = ", round(dxs$model$r.squared, 2), ")")) & theme(legend.position = "none"))
-
-response_curve_patchwork <- (patchwork::wrap_elements(full = response_tcf) + patchwork::wrap_elements(full = response_mfws)) /  (patchwork::wrap_elements(full = response_tgss) + patchwork::wrap_elements(full = response_dxs))
-
-
-imp_tcf <- spatialRF::plot_importance(tcf$model) + ggtitle(label = "Temperate Conifer Forests", subtitle = "Permutation importance computed on the out-of-bag data")
-imp_mfws <- spatialRF::plot_importance(mfws$model) + ggtitle(label = "Mediterranean Forests, Woodlands & Scrub", subtitle = "Permutation importance computed on the out-of-bag data")
-imp_tgss <- spatialRF::plot_importance(tgss$model) + ggtitle(label = "Temperate Grasslands, Savannas & Shrublands", subtitle = "Permutation importance computed on the out-of-bag data")
-imp_dxs <- spatialRF::plot_importance(dxs$model) + ggtitle(label = "Deserts & Xeric Shrublands", subtitle = "Permutation importance computed on the out-of-bag data")
-
-imp_patchwork <- (imp_tcf + imp_mfws) / (imp_tgss + imp_dxs)
+# response_tcf <- patchwork::patchworkGrob(x = tcf$plot + patchwork::plot_annotation(title = paste0("Temperate Conifer Forests (oob R^2 = ", round(tcf$model$r.squared, 2), ")")) & theme(legend.position = "none"))
+# response_mfws <-  patchwork::patchworkGrob(x = mfws$plot + patchwork::plot_annotation(title = paste0("Mediterranean Forests, Woodlands & Scrub (oob R^2 = ", round(mfws$model$r.squared, 2), ")")) & theme(legend.position = "none"))
+# response_tgss <- patchwork::patchworkGrob(x = tgss$plot + patchwork::plot_annotation(title = paste0("Temperate Grasslands, Savannas & Shrublands (oob R^2 = ", round(tgss$model$r.squared, 2), ")")) & theme(legend.position = "none"))
+# response_dxs <- patchwork::patchworkGrob(x = dxs$plot + patchwork::plot_annotation(title = paste0("Deserts & Xeric Shrublands (oob R^2 = ", round(dxs$model$r.squared, 2), ")")) & theme(legend.position = "none"))
+# 
+# response_curve_patchwork <- (patchwork::wrap_elements(full = response_tcf) + patchwork::wrap_elements(full = response_mfws)) /  (patchwork::wrap_elements(full = response_tgss) + patchwork::wrap_elements(full = response_dxs))
+# 
+# 
+# imp_tcf <- spatialRF::plot_importance(tcf$model) + ggtitle(label = "Temperate Conifer Forests", subtitle = "Permutation importance computed on the out-of-bag data")
+# imp_mfws <- spatialRF::plot_importance(mfws$model) + ggtitle(label = "Mediterranean Forests, Woodlands & Scrub", subtitle = "Permutation importance computed on the out-of-bag data")
+# imp_tgss <- spatialRF::plot_importance(tgss$model) + ggtitle(label = "Temperate Grasslands, Savannas & Shrublands", subtitle = "Permutation importance computed on the out-of-bag data")
+# imp_dxs <- spatialRF::plot_importance(dxs$model) + ggtitle(label = "Deserts & Xeric Shrublands", subtitle = "Permutation importance computed on the out-of-bag data")
+# 
+# imp_patchwork <- (imp_tcf + imp_mfws) / (imp_tgss + imp_dxs)

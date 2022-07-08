@@ -22,13 +22,21 @@ fired_daily_response <-
 
 driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
 
+target_event_ids <-
+  sf::read_sf("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
+  dplyr::mutate(area_ha = as.numeric(sf::st_area(.)) / 10000) %>% 
+  dplyr::filter(area_ha >= 121.406) %>% 
+  dplyr::pull(id)
+
 run_rf_for_biome <- function(fired_drivers_fname,
                              biome_shortname,
                              distance_thresholds = c(0, 1000, 5000, 10000, 25000, 50000),
                              random_seed = 1848,
                              spatial = FALSE) {
+  
   fires <-
     data.table::fread(fired_drivers_fname) %>%
+    dplyr::filter(id %in% target_event_ids) %>% 
     dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
                   -cumu_count, -cumu_area_ha,
                   -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
@@ -165,6 +173,7 @@ run_rf_for_biome <- function(fired_drivers_fname,
 }
 
 #### 
+
 tcf <- run_rf_for_biome(fired_drivers_fname = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v3.csv",
                         biome_shortname = "tcf",
                         distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000),

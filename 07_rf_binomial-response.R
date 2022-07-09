@@ -48,7 +48,7 @@ fires <-
   fires %>% 
   dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
                 ewe = ifelse(area_log10_pct >= 0.95, yes = 1, no = 0)) %>% 
-  dplyr::select(id, did, ewe, area_log10, barriers_to_spread, change_diversity, starts_with("csp_ergo_landforms"), elevation, flat, friction, friction_walking_only, landcover_diversity, landform_diversity, starts_with("lcms_change"), starts_with("lcms_landcover"), lower_slope, ndvi, road_density_mpha, rumple_index, upper_slope, valleys, veg_structure_rumple, npl, npl_at_ignition, concurrent_fires, wind_anisotropy, wind_terrain_anisotropy, wind_terrain_alignment, max_wind_speed_pct, min_wind_speed_pct, max_rh_pct, min_rh_pct, max_temp_pct, min_temp_pct, max_soil_water_pct, min_soil_water_pct, max_vpd_pct, min_vpd_pct, starts_with("spei"), pdsi_z, erc_pct, bi_pct, fm100_pct, fm1000_pct, sqrt_aoi_tm1) %>% 
+  dplyr::select(id, did, ewe, x_biggest_poly_3310, y_biggest_poly_3310, area_log10, barriers_to_spread, change_diversity, starts_with("csp_ergo_landforms"), elevation, flat, friction, friction_walking_only, landcover_diversity, landform_diversity, starts_with("lcms_change"), starts_with("lcms_landcover"), lower_slope, ndvi, road_density_mpha, rumple_index, upper_slope, valleys, veg_structure_rumple, npl, npl_at_ignition, concurrent_fires, wind_anisotropy, wind_terrain_anisotropy, wind_terrain_alignment, max_wind_speed_pct, min_wind_speed_pct, max_rh_pct, min_rh_pct, max_temp_pct, min_temp_pct, max_soil_water_pct, min_soil_water_pct, max_vpd_pct, min_vpd_pct, starts_with("spei"), pdsi_z, erc_pct, bi_pct, fm100_pct, fm1000_pct, sqrt_aoi_tm1) %>% 
   as.data.frame()
 
 human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
@@ -134,7 +134,7 @@ predictor.variable.names_reduced <- spatialRF::auto_cor(
 ##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
 data <- fires
 distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000)
-biome_shortname <- "tcf"
+
 random_seed <- 2203
 xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
 

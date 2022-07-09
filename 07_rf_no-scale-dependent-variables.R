@@ -12,10 +12,19 @@ library(patchwork)
 library(readr)
 
 # read in fire data
-system2(command = "aws", args = "s3 sync s3://california-megafires/data/out/  data/out/", stdout = TRUE)  
+system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_daily_ca_response-vars.csv  data/out/fired_daily_ca_response-vars.csv", stdout = TRUE)  
+system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_events_ca_epsg3310_2003-2020.gpkg  data/out/fired_events_ca_epsg3310_2003-2020.gpkg", stdout = TRUE)  
+
+system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v3.csv  data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v3.csv", stdout = TRUE)  
+system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v3.csv  data/out/analysis-ready/FIRED-daily-scale-drivers_california_mfws_v3.csv", stdout = TRUE)  
+system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v3.csv  data/out/analysis-ready/FIRED-daily-scale-drivers_california_tgss_v3.csv", stdout = TRUE)  
+system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v3.csv  data/out/analysis-ready/FIRED-daily-scale-drivers_california_dxs_v3.csv", stdout = TRUE)  
+
 
 # read in driver descriptions
 system2(command = "aws", args = "s3 cp s3://california-megafires/tables/driver-descriptions.csv  tables/driver-descriptions.csv", stdout = TRUE)  
+
+
 
 fired_daily_response <- 
   data.table::fread(input = "data/out/fired_daily_ca_response-vars.csv")

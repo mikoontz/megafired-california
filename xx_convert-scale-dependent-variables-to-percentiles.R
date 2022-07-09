@@ -3,10 +3,18 @@ library(data.table)
 library(vegan)
 library(ggplot2)
 
-system2(command = "aws", args = "s3 sync s3://california-megafires/data/out/fired_daily_random-locations data/out/fired_daily_random-locations")
+# system2(command = "aws", args = "s3 sync s3://california-megafires/data/out/fired_daily_random-locations data/out/fired_daily_random-locations")
+
+# biome_shortname <- "mfws"
+# biome_shortname <- "tgss"
+biome_shortname <- "dxs"
 
 static_drivers <- 
-  list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", pattern = "static", full.names = TRUE) %>% 
+  list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", pattern = "static", full.names = TRUE)
+
+static_drivers <- static_drivers[grepl(pattern = biome_shortname, x = static_drivers)]
+static_drivers <- 
+  static_drivers %>% 
   lapply(FUN = fread) %>% 
   data.table::rbindlist()
 
@@ -17,7 +25,11 @@ static_drivers[, `:=`(.geo = NULL, `system:index` = NULL,
                       road_density_mpha = (road_length_m) / (proj_area / 10000),
                       surf_area = NULL, road_length_m = NULL)]
 fluc_drivers <- 
-  list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", pattern = "fluc", full.names = TRUE) %>% 
+  list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", pattern = "fluc", full.names = TRUE)
+
+fluc_drivers <- fluc_drivers[grepl(pattern = biome_shortname, x = fluc_drivers)]
+fluc_drivers <-
+  fluc_drivers %>% 
   lapply(FUN = fread) %>% 
   data.table::rbindlist()
 
@@ -54,7 +66,7 @@ fi_drivers <-
   dplyr::select(-samp_id) %>% 
   tidyr::nest(data = !c(did, date, id, driver))
 
-fired_drivers_fname <- "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v3.csv"
+fired_drivers_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v3.csv")
 
 fired_daily_response <- 
   data.table::fread(input = "data/out/fired_daily_ca_response-vars.csv")
@@ -96,6 +108,8 @@ fires_and_fi[, driver_pct := mapply(data, value, FUN = function(fi_value, fire_v
 
 # version 4 uses the actual FIRED polygons affine transformed to be on top of 1000 random points throughout the
 # temperate conifer forest biome
+# version 5 uses the actual FIRED polygons affine transformed to be on top of 500 random points throughout each biome
+
 fires_orig <-
   data.table::fread(fired_drivers_fname) %>%
   dplyr::select(-starts_with("adj")) %>% 
@@ -109,70 +123,73 @@ out <-
   dplyr::arrange(date, id) %>% 
   dplyr::left_join(fires_orig)
 
-data.table::fwrite(x = out, file = "data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v4.csv")
+new_fired_drivers_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv")
+data.table::fwrite(x = out, file = new_fired_drivers_fname)
 
-fires <- 
-  data.table::fread("data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v4.csv") %>% 
-  dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
-                -cumu_count, -cumu_area_ha,
-                -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
-                -ends_with("rtma"), -ends_with("rtma_pct"),
-                -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi"),
-                -starts_with("raw")) %>% 
-  dplyr::left_join(fired_daily_response) %>% 
-  dplyr::mutate(sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha))
+system2(command = "aws", args = paste0("s3 cp data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv"), stdout = TRUE)  
 
-idx <- substr(names(fires), start = 1, stop = 4) == "adj_"
-names(fires)[idx] <- substr(names(fires), start = 5, stop = nchar(names(fires)))[idx]
-
-fires_for_amy <-
-  fires %>% 
-  dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
-                ewe = ifelse(area_log10_pct >= 0.95, yes = 1, no = 0)) %>% 
-  dplyr::select(did, ewe, barriers_to_spread, change_diversity, starts_with("csp_ergo_landforms"), elevation, flat, friction, friction_walking_only, landcover_diversity, landform_diversity, starts_with("lcms_change"), starts_with("lcms_landcover"), lower_slope, ndvi, road_density_mpha, rumple_index, upper_slope, valleys, veg_structure_rumple, npl, npl_at_ignition, concurrent_fires, wind_anisotropy, wind_terrain_anisotropy, wind_terrain_alignment, max_wind_speed_pct, min_wind_speed_pct, max_rh_pct, min_rh_pct, max_temp_pct, min_temp_pct, max_soil_water_pct, min_soil_water_pct, max_vpd_pct, min_vpd_pct, starts_with("spei"), pdsi_z, erc_pct, bi_pct, fm100_pct, fm1000_pct, sqrt_aoi_tm1)
-
-
-fires_long <-
-  fires %>% 
-  dplyr::select(-c(x_biggest_poly_3310, y_biggest_poly_3310, daily_area_tminus1_ha, cum_area_ha, cum_area_ha_tminus1, daily_perim_km, daily_perim_tminus1_km, active_fireline_km, samp_id, predicted_aoi_log_cumarea_tm1, predicted_aoi_cumarea_tm1, aoir_modeled_cumarea_tm1, aoir_cumarea_tm1, predicted_aoi_log_sqrtarea_tm1, predicted_aoi_sqrtarea_tm1, aoir_modeled_sqrtarea_tm1, aoir_sqrtarea_tm1, daily_area_ha)) %>% 
-  dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10)) %>%
-  dplyr::mutate(area_log10_decile = floor(area_log10_pct * 10) + 0.5) %>% 
-  dplyr::mutate(area_log10_decile = ifelse(area_log10_decile == 10.5, yes = 9.5, no = area_log10_decile)) %>%
-  tidyr::pivot_longer(cols = -c(did, id, date, ig_year, area_ha, area_log10, area_log10_pct, area_log10_decile, biome_name, eco_name, biome_name_daily, eco_name_daily), names_to = "driver", values_to = "value") %>% 
-  dplyr::select(did, id, date, ig_year, area_ha, area_log10, area_log10_pct, area_log10_decile, biome_name, eco_name, biome_name_daily, eco_name_daily, everything()) %>% 
-  dplyr::left_join(driver_descriptions) %>% 
-  dplyr::mutate(driver_desc_ggplot = ifelse(driver_type %in% c("fuel", "topography"), yes = driver_desc, no = driver)) %>% 
-  dplyr::mutate(date = as.character(date))
-
-
-ggplot(dplyr::filter(fires_long, driver_type == "fuel"), aes(x = area_log10, y = value)) +
-  geom_smooth(color = "red") +
-  facet_wrap(facets = "driver_desc_ggplot") +
-  geom_hline(yintercept = 0.5, color = "black") +
-  theme_bw()
-ggplot(dplyr::filter(fires_long, driver_type == "topography"), aes(x = area_log10, y = value)) +
-  geom_smooth(color = "red") +
-  facet_wrap(facets = "driver_desc_ggplot") +
-  geom_hline(yintercept = 0.5, color = "black") +
-  theme_bw()
-ggplot(dplyr::filter(fires_long, driver_type == "human"), aes(x = area_log10, y = value)) +
-  geom_smooth(color = "red") +
-  facet_wrap(facets = "driver_desc_ggplot", scales = "free_y") +
-  geom_hline(yintercept = 0.5, color = "black") +
-  theme_bw()
-
-ggplot(dplyr::filter(fires_long, driver_type == "fuel"), aes(x = area_log10_pct, y = value)) +
-  geom_smooth(color = "red") +
-  facet_wrap(facets = "driver_desc_ggplot") +
-  geom_hline(yintercept = 0.5, color = "black") +
-  theme_bw()
-ggplot(dplyr::filter(fires_long, driver_type == "topography"), aes(x = area_log10_pct, y = value)) +
-  geom_smooth(color = "red") +
-  facet_wrap(facets = "driver_desc_ggplot") +
-  geom_hline(yintercept = 0.5, color = "black") +
-  theme_bw()
-ggplot(dplyr::filter(fires_long, driver_type == "human"), aes(x = area_log10_pct, y = value)) +
-  geom_smooth(color = "red") +
-  facet_wrap(facets = "driver_desc_ggplot", scales = "free_y") +
-  geom_hline(yintercept = 0.5, color = "black") +
-  theme_bw()
+# fires <- 
+#   data.table::fread("data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v4.csv") %>% 
+#   dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+#                 -cumu_count, -cumu_area_ha,
+#                 -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
+#                 -ends_with("rtma"), -ends_with("rtma_pct"),
+#                 -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi"),
+#                 -starts_with("raw")) %>% 
+#   dplyr::left_join(fired_daily_response) %>% 
+#   dplyr::mutate(sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha))
+# 
+# idx <- substr(names(fires), start = 1, stop = 4) == "adj_"
+# names(fires)[idx] <- substr(names(fires), start = 5, stop = nchar(names(fires)))[idx]
+# 
+# fires_for_amy <-
+#   fires %>% 
+#   dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
+#                 ewe = ifelse(area_log10_pct >= 0.95, yes = 1, no = 0)) %>% 
+#   dplyr::select(did, ewe, barriers_to_spread, change_diversity, starts_with("csp_ergo_landforms"), elevation, flat, friction, friction_walking_only, landcover_diversity, landform_diversity, starts_with("lcms_change"), starts_with("lcms_landcover"), lower_slope, ndvi, road_density_mpha, rumple_index, upper_slope, valleys, veg_structure_rumple, npl, npl_at_ignition, concurrent_fires, wind_anisotropy, wind_terrain_anisotropy, wind_terrain_alignment, max_wind_speed_pct, min_wind_speed_pct, max_rh_pct, min_rh_pct, max_temp_pct, min_temp_pct, max_soil_water_pct, min_soil_water_pct, max_vpd_pct, min_vpd_pct, starts_with("spei"), pdsi_z, erc_pct, bi_pct, fm100_pct, fm1000_pct, sqrt_aoi_tm1)
+# 
+# 
+# fires_long <-
+#   fires %>% 
+#   dplyr::select(-c(x_biggest_poly_3310, y_biggest_poly_3310, daily_area_tminus1_ha, cum_area_ha, cum_area_ha_tminus1, daily_perim_km, daily_perim_tminus1_km, active_fireline_km, samp_id, predicted_aoi_log_cumarea_tm1, predicted_aoi_cumarea_tm1, aoir_modeled_cumarea_tm1, aoir_cumarea_tm1, predicted_aoi_log_sqrtarea_tm1, predicted_aoi_sqrtarea_tm1, aoir_modeled_sqrtarea_tm1, aoir_sqrtarea_tm1, daily_area_ha)) %>% 
+#   dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10)) %>%
+#   dplyr::mutate(area_log10_decile = floor(area_log10_pct * 10) + 0.5) %>% 
+#   dplyr::mutate(area_log10_decile = ifelse(area_log10_decile == 10.5, yes = 9.5, no = area_log10_decile)) %>%
+#   tidyr::pivot_longer(cols = -c(did, id, date, ig_year, area_ha, area_log10, area_log10_pct, area_log10_decile, biome_name, eco_name, biome_name_daily, eco_name_daily), names_to = "driver", values_to = "value") %>% 
+#   dplyr::select(did, id, date, ig_year, area_ha, area_log10, area_log10_pct, area_log10_decile, biome_name, eco_name, biome_name_daily, eco_name_daily, everything()) %>% 
+#   dplyr::left_join(driver_descriptions) %>% 
+#   dplyr::mutate(driver_desc_ggplot = ifelse(driver_type %in% c("fuel", "topography"), yes = driver_desc, no = driver)) %>% 
+#   dplyr::mutate(date = as.character(date))
+# 
+# 
+# ggplot(dplyr::filter(fires_long, driver_type == "fuel"), aes(x = area_log10, y = value)) +
+#   geom_smooth(color = "red") +
+#   facet_wrap(facets = "driver_desc_ggplot") +
+#   geom_hline(yintercept = 0.5, color = "black") +
+#   theme_bw()
+# ggplot(dplyr::filter(fires_long, driver_type == "topography"), aes(x = area_log10, y = value)) +
+#   geom_smooth(color = "red") +
+#   facet_wrap(facets = "driver_desc_ggplot") +
+#   geom_hline(yintercept = 0.5, color = "black") +
+#   theme_bw()
+# ggplot(dplyr::filter(fires_long, driver_type == "human"), aes(x = area_log10, y = value)) +
+#   geom_smooth(color = "red") +
+#   facet_wrap(facets = "driver_desc_ggplot", scales = "free_y") +
+#   geom_hline(yintercept = 0.5, color = "black") +
+#   theme_bw()
+# 
+# ggplot(dplyr::filter(fires_long, driver_type == "fuel"), aes(x = area_log10_pct, y = value)) +
+#   geom_smooth(color = "red") +
+#   facet_wrap(facets = "driver_desc_ggplot") +
+#   geom_hline(yintercept = 0.5, color = "black") +
+#   theme_bw()
+# ggplot(dplyr::filter(fires_long, driver_type == "topography"), aes(x = area_log10_pct, y = value)) +
+#   geom_smooth(color = "red") +
+#   facet_wrap(facets = "driver_desc_ggplot") +
+#   geom_hline(yintercept = 0.5, color = "black") +
+#   theme_bw()
+# ggplot(dplyr::filter(fires_long, driver_type == "human"), aes(x = area_log10_pct, y = value)) +
+#   geom_smooth(color = "red") +
+#   facet_wrap(facets = "driver_desc_ggplot", scales = "free_y") +
+#   geom_hline(yintercept = 0.5, color = "black") +
+#   theme_bw()

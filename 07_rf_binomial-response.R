@@ -5,8 +5,33 @@ library(sf)
 library(data.table)
 library(spatialRF)
 
+biome_shortname <- "mfws"
+# biome_shortname <- "tgss"
+# biome_shortname <- "dxs"
+
+
+system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_daily_ca_response-vars.csv  data/out/fired_daily_ca_response-vars.csv", stdout = TRUE)  
+
+system2(command = "aws", args = paste0("s3 cp s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv  data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv"), stdout = TRUE)  
+
+system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_events_ca_epsg3310_2003-2020.gpkg  data/out/fired_events_ca_epsg3310_2003-2020.gpkg", stdout = TRUE)  
+
+system2(command = "aws", args = "s3 cp s3://california-megafires/tables/driver-descriptions.csv  tables/driver-descriptions.csv", stdout = TRUE)  
+
+fired_daily_response <- 
+  data.table::fread(input = "data/out/fired_daily_ca_response-vars.csv")
+
+driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
+
+target_event_ids <-
+  sf::read_sf("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
+  dplyr::mutate(area_ha = as.numeric(sf::st_area(.)) / 10000) %>% 
+  dplyr::filter(area_ha >= 121.406) %>% 
+  dplyr::pull(id)
+
 fires <- 
-  data.table::fread("data/out/analysis-ready/FIRED-daily-scale-drivers_california_tcf_v4.csv") %>% 
+  data.table::fread(paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv")) %>% 
+  dplyr::filter(id %in% target_event_ids) %>% 
   dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
                 -cumu_count, -cumu_area_ha,
                 -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
@@ -56,7 +81,7 @@ predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers
 apply(fires[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
 
 # Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
-na_cols <- colnames(fires[, predictor.variable.names])[which(apply(fires[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 55)]
+na_cols <- colnames(fires[, predictor.variable.names])[which(apply(fires[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
 
 predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
 fires <- 
@@ -108,28 +133,62 @@ predictor.variable.names_reduced <- spatialRF::auto_cor(
 
 ##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
 data <- fires
+distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000)
+biome_shortname <- "tcf"
+random_seed <- 2203
+xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+
+data_sf <-
+  data %>%
+  sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+
+dist_mat <-
+  sf::st_distance(x = data_sf,
+                  y = data_sf) %>%
+  units::drop_units()
+
 
 (start_time <- Sys.time())
-tcf_nonspatial <- spatialRF::rf(
+biome_nonspatial <- spatialRF::rf(
   data = data,
   dependent.variable.name = "ewe",
   predictor.variable.names = predictor.variable.names_reduced,
+  distance.matrix = dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
   ranger.arguments = list(classification = TRUE),
   verbose = TRUE
 )
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
-tcf_nonspatial_response_curves_accentuate_gg <-
-  spatialRF::plot_response_curves(
-    tcf_nonspatial,
-    quantiles = c(0.5),
-    ncol = 5
-  )
+# version 1 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase
+# using "adjusted" variables, some of which are scale-dependent regardless of fire process
+readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v1.rds")))
+system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v1.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v1.rds"), stdout = TRUE)  
 
-tcf_nonspatial_response_curves_accentuate_gg
+biome_spatial <- spatialRF::rf_spatial(
+  model = biome_nonspatial,
+  method = "mem.moran.sequential", #default method
+  verbose = TRUE,
+  seed = random_seed
+)
 
-fires_for_amy <- data[, c("did", "ewe", predictor.variable.names_reduced$selected.variables)]
-dim(fires_for_amy)
+readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_spatial_v1.rds")))
+system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v1.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v1.rds"), stdout = TRUE)
 
-data.table::fwrite(x = fires_for_amy, file = "data/out/rf-binomial-response_amy-check.csv")
+
+# tcf_nonspatial_response_curves_accentuate_gg <-
+#   spatialRF::plot_response_curves(
+#     tcf_nonspatial,
+#     quantiles = c(0.5),
+#     ncol = 5
+#   )
+# 
+# tcf_nonspatial_response_curves_accentuate_gg
+# 
+# fires_for_amy <- data[, c("did", "ewe", predictor.variable.names_reduced$selected.variables)]
+# dim(fires_for_amy)
+# 
+# data.table::fwrite(x = fires_for_amy, file = "data/out/rf-binomial-response-95th-pct-ewe_amy-check.csv")

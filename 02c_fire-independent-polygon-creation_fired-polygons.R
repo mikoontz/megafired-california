@@ -40,7 +40,7 @@ resolve <-
   sf::st_set_agr(value = "constant") %>% 
   sf::st_intersection(y = ca)
 
-set_fire_independent_locations <- function(biome, short_name, buffer = 50000, seed = 1224, n_sets = 5, n_pts = 1000) {
+set_fire_independent_locations <- function(biome, short_name, buffer = 50000, seed = 1224, n_sets = 5, n_pts = 1000, version) {
   
   # Subset the FIRED data to just the biome of interest
   fired_biome <-
@@ -72,6 +72,8 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
     dplyr::as_tibble() %>% 
     dplyr::mutate(set = sample(1:n_sets, size = nrow(.), replace = TRUE))
   
+  data.table::fwrite(x = biome_sample_points, file = file.path("data", "out", "fired_daily_random-locations", paste0("fired_daily_random-locations_", short_name, "_", version, ".csv")))
+  
   # Pack each row representing the the actual fire spread geometries with a data.frame
   # that represents the new set of n_pts centroids for those fire spread geometries, then
   # unnest the data to expand it (n_pts0 rows now for each of the fire/day combinations)
@@ -86,7 +88,7 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
   # given value will go into the same set (and therefore all FIRED polygons will be represented at
   # that particular random location)
   set_names <- stringr::str_pad(string = as.character(1:n_sets), width = 2, side = "left", pad = "0")
-  fnames <- paste0("fired_daily_random-locations_", short_name, "_v4_", set_names)
+  fnames <- paste0("fired_daily_random-locations_", short_name, "_", version, "_", set_names)
   l <- split(x = fired_biome_with_samps, f = fired_biome_with_samps$set)
   
   out <- pblapply(X = 1:n_sets, cl = n_sets, FUN = function(i) {
@@ -138,7 +140,8 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
 
 (start_time <- Sys.time())
 set_fire_independent_locations(biome = "Temperate Conifer Forests", short_name = "tcf", 
-                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500,
+                               version = "v4")
 
 system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
@@ -147,8 +150,10 @@ system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s
 # Time difference of 86.65956 mins for 1,000 points in the Temperate Conifer Forest
 
 (start_time <- Sys.time())
-set_fire_independent_locations(biome = "Mediterranean Forests, Woodlands & Scrub", short_name = "mfws", 
-                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+set_fire_independent_locations(biome = "Mediterranean Forests, Woodlands & Scrub", 
+                               short_name = "mfws", 
+                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500,
+                               version = "v4")
 
 system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
@@ -157,8 +162,10 @@ system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s
 
 
 (start_time <- Sys.time())
-set_fire_independent_locations(biome = "Temperate Grasslands, Savannas & Shrublands", short_name = "tgss", 
-                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+set_fire_independent_locations(biome = "Temperate Grasslands, Savannas & Shrublands",
+                               short_name = "tgss", 
+                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500,
+                               version = "v4")
 
 system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
@@ -167,7 +174,8 @@ system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s
 
 (start_time <- Sys.time())
 set_fire_independent_locations(biome = "Deserts & Xeric Shrublands", short_name = "dxs", 
-                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500)
+                               buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500,
+                               version = "v4")
 
 system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 

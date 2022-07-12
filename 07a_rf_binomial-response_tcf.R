@@ -10,6 +10,8 @@ biome_shortname <- "tcf"
 # biome_shortname <- "tgss"
 # biome_shortname <- "dxs"
 
+dir.create(file.path("data", "out", "rf"), recursive = TRUE, showWarnings = FALSE)
+
 system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_daily_ca_response-vars.csv  data/out/fired_daily_ca_response-vars.csv", stdout = TRUE)  
 
 system2(command = "aws", args = paste0("s3 cp s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v4.csv  data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v4.csv"), stdout = TRUE)  
@@ -171,12 +173,15 @@ system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname,
 
 biome_spatial <- biome_nonspatial
 
+(start_time <- Sys.time())
 biome_spatial <- spatialRF::rf_spatial(
   model = biome_nonspatial,
   method = "mem.moran.sequential", #default method
   verbose = TRUE,
   seed = random_seed
 )
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
-readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v1.rds")))
-system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v1.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v1.rds"), stdout = TRUE)
+readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds")))
+system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds"), stdout = TRUE)

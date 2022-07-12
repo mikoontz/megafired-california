@@ -5,6 +5,8 @@ library(sf)
 library(data.table)
 library(spatialRF)
 
+dir.create(file.path("data", "out", "rf"), recursive = TRUE, showWarnings = FALSE)
+
 # biome_shortname <- "tcf"
 # biome_shortname <- "mfws"
 biome_shortname <- "tgss"
@@ -171,12 +173,15 @@ system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname,
 
 biome_spatial <- biome_nonspatial
 
+(start_time <- Sys.time())
 biome_spatial <- spatialRF::rf_spatial(
   model = biome_nonspatial,
   method = "mem.moran.sequential", #default method
   verbose = TRUE,
   seed = random_seed
 )
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
 readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds")))
 system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds"), stdout = TRUE)

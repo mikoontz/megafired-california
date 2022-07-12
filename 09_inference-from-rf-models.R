@@ -25,11 +25,12 @@ plot_predict_interaction(forest = biome_nonspatial, data = data, variable1 = "ro
 
 plot_predict_interaction(forest = biome_nonspatial, data = data, variable1 = "road_density_mpha", variable2 = "road_density_mpha")
 
-biome_nonspatial_response_curves_accentuate_gg <-
+spatialRF::auc(o = data$ewe, p = ifelse(biome_spatial$predictions$values >= 0.5, 1, 0))
+rf_response_curves_gg <-
   spatialRF::plot_response_curves(
-    biome_nonspatial,
+    biome_spatial,
     quantiles = c(0.5),
     ncol = 5
   )
 
-biome_nonspatial_response_curves_accentuate_gg
+rf_response_curves_gg

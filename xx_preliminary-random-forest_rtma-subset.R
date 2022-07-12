@@ -25,7 +25,8 @@ fires <-
                 -cumu_count, -cumu_area_ha,
                 -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
                 -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi")) %>% 
-  dplyr::left_join(fired_daily_response)
+  dplyr::left_join(fired_daily_response) %>% 
+  dplyr::mutate(sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha))
 
 fires <- 
   fires %>% 
@@ -47,7 +48,7 @@ topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
 fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
 interacting_drivers <- c("wind_terrain_anisotropy_rtma", "wind_terrain_alignment_rtma", "bi_pct", "erc_pct")
 
-predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers)
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1")
 
 # No NAs
 apply(fires[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
@@ -114,12 +115,12 @@ tcf_dist_mat <-
                   y = tcf_sf) %>% 
   units::drop_units()
 
-random_seed <- 1848
+random_seed <- 1216
 
 (start_time <- Sys.time())
 tcf_nonspatial <- spatialRF::rf(
   data = data,
-  dependent.variable.name = "aoir_sqrtarea_tm1",
+  dependent.variable.name = "area_log10",
   predictor.variable.names = predictor.variable.names_reduced,
   distance.matrix = tcf_dist_mat,
   distance.thresholds = distance_thresholds,

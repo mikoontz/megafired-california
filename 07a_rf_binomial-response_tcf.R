@@ -133,13 +133,13 @@ dist_mat <-
 
 ### ----- FEATURE ENGINEERING
 
-(start_time <- Sys.time())
-ftr_eng <- spatialRF::the_feature_engineer(data = data,
-                                           dependent.variable.name = "ewe",
-                                           predictor.variable.names = predictor.variable.names_reduced,
-                                           xy = xy)
-(end_time <- Sys.time())
-(difftime(time1 = end_time, time2 = start_time, units = "mins"))
+# (start_time <- Sys.time())
+# ftr_eng <- spatialRF::the_feature_engineer(data = data,
+#                                            dependent.variable.name = "ewe",
+#                                            predictor.variable.names = predictor.variable.names_reduced,
+#                                            xy = xy)
+# (end_time <- Sys.time())
+# (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 # Fitting and evaluating a model without interactions.
 # Testing 36 candidate interactions.
 # No promising interactions found. 
@@ -148,8 +148,6 @@ ftr_eng <- spatialRF::the_feature_engineer(data = data,
 # [1] "2022-07-12 11:28:24 MDT"
 # > (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 # Time difference of 7.809134 mins
-
-
 
 (start_time <- Sys.time())
 biome_nonspatial <- spatialRF::rf(
@@ -166,9 +164,10 @@ biome_nonspatial <- spatialRF::rf(
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
 # version 1 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase
+# version 2 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a regression problem
 # using "adjusted" variables, some of which are scale-dependent regardless of fire process
-readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v1.rds")))
-system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v1.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v1.rds"), stdout = TRUE)  
+readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v2.rds")))
+system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v2.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v2.rds"), stdout = TRUE)  
 
 biome_spatial <- biome_nonspatial
 

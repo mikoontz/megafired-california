@@ -49,8 +49,29 @@ names(fires)[idx] <- substr(names(fires), start = 5, stop = nchar(names(fires)))
 fires <-
   fires %>% 
   dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
-                ewe = ifelse(area_log10_pct >= 0.95, yes = 1, no = 0)) %>% # 95th percentile growth for deserts and xeric shrublands is 1335.244 ha per day
-  dplyr::select(id, did, ewe, x_biggest_poly_3310, y_biggest_poly_3310, area_log10, barriers_to_spread, change_diversity, starts_with("csp_ergo_landforms"), elevation, flat, friction, friction_walking_only, landcover_diversity, landform_diversity, starts_with("lcms_change"), starts_with("lcms_landcover"), lower_slope, ndvi, road_density_mpha, rumple_index, upper_slope, valleys, veg_structure_rumple, npl, npl_at_ignition, concurrent_fires, wind_anisotropy, wind_terrain_anisotropy, wind_terrain_alignment, max_wind_speed_pct, min_wind_speed_pct, max_rh_pct, min_rh_pct, max_temp_pct, min_temp_pct, max_soil_water_pct, min_soil_water_pct, max_vpd_pct, min_vpd_pct, starts_with("spei"), pdsi_z, erc_pct, bi_pct, fm100_pct, fm1000_pct, sqrt_aoi_tm1) %>% 
+                ewe = ifelse(area_log10_pct >= 0.95, yes = 1, no = 0)) %>% # 95th percentile growth for temperate conifer forests is 1683.266 ha per day
+  dplyr::select(id, did, ewe, date, x_biggest_poly_3310, y_biggest_poly_3310, 
+                area_log10, barriers_to_spread, change_diversity, 
+                starts_with("csp_ergo_landforms"), elevation, flat, friction, 
+                friction_walking_only, landcover_diversity, landform_diversity, 
+                starts_with("lcms_change"), starts_with("lcms_landcover"), 
+                lower_slope, ndvi, road_density_mpha, rumple_index, upper_slope, 
+                valleys, veg_structure_rumple, npl, npl_at_ignition, 
+                concurrent_fires, wind_anisotropy, wind_terrain_anisotropy, 
+                wind_terrain_alignment, max_wind_speed_pct, min_wind_speed_pct, 
+                max_rh_pct, min_rh_pct, max_temp_pct, min_temp_pct, 
+                max_soil_water_pct, min_soil_water_pct, max_vpd_pct, 
+                min_vpd_pct, starts_with("spei"), pdsi_z, erc_pct, bi_pct, 
+                fm100_pct, fm1000_pct, sqrt_aoi_tm1)
+
+fires <-
+  fires %>% 
+  dplyr::filter(ewe == 1) %>% 
+  dplyr::group_by(id) %>% 
+  dplyr::arrange(date) %>% 
+  dplyr::slice(1) %>% 
+  dplyr::ungroup() %>% 
+  rbind(fires[fires$ewe == 0, ]) %>% 
   as.data.frame()
 
 human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
@@ -167,9 +188,10 @@ biome_nonspatial <- spatialRF::rf(
 
 # version 1 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a classification problem
 # version 2 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a regression problem
+# version 3 of the binomial response model predicts whether daily AOI is in top 95th percentile, but only uses the first time that happens for each fire
 # using "adjusted" variables, some of which are scale-dependent regardless of fire process
-readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v2.rds")))
-system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v2.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v2.rds"), stdout = TRUE)  
+readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v3.rds")))
+system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v3.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v3.rds"), stdout = TRUE)  
 
 biome_spatial <- biome_nonspatial
 
@@ -183,5 +205,5 @@ biome_spatial <- spatialRF::rf_spatial(
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
-readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds")))
-system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v2.rds"), stdout = TRUE)
+readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds")))
+system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds"), stdout = TRUE)

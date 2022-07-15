@@ -186,6 +186,18 @@ biome_nonspatial <- spatialRF::rf(
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
+# biome_nonspatial <- readr::read_rds("data/out/rf/rf_mfws_binomial-response-95th-pct-ewe_nonspatial_v1.rds")
+
+biome_nonspatial <- spatialRF::rf_evaluate(
+  model = biome_nonspatial,
+  xy = xy,                  #data coordinates
+  repetitions = 30,         #number of spatial folds
+  training.fraction = 0.75, #training data fraction on each fold
+  metrics = c("r.squared", "auc"),
+  seed = random_seed,
+  verbose = TRUE
+)
+
 # version 1 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase
 # version 2 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a regression problem
 # version 3 of the binomial response model predicts whether daily AOI is in top 95th percentile, but only uses the first time that happens for each fire

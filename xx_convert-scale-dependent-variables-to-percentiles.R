@@ -5,9 +5,10 @@ library(ggplot2)
 
 # system2(command = "aws", args = "s3 sync s3://california-megafires/data/out/fired_daily_random-locations data/out/fired_daily_random-locations")
 
+biome_shortname <- "tcf"
 # biome_shortname <- "mfws"
 # biome_shortname <- "tgss"
-biome_shortname <- "dxs"
+# biome_shortname <- "dxs"
 
 static_drivers <- 
   list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", pattern = "static", full.names = TRUE)

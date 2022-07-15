@@ -14,7 +14,7 @@ dir.create(file.path("data", "out", "rf"), recursive = TRUE, showWarnings = FALS
 
 system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_daily_ca_response-vars.csv  data/out/fired_daily_ca_response-vars.csv", stdout = TRUE)  
 
-system2(command = "aws", args = paste0("s3 cp s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v4.csv  data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v4.csv"), stdout = TRUE)  
+system2(command = "aws", args = paste0("s3 cp s3://california-megafires/data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv  data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv"), stdout = TRUE)  
 
 system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_events_ca_epsg3310_2003-2020.gpkg  data/out/fired_events_ca_epsg3310_2003-2020.gpkg", stdout = TRUE)  
 
@@ -32,7 +32,7 @@ target_event_ids <-
   dplyr::pull(id)
 
 fires <- 
-  data.table::fread(paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v4.csv")) %>% 
+  data.table::fread(paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_v5.csv")) %>% 
   dplyr::filter(id %in% target_event_ids) %>% 
   dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
                 -cumu_count, -cumu_area_ha,
@@ -165,6 +165,15 @@ biome_nonspatial <- spatialRF::rf(
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
+biome_nonspatial <- spatialRF::rf_evaluate(
+  model = biome_nonspatial,
+  xy = xy,                  #data coordinates
+  repetitions = 30,         #number of spatial folds
+  training.fraction = 0.75, #training data fraction on each fold
+  metrics = c("r.squared", "auc"),
+  seed = random_seed,
+  verbose = TRUE
+)
 # version 1 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase
 # version 2 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a regression problem
 # using "adjusted" variables, some of which are scale-dependent regardless of fire process

@@ -9,8 +9,8 @@ dir.create("figs/rf", showWarnings = FALSE)
 
 # system2(command = "aws", args = "s3 sync s3://california-megafires/data/out/rf  data/out/rf", stdout = TRUE)  
 
-# biome_shortname <- "tcf"
-biome_shortname <- "mfws"
+biome_shortname <- "tcf"
+# biome_shortname <- "mfws"
 # biome_shortname <- "tgss"
 # biome_shortname <- "dxs"
 

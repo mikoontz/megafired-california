@@ -112,12 +112,12 @@ fires <-
   as.data.frame()
 
 human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
-topography_drivers <- c("elevation", "rumple_index", "barriers_to_spread", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "flat", "valleys", "landform_diversity")
-weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct", 
-                     "max_temp_pct", "min_temp_pct", 
+topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "valley", "valley_narrow", "landform_diversity")
+weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
+                     "max_temp_pct", "min_temp_pct",
                      "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
-fuel_drivers <- c("ndvi", "fuel_stable", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity", "change_diversity")
+fuel_drivers <- c("ndvi", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity")
 interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
 
 # human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")

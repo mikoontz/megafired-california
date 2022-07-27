@@ -39,7 +39,10 @@ fires <-
                 -proj_area, -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac, -samp_id,
                 -ends_with("rtma"), -ends_with("rtma_pct"),
                 -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi"),
-                -starts_with("raw")) %>% 
+                -starts_with("raw"),
+                # -contains("upper_slope"),
+                # -contains("lower_slope")
+  ) %>% 
   dplyr::left_join(fired_daily_response) %>% 
   dplyr::mutate(sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha))
 
@@ -55,36 +58,79 @@ fires <-
                 starts_with("csp_ergo_landforms"), elevation, flat, friction, 
                 friction_walking_only, landcover_diversity, landform_diversity, 
                 starts_with("lcms_change"), starts_with("lcms_landcover"), 
-                lower_slope, ndvi, road_density_mpha, rumple_index, upper_slope, 
+                ndvi, road_density_mpha, rumple_index, 
                 valleys, veg_structure_rumple, npl, npl_at_ignition, 
                 concurrent_fires, wind_anisotropy, wind_terrain_anisotropy, 
                 wind_terrain_alignment, max_wind_speed_pct, min_wind_speed_pct, 
                 max_rh_pct, min_rh_pct, max_temp_pct, min_temp_pct, 
                 max_soil_water_pct, min_soil_water_pct, max_vpd_pct, 
                 min_vpd_pct, starts_with("spei"), pdsi_z, erc_pct, bi_pct, 
-                fm100_pct, fm1000_pct, sqrt_aoi_tm1)
+                fm100_pct, fm1000_pct, sqrt_aoi_tm1) %>% 
+  as.data.frame()
 
 fires <-
+  fires %>%
+  dplyr::filter(ewe == 1) %>%
+  dplyr::group_by(id) %>%
+  dplyr::arrange(date) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  rbind(fires[fires$ewe == 0, ]) %>%
+  as.data.frame()
+
+fires <- 
   fires %>% 
-  dplyr::filter(ewe == 1) %>% 
-  dplyr::group_by(id) %>% 
-  dplyr::arrange(date) %>% 
-  dplyr::slice(1) %>% 
-  dplyr::ungroup() %>% 
-  rbind(fires[fires$ewe == 0, ]) %>% 
+  dplyr::rename(peak_ridge_warm = csp_ergo_landforms_11,
+                peak_ridge = csp_ergo_landforms_12,
+                peak_ridge_cool = csp_ergo_landforms_13,
+                mountain_divide = csp_ergo_landforms_14,
+                cliff = csp_ergo_landforms_15,
+                upper_slope_warm = csp_ergo_landforms_21,
+                upper_slope = csp_ergo_landforms_22,
+                upper_slope_cool = csp_ergo_landforms_23,
+                upper_slope_flat = csp_ergo_landforms_24,
+                lower_slope_warm = csp_ergo_landforms_31,
+                lower_slope = csp_ergo_landforms_32,
+                lower_slope_cool = csp_ergo_landforms_33,
+                lower_slope_flat = csp_ergo_landforms_34,
+                valley = csp_ergo_landforms_41,
+                valley_narrow = csp_ergo_landforms_42) %>% 
+  dplyr::rename(trees = lcms_landcover_01,
+                shrubs_trees_mix = lcms_landcover_03,
+                grass_forbs_herb_trees_mix = lcms_landcover_04,
+                barren_trees_mix = lcms_landcover_05,
+                shrubs = lcms_landcover_07,
+                grass_forb_herb_shrub_mix = lcms_landcover_08,
+                barren_shrub_mix = lcms_landcover_09,
+                grass_forb_herb = lcms_landcover_10,
+                barren_grass_forb_herb_mix = lcms_landcover_11,
+                barren = lcms_landcover_12) %>% 
+  dplyr::rename(fuel_stable = lcms_change_01,
+                fuel_slow_loss = lcms_change_02,
+                fuel_fast_loss = lcms_change_03,
+                fuel_gain = lcms_change_04) %>% 
   as.data.frame()
 
 human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
-weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy",
-                     "max_temp_pct", "min_temp_pct",
-                     "max_rh_pct", "min_rh_pct",
-                     "max_vpd_pct", "min_vpd_pct",
-                     "max_soil_water_pct", "min_soil_water_pct",
-                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z",
-                     "fm100_pct", "fm1000_pct")
-topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
-fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+topography_drivers <- c("elevation", "rumple_index", "barriers_to_spread", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "flat", "valleys", "landform_diversity")
+weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct", 
+                     "max_temp_pct", "min_temp_pct", 
+                     "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
+fuel_drivers <- c("ndvi", "fuel_stable", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity", "change_diversity")
 interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
+# human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
+# weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy",
+#                      "max_temp_pct", "min_temp_pct",
+#                      "max_rh_pct", "min_rh_pct",
+#                      "max_vpd_pct", "min_vpd_pct",
+#                      "max_soil_water_pct", "min_soil_water_pct",
+#                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y",
+#                      "fm100_pct", "fm1000_pct")
+# topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+# fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+# interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
 
 predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1")
 
@@ -193,7 +239,7 @@ biome_nonspatial <- spatialRF::rf_evaluate(
   xy = xy,                  #data coordinates
   repetitions = 30,         #number of spatial folds
   training.fraction = 0.75, #training data fraction on each fold
-  metrics = c("r.squared", "auc"),
+  metrics = c("r.squared", "rmse", "auc"),
   seed = random_seed,
   verbose = TRUE
 )
@@ -202,20 +248,50 @@ biome_nonspatial <- spatialRF::rf_evaluate(
 # version 2 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a regression problem
 # version 3 of the binomial response model predicts whether daily AOI is in top 95th percentile, but only uses the first time that happens for each fire
 # using "adjusted" variables, some of which are scale-dependent regardless of fire process
-readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v3.rds")))
-system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v3.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v3.rds"), stdout = TRUE)  
+# version 4 is just like version 3 except we drop pdsi_z from the predictor list because of some anomolous values
+# version 5 includes ALL the variables from the 'randomly placed FIRED perimeters' process
+readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds")))
+system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds"), stdout = TRUE)  
 
-biome_spatial <- biome_nonspatial
-
+# Build a non-spatial model just using the sqrt_aoi_tm1 variable
 (start_time <- Sys.time())
-biome_spatial <- spatialRF::rf_spatial(
-  model = biome_nonspatial,
-  method = "mem.moran.sequential", #default method
-  verbose = TRUE,
-  seed = random_seed
+biome_nonspatial_simple <- spatialRF::rf(
+  data = data,
+  dependent.variable.name = "ewe",
+  predictor.variable.names = "sqrt_aoi_tm1",
+  distance.matrix = dist_mat,
+  distance.thresholds = distance_thresholds,
+  xy = xy, #not needed by rf, but other functions read it from the model
+  seed = random_seed,
+  verbose = TRUE
 )
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
-readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds")))
-system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds"), stdout = TRUE)
+biome_nonspatial_simple <- spatialRF::rf_evaluate(
+  model = biome_nonspatial_simple,
+  xy = xy,                  #data coordinates
+  repetitions = 30,         #number of spatial folds
+  training.fraction = 0.75, #training data fraction on each fold
+  metrics = c("r.squared", "rmse", "auc"),
+  seed = random_seed,
+  verbose = TRUE
+)
+
+readr::write_rds(x = biome_nonspatial_simple, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-simple_v3.rds")))
+system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-simple_v3.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-simple_v3.rds"), stdout = TRUE)  
+
+# biome_spatial <- biome_nonspatial
+# 
+# (start_time <- Sys.time())
+# biome_spatial <- spatialRF::rf_spatial(
+#   model = biome_nonspatial,
+#   method = "mem.moran.sequential", #default method
+#   verbose = TRUE,
+#   seed = random_seed
+# )
+# (end_time <- Sys.time())
+# (difftime(time1 = end_time, time2 = start_time, units = "mins"))
+# 
+# readr::write_rds(x = biome_spatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds")))
+# system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_spatial_v3.rds"), stdout = TRUE)

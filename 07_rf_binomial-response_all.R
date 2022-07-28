@@ -5,11 +5,6 @@ library(sf)
 library(data.table)
 library(spatialRF)
 
-biome_shortname <- "tcf"
-# biome_shortname <- "mfws"
-# biome_shortname <- "tgss"
-# biome_shortname <- "dxs"
-
 dir.create(file.path("data", "out", "rf"), recursive = TRUE, showWarnings = FALSE)
 
 system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_daily_ca_response-vars.csv  data/out/fired_daily_ca_response-vars.csv", stdout = TRUE)  
@@ -20,7 +15,12 @@ system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_
 
 system2(command = "aws", args = "s3 cp s3://california-megafires/tables/driver-descriptions.csv  tables/driver-descriptions.csv", stdout = TRUE)  
 
-fired_daily_response <- 
+biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+
+for (counter in 3:4) {
+  biome_shortname <- biome_shortnames[counter]
+  
+  fired_daily_response <- 
   data.table::fread(input = "data/out/fired_daily_ca_response-vars.csv")
 
 driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
@@ -244,7 +244,8 @@ biome_nonspatial <-
 # version 4 is just like version 3 except we drop pdsi_z from the predictor list because of some anomolous values
 # version 5 includes ALL the variables from the 'randomly placed FIRED perimeters' process
 readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds")))
-system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds"), stdout = TRUE)  
+# system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds"), stdout = TRUE)
+}
 
 
 # Build a non-spatial model just using the sqrt_aoi_tm1 variable

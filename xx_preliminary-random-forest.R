@@ -30,6 +30,19 @@ fires_working <-
   fires %>% 
   as.data.frame()
 
+### Set 7
+# human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
+# weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy",
+#                      "max_temp_pct", "min_temp_pct",
+#                      "max_rh_pct", "min_rh_pct",
+#                      "max_vpd_pct", "min_vpd_pct",
+#                      "max_soil_water_pct", "min_soil_water_pct",
+#                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y",
+#                      "fm100_pct", "fm1000_pct")
+# topography_drivers <- c("elevation", "rumple_index", "landform_diversity")
+# fuel_drivers <- c("ndvi", "veg_structure_rumple", "landcover_diversity")
+# interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+
 ### Set 6
 human_drivers <- c("npl", "concurrent_fires", "friction")
 weather_drivers <- c("max_wind_speed_pct", "min_wind_speed_pct", "wind_anisotropy", 

@@ -255,6 +255,9 @@ readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", pas
 system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_v5.rds"), stdout = TRUE)  
 
 # Build a non-spatial model just using the sqrt_aoi_tm1 variable
+# version 1 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase
+# version 2 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a regression problem
+# version 3 of the binomial response model predicts whether daily AOI is in top 95th percentile, but only uses the first time that happens for each fire
 (start_time <- Sys.time())
 biome_nonspatial_simple <- spatialRF::rf(
   data = data,
@@ -280,7 +283,16 @@ biome_nonspatial_simple <- spatialRF::rf_evaluate(
 )
 
 readr::write_rds(x = biome_nonspatial_simple, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-simple_v3.rds")))
-system2(command = "aws", args = paste0("s3 cp data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-simple_v3.rds s3://california-megafires/data/out/rf/rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-simple_v3.rds"), stdout = TRUE)  
+
+# Repeat to get a distribution of importance values
+biome_nonspatial_repeat <- spatialRF::rf_repeat(
+  model = biome_nonspatial,
+  repetitions = 30,
+  seed = random_seed,
+  verbose = TRUE
+)
+
+readr::write_rds(x = biome_nonspatial_repeat, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-repeat_v1.rds")))
 
 # biome_spatial <- biome_nonspatial
 # 

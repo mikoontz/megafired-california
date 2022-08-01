@@ -72,4 +72,8 @@ bi_pct,burning index,"weather, fuel"
 erc_pct,energy release component,"weather, fuel"
 wind_terrain_alignment,degree to which wind is parallel to slopes,"weather, topography"
 wind_terrain_anisotropy,variability in degree to which wind is parallel to slopes,"weather, topography"
-sqrt_aoi_tm1,,
+sqrt_aoi_tm1,,fire
+upper_slopes,combination of lcms_landforms_21 + lcms_landforms_22 + lcms_landforms_23,topography
+lower_slopes,combination of lcms_landforms_31 + lcms_landforms_32 + lcms_landforms_33,topography
+flat,combination of lcms_landforms_24 + lcms_landforms_34,topography
+event_day,cumulative duration of fire event in days,human

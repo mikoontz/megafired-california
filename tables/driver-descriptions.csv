@@ -1,0 +1,75 @@
+driver,driver_desc,driver_type
+change_diversity,change_diversity,fuel
+landcover_diversity,landcover_diversity,fuel
+lcms_change_01,stable,fuel
+lcms_change_02,slow loss,fuel
+lcms_change_03,fast loss,fuel
+lcms_change_04,gain,fuel
+lcms_landcover_01,trees,fuel
+lcms_landcover_03,shrubs & trees mix,fuel
+lcms_landcover_04,grass/forb/herb & trees mix,fuel
+lcms_landcover_05,barren & trees mix,fuel
+lcms_landcover_07,shrubs,fuel
+lcms_landcover_08,grass/forb/herb & shrubs mix,fuel
+lcms_landcover_09,barren & shrubs mix,fuel
+lcms_landcover_10,grass/forb/herb,fuel
+lcms_landcover_11,barren & grass/forb/herb mix,fuel
+lcms_landcover_12,barren or impervious,fuel
+ndvi,ndvi,fuel
+veg_structure_rumple,heterogeneity of ndvi,fuel
+concurrent_fires,number of fires burning concurrently on day of interest,human
+friction,friction,human
+friction_walking_only,friction_walking_only,human
+npl,national preparedness level on day of interest,human
+npl_at_ignition,national preparedness level on day of ignition for fire of interest,human
+road_density_mpha,road_density_mpha,human
+barriers_to_spread,barriers_to_spread,topography
+csp_ergo_landforms_11,peak/ridge (warm),topography
+csp_ergo_landforms_12,peak/ridge,topography
+csp_ergo_landforms_13,peak/ridge (cool),topography
+csp_ergo_landforms_14,mountain/divide,topography
+csp_ergo_landforms_15,cliff,topography
+csp_ergo_landforms_21,upper slope (warm),topography
+csp_ergo_landforms_22,upper slope,topography
+csp_ergo_landforms_23,upper slope (cool),topography
+csp_ergo_landforms_24,upper slope (flat),topography
+csp_ergo_landforms_31,lower slope (warm),topography
+csp_ergo_landforms_32,lower slope,topography
+csp_ergo_landforms_33,lower slope (cool),topography
+csp_ergo_landforms_34,lower slope (flat),topography
+csp_ergo_landforms_41,valley,topography
+csp_ergo_landforms_42,valley (narrow),topography
+elevation,elevation,topography
+flat,flat,topography
+landform_diversity,landform_diversity,topography
+lower_slope,lower_slope,topography
+rumple_index,rumple_index,topography
+upper_slope,upper_slope,topography
+valleys,valleys,topography
+fm100_pct,100 hour fuel moisture,weather
+fm1000_pct,1000 hour fuel moisture,weather
+max_rh_pct,maximum relative humidity percentile,weather
+max_soil_water_pct,maximum volumetric soil water percentile,weather
+max_temp_pct,maximum temperature percentile,weather
+max_vpd_pct,maximum vapor pressure deficit percentile,weather
+max_wind_speed_pct,maximum wind speed percentile,weather
+min_rh_pct,minimum relative humidity percentile,weather
+min_soil_water_pct,minimum volumetric soil water percentile,weather
+min_temp_pct,minimum temperature percentile,weather
+min_vpd_pct,minimum vapor pressure deficit percentile,weather
+min_wind_speed_pct,minimum wind speed percentile,weather
+pdsi_z,Palmer Drought Severity Index (z-score),weather
+spei14d,standardized precipitation evapotranspiration index over previous 14 days,weather
+spei180d,standardized precipitation evapotranspiration index over previous 180 days,weather
+spei1y,standardized precipitation evapotranspiration index over previous year,weather
+spei270d,standardized precipitation evapotranspiration index over previous 270 days,weather
+spei2y,standardized precipitation evapotranspiration index over previous 2 years,weather
+spei30d,standardized precipitation evapotranspiration index over previous 30 days,weather
+spei5y,standardized precipitation evapotranspiration index over previous 5 years,weather
+spei90d,standardized precipitation evapotranspiration index over previous 90 days,weather
+wind_anisotropy,variability in wind direction,weather
+bi_pct,burning index,"weather, fuel"
+erc_pct,energy release component,"weather, fuel"
+wind_terrain_alignment,degree to which wind is parallel to slopes,"weather, topography"
+wind_terrain_anisotropy,variability in degree to which wind is parallel to slopes,"weather, topography"
+sqrt_aoi_tm1,,

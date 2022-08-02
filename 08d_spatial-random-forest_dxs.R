@@ -1,1 +1,0 @@
-# Run Spatial Random Forest for Desert and Xeric Shrublands

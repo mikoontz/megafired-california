@@ -7,8 +7,6 @@ library(lubridate)
 library(pbapply)
 library(USAboundaries)
 
-dir.create("data/out/analysis-ready", showWarnings = FALSE)
-
 #### --- input FIRED data
 fired_events <- 
   sf::st_read("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 

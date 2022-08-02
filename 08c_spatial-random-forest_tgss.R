@@ -1,1 +1,0 @@
-# Run Spatial Random Forest for Temperate Grassland Savanna and Shrublands

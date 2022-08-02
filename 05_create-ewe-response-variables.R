@@ -30,6 +30,34 @@ daily <-
 
 daily 
 
+modis_afd <- 
+  data.table::fread("data/out/mcd14ml_ca.csv", colClasses = c(acq_time = "character")) %>% 
+  sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
+  dplyr::mutate(acq_date = lubridate::ymd(acq_date)) %>% 
+  dplyr::mutate(local_datetime = lubridate::ymd_hm(paste0(acq_date, " ", acq_time))  - lubridate::hours(x = 7),
+                local_hour = lubridate::hour(local_datetime),
+                local_minute = lubridate::minute(local_datetime),
+                local_date = lubridate::ymd(paste(lubridate::year(local_datetime),
+                                                  lubridate::month(local_datetime),
+                                                  lubridate::day(local_datetime),
+                                                  sep = "-")))
+
+daily_with_afd <- 
+  sf::st_join(sf::st_buffer(x = daily, dist = 2600), modis_afd) %>% 
+  filter(local_date == date) %>% 
+  sf::st_drop_geometry() %>% 
+  sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE)
+
+daily_with_afd_summary <-
+  daily_with_afd %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::group_by(did, id, date, daily_area_ha) %>% 
+  dplyr::summarize(frp90 = quantile(x = frp, probs = 0.9),
+                   n_afd = n()) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::mutate(afd_per_ha = n_afd / daily_area_ha) %>% 
+  dplyr::select(-daily_area_ha)
+
 # fired_frap_mtbs_join <- read.csv(file = "data/out/fired-frap-mtbs-join.csv")
 
 ggplot(daily, aes(x = log(cum_area_ha_tminus1 + 0.1), y = log(daily_area_ha), color = biome_name)) +
@@ -85,7 +113,7 @@ fm_sqrt_area_tm1 <- mgcv::gam(log(daily_area_ha) ~ s(sqrt(daily_area_tminus1_ha)
                               method = "REML",
                               data = daily)
 
-summary(fm)
+summary(fm_sqrt_area_tm1)
 
 ggplot(daily, aes(x = sqrt(daily_area_tminus1_ha), y = log(daily_area_ha), color = biome_name)) +
   geom_point() +
@@ -97,6 +125,7 @@ ggplot(daily, aes(x = sqrt(daily_area_tminus1_ha), y = daily_area_ha, color = bi
 
 daily_with_response <-
   daily %>% 
+  dplyr::left_join(daily_with_afd_summary) %>% 
   mutate(predicted_aoi_log_cumarea_tm1 = as.numeric(predict(fm_log_cum_area_tm1)),
          predicted_aoi_cumarea_tm1 = exp(predicted_aoi_log_cumarea_tm1),
          aoir_modeled_cumarea_tm1 = residuals(fm_log_cum_area_tm1),

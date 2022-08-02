@@ -1,1 +1,0 @@
-# Run Spatial Random Forest for Mediterranean Forest, Woodland, and Scrub

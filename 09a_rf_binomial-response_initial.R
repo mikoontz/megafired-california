@@ -29,14 +29,16 @@ biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 # version 10 (all the finer-grain landcover/landform classifications and includes event_day)
 # version 11 (summaries of landforms, just landcover_diversity, and includes event_day)
 # version 12 (all the finer-grain landcover/landform classifications and without event_day)
+# version 13 uses every possible variable in the RF model without reducing based on correlation, such that we can try using the importance values iteratively to remove the non-important variables
+# version 14 uses the previous year's LCMS data (land cover and land change) rather than the current year's
 
 # Nonspatial binomial response, just sqrt_aoi_tm1 as predictor
 # version 1 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase
 # version 2 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a regression problem
 # version 3 of the binomial response model predicts whether daily AOI is in top 95th percentile, but only uses the first time that happens for each fire
-nonspatial_version <- "v13"
+nonspatial_version <- "v14"
 nonspatial_simple_version <- "v3"
-drivers_version <- "v6"
+drivers_version <- "v7"
 
 # For defining "ewe" or not, what is the percentage threshold? E.g., 0.95 means an "ewe" is in the top
 # 5th percentile for daily area of increase
@@ -130,23 +132,24 @@ for (counter in 1:4) {
                   lower_slope_flat = csp_ergo_landforms_34,
                   valley = csp_ergo_landforms_41,
                   valley_narrow = csp_ergo_landforms_42) %>% 
-    dplyr::rename(trees = lcms_landcover_01,
-                  shrubs_trees_mix = lcms_landcover_03,
-                  grass_forbs_herb_trees_mix = lcms_landcover_04,
-                  barren_trees_mix = lcms_landcover_05,
-                  shrubs = lcms_landcover_07,
-                  grass_forb_herb_shrub_mix = lcms_landcover_08,
-                  barren_shrub_mix = lcms_landcover_09,
-                  grass_forb_herb = lcms_landcover_10,
-                  barren_grass_forb_herb_mix = lcms_landcover_11,
-                  barren = lcms_landcover_12) %>% 
-    dplyr::rename(fuel_stable = lcms_change_01,
-                  fuel_slow_loss = lcms_change_02,
-                  fuel_fast_loss = lcms_change_03,
-                  fuel_gain = lcms_change_04) %>% 
+    dplyr::rename(trees = lcms_landcover_01_tm01,
+                  shrubs_trees_mix = lcms_landcover_03_tm01,
+                  grass_forbs_herb_trees_mix = lcms_landcover_04_tm01,
+                  barren_trees_mix = lcms_landcover_05_tm01,
+                  shrubs = lcms_landcover_07_tm01,
+                  grass_forb_herb_shrub_mix = lcms_landcover_08_tm01,
+                  barren_shrub_mix = lcms_landcover_09_tm01,
+                  grass_forb_herb = lcms_landcover_10_tm01,
+                  barren_grass_forb_herb_mix = lcms_landcover_11_tm01,
+                  barren = lcms_landcover_12_tm01) %>% 
+    dplyr::rename(fuel_stable = lcms_change_01_tm01,
+                  fuel_slow_loss = lcms_change_02_tm01,
+                  fuel_fast_loss = lcms_change_03_tm01,
+                  fuel_gain = lcms_change_04_tm01) %>% 
     as.data.frame()
   
-  # version 13 uses all of the possible predictors and doesn't remove *any* at this stage due to correlation
+  # version 13 and 14 use all of the possible predictors 
+  # version 13 doesn't remove *any* at this stage due to correlation
   # with each other. We'll try to pare down the list of predictors using the cross-validation approach in the next
   # script, then, at the end, we can run the code that reduces the predictor list based on correlations.
   human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
@@ -278,25 +281,25 @@ for (counter in 1:4) {
   predictor.variable.names_reduced <- predictor.variable.names
   
   # Reduce collinearity in the predictors
-  # preference.order <- c(
-  #   "npl", 
-  #   "rumple_index", "elevation",
-  #   "max_wind_speed_pct", "min_wind_speed_pct",
-  #   "max_vpd_pct", "min_vpd_pct",
-  #   "fm100_pct", "erc_pct", "spei1y",
-  #   "ndvi", "veg_structure_rumple", "landcover_diversity", "change_diversity",
-  #   "wind_terrain_alignment"
-  # )
-  # 
-  # predictor.variable.names_reduced <- spatialRF::auto_cor(
-  #   x = fires[, predictor.variable.names],
-  #   cor.threshold = 0.75,
-  #   preference.order = preference.order
-  # ) %>% 
-  #   spatialRF::auto_vif(
-  #     vif.threshold = 5,
-  #     preference.order = preference.order
-  #   )
+  preference.order <- c(
+    "npl",
+    "rumple_index", "elevation",
+    "max_wind_speed_pct", "min_wind_speed_pct",
+    "max_vpd_pct", "min_vpd_pct",
+    "fm100_pct", "erc_pct", "spei1y",
+    "ndvi", "veg_structure_rumple", "landcover_diversity", "change_diversity",
+    "wind_terrain_alignment"
+  )
+
+  predictor.variable.names_reduced <- spatialRF::auto_cor(
+    x = fires[, predictor.variable.names],
+    cor.threshold = 0.75,
+    preference.order = preference.order
+  ) %>%
+    spatialRF::auto_vif(
+      vif.threshold = 5,
+      preference.order = preference.order
+    )
   
   ##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
   data <- fires

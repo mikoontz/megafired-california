@@ -26,12 +26,15 @@ biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 # version 7 fixes an issue where non-ewe days of an event after the first ewe event were included, while all ewe days after the first were excluded; back to just using all days from each fire
 # version 8 adds event day
 # version 9 uses the cleaner version of drivers data
+# version 10 (all the finer-grain landcover/landform classifications and includes event_day)
+# version 11 (summaries of landforms, just landcover_diversity, and includes event_day)
+# version 12 (all the finer-grain landcover/landform classifications and without event_day)
 
 # Nonspatial binomial response, just sqrt_aoi_tm1 as predictor
 # version 1 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase
 # version 2 of the binomial response model predicts whether daily area of increase is in top 95th percentile of daily area of increase as a regression problem
 # version 3 of the binomial response model predicts whether daily AOI is in top 95th percentile, but only uses the first time that happens for each fire
-nonspatial_version <- "v9"
+nonspatial_version <- "v13"
 nonspatial_simple_version <- "v3"
 drivers_version <- "v6"
 
@@ -143,20 +146,69 @@ for (counter in 1:4) {
                   fuel_gain = lcms_change_04) %>% 
     as.data.frame()
   
-  
-  # version 9
+  # version 13 uses all of the possible predictors and doesn't remove *any* at this stage due to correlation
+  # with each other. We'll try to pare down the list of predictors using the cross-validation approach in the next
+  # script, then, at the end, we can run the code that reduces the predictor list based on correlations.
   human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
-  topography_drivers <- c("elevation", "rumple_index", "barriers_to_spread", "upper_slopes", "lower_slopes", "flat", "valleys", "landform_diversity")
+  topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "valley", "valley_narrow", "landform_diversity")
   weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
-                       "max_temp_pct", "min_temp_pct",
+                       "max_temp_pct", "min_temp_pct", "bi_pct", "erc_pct",
                        "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
                        "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
-  fuel_drivers <- c("ndvi", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "landcover_diversity")
-  interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
-  
+  fuel_drivers <- c("ndvi", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity")
+  interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment")
+
   predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1", "event_day")
   
-  # version 8 (combined some landform categories)
+  # # version 12 (all the finer-grain landcover/landform classifications and without event_day)
+  # human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
+  # topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "valley", "valley_narrow", "landform_diversity")
+  # weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
+  #                      "max_temp_pct", "min_temp_pct",
+  #                      "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
+  #                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
+  # fuel_drivers <- c("ndvi", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity")
+  # interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+  # 
+  # predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1")
+# 
+  # # version 11 (summaries of landform/landcover data and doesn't include event_day)
+  # human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
+  # topography_drivers <- c("elevation", "rumple_index", "barriers_to_spread", "upper_slopes", "lower_slopes", "flat", "valleys", "landform_diversity")
+  # weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
+  #                      "max_temp_pct", "min_temp_pct",
+  #                      "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
+  #                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
+  # fuel_drivers <- c("ndvi", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "landcover_diversity")
+  # interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+  # 
+  # predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1")
+
+  # # version 10 (all the finer-grain landcover/landform classifications and includes event_day)
+  # human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
+  # topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "valley", "valley_narrow", "landform_diversity")
+  # weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
+  #                      "max_temp_pct", "min_temp_pct",
+  #                      "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
+  #                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
+  # fuel_drivers <- c("ndvi", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity")
+  # interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+  # 
+  # predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1", "event_day")
+  
+  # # version 9 (summaries of landform/landcover data and includes event_day)
+  # human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
+  # topography_drivers <- c("elevation", "rumple_index", "barriers_to_spread", "upper_slopes", "lower_slopes", "flat", "valleys", "landform_diversity")
+  # weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
+  #                      "max_temp_pct", "min_temp_pct",
+  #                      "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
+  #                      "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
+  # fuel_drivers <- c("ndvi", "fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "veg_structure_rumple", "landcover_diversity")
+  # interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment", "bi_pct", "erc_pct")
+  # 
+  # predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1", "event_day")
+  # 
+  # version 8 (combined some landform categories and includes event_day)
   # human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
   # topography_drivers <- c("elevation", "rumple_index", "barriers_to_spread", "upper_slopes", "lower_slopes", "flat", "valleys", "landform_diversity")
   # weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
@@ -222,26 +274,29 @@ for (counter in 1:4) {
   
   sort(cor(fires[, predictor.variable.names])[, "erc_pct"])
   
-  # Reduce collinearity in the predictors
-  preference.order <- c(
-    "npl", 
-    "rumple_index", "elevation",
-    "max_wind_speed_pct", "min_wind_speed_pct",
-    "max_vpd_pct", "min_vpd_pct",
-    "fm100_pct", "erc_pct", "spei1y",
-    "ndvi", "veg_structure_rumple", "landcover_diversity", "change_diversity",
-    "wind_terrain_alignment"
-  )
+  # Note that version 13 doesn't reduce collinearity in the predictors yet
+  predictor.variable.names_reduced <- predictor.variable.names
   
-  predictor.variable.names_reduced <- spatialRF::auto_cor(
-    x = fires[, predictor.variable.names],
-    cor.threshold = 0.75,
-    preference.order = preference.order
-  ) %>% 
-    spatialRF::auto_vif(
-      vif.threshold = 5,
-      preference.order = preference.order
-    )
+  # Reduce collinearity in the predictors
+  # preference.order <- c(
+  #   "npl", 
+  #   "rumple_index", "elevation",
+  #   "max_wind_speed_pct", "min_wind_speed_pct",
+  #   "max_vpd_pct", "min_vpd_pct",
+  #   "fm100_pct", "erc_pct", "spei1y",
+  #   "ndvi", "veg_structure_rumple", "landcover_diversity", "change_diversity",
+  #   "wind_terrain_alignment"
+  # )
+  # 
+  # predictor.variable.names_reduced <- spatialRF::auto_cor(
+  #   x = fires[, predictor.variable.names],
+  #   cor.threshold = 0.75,
+  #   preference.order = preference.order
+  # ) %>% 
+  #   spatialRF::auto_vif(
+  #     vif.threshold = 5,
+  #     preference.order = preference.order
+  #   )
   
   ##### ---- SET UP DATA SUBSETS WITH THEIR XY MATRICES
   data <- fires
@@ -305,97 +360,98 @@ for (counter in 1:4) {
   biome_nonspatial_import <- spatialRF::rf_importance(model = biome_nonspatial, xy = xy, metric = "rmse")
   
   readr::write_rds(x = biome_nonspatial, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial_", nonspatial_version, ".rds")))
+  
   readr::write_rds(x = biome_nonspatial_import, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-model-transferability_", nonspatial_version, ".rds")))
   
-  # Repeat to get a distribution of importance values
-  biome_nonspatial_repeat <- spatialRF::rf_repeat(
-    model = biome_nonspatial,
-    repetitions = 30,
-    seed = random_seed,
-    verbose = TRUE
-  )
-  
-  readr::write_rds(x = biome_nonspatial_repeat, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-repeat_", nonspatial_version, ".rds")))
+  # # Repeat to get a distribution of importance values
+  # biome_nonspatial_repeat <- spatialRF::rf_repeat(
+  #   model = biome_nonspatial,
+  #   repetitions = 30,
+  #   seed = random_seed,
+  #   verbose = TRUE
+  # )
+  # 
+  # readr::write_rds(x = biome_nonspatial_repeat, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-repeat_", nonspatial_version, ".rds")))
   
 }
 
 
-# Fit and write to disk the simple model, using just sqrt_aoi_tm1 as the only predictor
-for (j in seq_along(biome_shortnames)) {
-  
-  biome_shortname <- biome_shortnames[j]
-  
-  fired_daily_response <- 
-    data.table::fread(input = "data/out/fired_daily_ca_response-vars.csv")
-  
-  driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
-  
-  target_event_ids <-
-    sf::read_sf("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
-    dplyr::mutate(area_ha = as.numeric(sf::st_area(.)) / 10000) %>% 
-    dplyr::filter(area_ha >= 121.406) %>% 
-    dplyr::pull(id)
-  
-  fires <- 
-    data.table::fread(paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_", drivers_version, ".csv")) %>% 
-    dplyr::filter(id %in% target_event_ids) %>% 
-    dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
-                  -cumu_count, -cumu_area_ha,
-                  -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac,
-                  -ends_with("rtma"), -ends_with("rtma_pct"),
-                  -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi"),
-                  -starts_with("raw"),
-    ) %>% 
-    dplyr::left_join(fired_daily_response) %>% 
-    # dplyr::mutate(n_afd = ifelse(is.na(n_afd), yes = 0, no = n_afd),
-    #               frp90 = ifelse(is.na(frp90), yes = 0, no = frp90),
-    #               afd_per_ha = ifelse(is.na(afd_per_ha), yes = 0, no = afd_per_ha)) %>% 
-    dplyr::mutate(sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha)) %>% 
-    dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
-                  ewe = ifelse(area_log10_pct >= pct_threshold, yes = 1, no = 0)) %>% 
-    as.data.frame()
-  
-  idx <- substr(names(fires), start = 1, stop = 4) == "adj_"
-  names(fires)[idx] <- substr(names(fires), start = 5, stop = nchar(names(fires)))[idx]
-  
-  data <- fires
-  distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000)
-  
-  random_seed <- 2203
-  xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
-  
-  data_sf <-
-    data %>%
-    sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
-  
-  dist_mat <-
-    sf::st_distance(x = data_sf,
-                    y = data_sf) %>%
-    units::drop_units()
-  
-  (start_time <- Sys.time())
-  biome_nonspatial_simple <- spatialRF::rf(
-    data = data,
-    dependent.variable.name = "ewe",
-    predictor.variable.names = "sqrt_aoi_tm1",
-    distance.matrix = dist_mat,
-    distance.thresholds = distance_thresholds,
-    xy = xy, #not needed by rf, but other functions read it from the model
-    seed = random_seed,
-    verbose = TRUE
-  )
-  (end_time <- Sys.time())
-  (difftime(time1 = end_time, time2 = start_time, units = "mins"))
-  
-  biome_nonspatial_simple <- spatialRF::rf_evaluate(
-    model = biome_nonspatial_simple,
-    xy = xy,                  #data coordinates
-    repetitions = 30,         #number of spatial folds
-    training.fraction = 0.75, #training data fraction on each fold
-    metrics = c("r.squared", "rmse", "auc"),
-    seed = random_seed,
-    verbose = TRUE
-  )
-  
-  readr::write_rds(x = biome_nonspatial_simple, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-simple_", nonspatial_simple_version, ".rds")))
-}
+# # Fit and write to disk the simple model, using just sqrt_aoi_tm1 as the only predictor
+# for (j in seq_along(biome_shortnames)) {
+#   
+#   biome_shortname <- biome_shortnames[j]
+#   
+#   fired_daily_response <- 
+#     data.table::fread(input = "data/out/fired_daily_ca_response-vars.csv")
+#   
+#   driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
+#   
+#   target_event_ids <-
+#     sf::read_sf("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
+#     dplyr::mutate(area_ha = as.numeric(sf::st_area(.)) / 10000) %>% 
+#     dplyr::filter(area_ha >= 121.406) %>% 
+#     dplyr::pull(id)
+#   
+#   fires <- 
+#     data.table::fread(paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_", drivers_version, ".csv")) %>% 
+#     dplyr::filter(id %in% target_event_ids) %>% 
+#     dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+#                   -cumu_count, -cumu_area_ha,
+#                   -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac,
+#                   -ends_with("rtma"), -ends_with("rtma_pct"),
+#                   -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi"),
+#                   -starts_with("raw"),
+#     ) %>% 
+#     dplyr::left_join(fired_daily_response) %>% 
+#     # dplyr::mutate(n_afd = ifelse(is.na(n_afd), yes = 0, no = n_afd),
+#     #               frp90 = ifelse(is.na(frp90), yes = 0, no = frp90),
+#     #               afd_per_ha = ifelse(is.na(afd_per_ha), yes = 0, no = afd_per_ha)) %>% 
+#     dplyr::mutate(sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha)) %>% 
+#     dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
+#                   ewe = ifelse(area_log10_pct >= pct_threshold, yes = 1, no = 0)) %>% 
+#     as.data.frame()
+#   
+#   idx <- substr(names(fires), start = 1, stop = 4) == "adj_"
+#   names(fires)[idx] <- substr(names(fires), start = 5, stop = nchar(names(fires)))[idx]
+#   
+#   data <- fires
+#   distance_thresholds = c(0, 1000, 2000, 4000, 8000, 16000, 32000, 64000)
+#   
+#   random_seed <- 2203
+#   xy <- data[, c("x_biggest_poly_3310", "y_biggest_poly_3310")] %>% setNames(c("x", "y"))
+#   
+#   data_sf <-
+#     data %>%
+#     sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310, remove = FALSE)
+#   
+#   dist_mat <-
+#     sf::st_distance(x = data_sf,
+#                     y = data_sf) %>%
+#     units::drop_units()
+#   
+#   (start_time <- Sys.time())
+#   biome_nonspatial_simple <- spatialRF::rf(
+#     data = data,
+#     dependent.variable.name = "ewe",
+#     predictor.variable.names = "sqrt_aoi_tm1",
+#     distance.matrix = dist_mat,
+#     distance.thresholds = distance_thresholds,
+#     xy = xy, #not needed by rf, but other functions read it from the model
+#     seed = random_seed,
+#     verbose = TRUE
+#   )
+#   (end_time <- Sys.time())
+#   (difftime(time1 = end_time, time2 = start_time, units = "mins"))
+#   
+#   biome_nonspatial_simple <- spatialRF::rf_evaluate(
+#     model = biome_nonspatial_simple,
+#     xy = xy,                  #data coordinates
+#     repetitions = 30,         #number of spatial folds
+#     training.fraction = 0.75, #training data fraction on each fold
+#     metrics = c("r.squared", "rmse", "auc"),
+#     seed = random_seed,
+#     verbose = TRUE
+#   )
+#   
+#   readr::write_rds(x = biome_nonspatial_simple, file = file.path("data", "out", "rf", paste0("rf_", biome_shortname, "_binomial-response-95th-pct-ewe_nonspatial-simple_", nonspatial_simple_version, ".rds")))
+# }

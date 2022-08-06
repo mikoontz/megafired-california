@@ -7,6 +7,10 @@ library(lubridate)
 library(pbapply)
 library(USAboundaries)
 
+static_version <- "v4"
+fluc_version <- "v5"
+driver_version <- "v8"
+
 #### --- input FIRED data
 fired_events <- 
   sf::st_read("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
@@ -229,9 +233,9 @@ rtma_drivers_summarized <-
 
 frap <- read.csv("data/out/fired-frap-mtbs-join.csv")
 creek <- rtma_drivers_summarized[rtma_drivers_summarized$id == 135921, ]
-creek$max_wind_gust_pct
-creek$max_wind_speed_pct
-creek$max_vpd_pct
+creek$max_wind_gust_rtma_pct
+creek$min_wind_speed_rtma_pct
+creek$max_vpd_rtma_pct
 
 #### --- end RTMA drivers prep
 
@@ -283,14 +287,14 @@ npl <-
   as.data.table()
 
 ### landform and landcover variables
-static_drivers <- data.table::fread("data/out/ee/FIRED-daily-static-drivers_california.csv")
+static_drivers <- data.table::fread(paste0("data/out/ee/FIRED-daily-static-drivers_california_", static_version, ".csv"))
 static_drivers[, `:=`(.geo = NULL, samp_id = NULL, `system:index` = NULL,
                       rumple_index = surf_area / proj_area,
                       road_density_mpha = (road_length_m) / (proj_area / 10000),
                       surf_area = NULL, road_length_m = NULL)]
 static_drivers <- static_drivers[did %in% target_fires_did, ]
 
-fluc_drivers <- data.table::fread("data/out/ee/FIRED-daily-fluctuating-drivers_california.csv")
+fluc_drivers <- data.table::fread(paste0("data/out/ee/FIRED-daily-fluctuating-drivers_california_", fluc_version, ".csv"))
 # LCMS Landcovers 2 and 6 are only in Alaska, so we'll remove them here
 fluc_drivers[, `:=`(.geo = NULL, samp_id = NULL, `system:index` = NULL,
                     veg_structure_rumple = ndvi_surf_area / ndvi_proj_area,
@@ -462,6 +466,9 @@ out <-
 # because there is one additional step to processing the drivers that accounts for the 
 # fire-independent scaling relationships
 
-sf::st_write(obj = out_sf, dsn = "data/out/FIRED-daily-scale-drivers_california_v7.gpkg", 
-             delete_dsn = file.exists("data/out/FIRED-daily-scale-drivers_california_v7.gpkg"))
-data.table::fwrite(x = out, file = "data/out/FIRED-daily-scale-drivers_california_v7.csv")
+# version 8 uses LCMS data from previous year instead of fire year
+
+
+sf::st_write(obj = out_sf, dsn = paste0("data/out/FIRED-daily-scale-drivers_california_", driver_version, ".gpkg"), 
+             delete_dsn = file.exists(paste0("data/out/FIRED-daily-scale-drivers_california_", driver_version, ".gpkg")))
+data.table::fwrite(x = out, file = paste0("data/out/FIRED-daily-scale-drivers_california_", driver_version, ".csv"))

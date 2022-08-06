@@ -15,9 +15,8 @@ dir.create("figs/rf", showWarnings = FALSE)
 # biome_shortname <- "tgss"
 # biome_shortname <- "dxs"
 
-nonspatial_version <- "v8"
+nonspatial_version <- "v10"
 nonspatial_simple_version <- "v3"
-nonspatial_repeat_version <- "v1"
 
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 
@@ -44,31 +43,6 @@ for (counter in 1:4) {
     readr::read_rds()
   
   rfspatial_model_transferability_gg <- biome_nonspatial_import$importance$cv.per.variable.plot
-  
-  # biome_nonspatial_simple <-
-  #   list.files("data/out/rf", full.names = TRUE) %>% 
-  #   data.frame(fname = .) %>% 
-  #   dplyr::filter(grepl(pattern = nonspatial_simple_version, x = fname), 
-  #                 grepl(pattern = "95th", x = fname),
-  #                 grepl(pattern = "_nonspatial-simple", x = fname),
-  #                 grepl(pattern = biome_shortname, x = fname)) %>%
-  #   dplyr::pull(fname) %>% 
-  #   readr::read_rds()
-  # 
-  # plot_response_curves(biome_nonspatial, quantiles = 0.5)
-  
-  # AUC of simple model versus one that includes fuel, topography, weather, and human factors
-  # eval_out <- 
-  #   rbind(
-  #     biome_nonspatial$evaluation$aggregated %>% 
-  #       dplyr::filter(model == "Testing",
-  #                     metric %in% c("auc", "rmse")) %>% 
-  #       dplyr::mutate(model = "complex"),
-  #     biome_nonspatial_simple$evaluation$aggregated %>% 
-  #       dplyr::filter(model == "Testing",
-  #                     metric %in% c("auc", "rmse")) %>% 
-  #       dplyr::mutate(model = "simple")
-  #   )
   
   spatialrf_import_gg <- biome_nonspatial$importance$cv.per.variable.plot
   # biome_nonspatial <- spatialRF::rf_importance(model = biome_nonspatial, xy = biome_nonspatial$ranger.arguments$xy, metric = "auc")
@@ -173,9 +147,6 @@ nonspatial_model_out <-
   })
 
 names(nonspatial_model_out) <- biome_shortnames
-
-
-
 
 lapply(biome_shortnames, FUN = function(biome_shortname) {
   biome_nonspatial <-
@@ -286,23 +257,148 @@ lapply(biome_shortnames, FUN = function(biome_shortname) {
   ggplot2::ggsave(plot = response_curves_spaghetti_gg, filename = paste0("figs/rf/", biome_shortname, "_response-curves-important-variables-spaghetti_", nonspatial_version, ".png"))
   ggplot2::ggsave(plot = response_curves_highlight_gg, filename = paste0("figs/rf/", biome_shortname, "_response-curves-important-variables-highlight_", nonspatial_version, ".png"))
   
+})
+
+
+# any variables we should drop from the model?
+
+model_checking <- 
+  lapply(biome_shortnames, FUN = function(biome_shortname) {
+    biome_nonspatial <-
+      list.files("data/out/rf", full.names = TRUE) %>% 
+      data.frame(fname = .) %>% 
+      dplyr::filter(grepl(pattern = nonspatial_version, x = fname), 
+                    grepl(pattern = "95th", x = fname),
+                    grepl(pattern = "_nonspatial_", x = fname),
+                    grepl(pattern = biome_shortname, x = fname)) %>%
+      dplyr::pull(fname) %>% 
+      readr::read_rds()
+    
+    data <- biome_nonspatial$ranger.arguments$data 
+    case.wgts <- spatialRF::case_weights(data = data, dependent.variable.name = "ewe")
+    data <-
+      data %>% 
+      dplyr::mutate(ewe = factor(ewe, levels = c(0, 1)))
+    
+    indep_vars <- biome_nonspatial$forest$independent.variable.names
+    n_pred <- 100
+    n_rep <- 1000
+    idx <- sample(x = nrow(data), size = n_rep, replace = TRUE)
+    
+    ranger_formula <- as.formula(paste0("ewe ~ ", paste(indep_vars, collapse = " + ")))
+    ranger_equivalent <- ranger::ranger(formula = ranger_formula,
+                                        data = data,
+                                        classification = TRUE,
+                                        probability = TRUE,
+                                        class.weights = unique(case.wgts),
+                                        importance = "permutation",
+                                        seed = 1)
+    
+    ranger_import_pval <- ranger::importance_pvalues(x = ranger_equivalent, formula = ranger_formula, data = data, method = "altmann")
+    key_vars <- 
+      ranger_import_pval %>% 
+      as.data.frame() %>% 
+      filter(pvalue < 0.05) %>% 
+      rownames()
+
+    newdata <- lapply(seq_along(key_vars), FUN = function(i) {
+      other_vars <- setdiff(indep_vars, key_vars[i])
+      newdata_x <- seq(min(data[[key_vars[i]]]), max(data[[key_vars[i]]]), length.out = n_pred)
+      
+      this_var_newdata <- 
+        lapply(seq_along(idx), FUN = function(j) {
+          this_idx_newdata <- 
+            data.frame(target_var = key_vars[i], group = j, iter = 1:n_pred, x = newdata_x) %>% 
+            cbind(data[idx[j], other_vars], row.names = "iter") %>% 
+            dplyr::mutate(iter = 1:n_pred)
+          
+          names(this_idx_newdata)[names(this_idx_newdata) == "x"] <- key_vars[i]
+          
+          this_idx_newdata <- this_idx_newdata[, c("target_var", "group", "iter", indep_vars)]
+          
+        }) %>% 
+        do.call(what = "rbind", args = .)
+    }) |> 
+      do.call("rbind", args = _)
+    
+    newdata$ewe <- predict(ranger_equivalent, data = newdata)$predictions[, 2]
+    # newdata$ewe <- predict(biome_nonspatial, data = newdata)$predictions
+    
+    newdata_agg <-
+      split(x = newdata, f = list(newdata$target_var, newdata$iter)) |> 
+      lapply(FUN = function(x) {
+        data.frame(target_var = unique(x$target_var),
+                   iter = unique(x$iter),
+                   x = unique(x[[unique(x$target_var)]]),
+                   ewe = mean(x$ewe),
+                   lwr = t.test(x = x$ewe)$conf.int[1],
+                   upr = t.test(x = x$ewe)$conf.int[2])
+      }) |>
+      do.call("rbind", args = _) |>
+      dplyr::mutate(target_var = factor(target_var, levels = key_vars))
+    
+    rownames(newdata_agg) <- 1:nrow(newdata_agg) 
+    
+    ggplot(newdata_agg, aes(x = x, y = ewe, ymin = lwr, ymax = upr)) +
+      geom_line() +
+      geom_ribbon(alpha = 0.25) +
+      facet_wrap(facets = "target_var", scales = "free") +
+      theme_bw()
+    
+    newdata_plotting <- 
+      newdata[, c("target_var", "group", "iter", "ewe", key_vars)] %>% 
+      split(f = .$target_var) %>% 
+      lapply(FUN = function(x) {
+        data.frame(target_var = x$target_var,
+                   group = x$group,
+                   iter = x$iter,
+                   x = x[, unique(x$target_var)],
+                   ewe = x$ewe)
+      }) %>% 
+      do.call(what = "rbind", args = .)
+    
+    rownames(newdata_plotting) <- 1:nrow(newdata_plotting)
+    newdata_plotting$target_var <- factor(newdata_plotting$target_var, levels = key_vars)
+    
+    response_curves_spaghetti_gg <- 
+      ggplot() +
+      geom_line(data = newdata_plotting, aes(x = x, y = ewe, group = group), alpha = 0.1) +
+      geom_line(data = newdata_agg, aes(x = x, y = ewe), color = "red") +
+      # geom_ribbon(alpha = 0.25) +
+      facet_wrap(facets = "target_var", scales = "free") +
+      theme_bw()
+    
+    response_curves_highlight_gg <- 
+      ggplot(data = newdata_agg, aes(x = x, y = ewe, ymin = lwr, ymax = upr)) +
+      geom_line(lwd = 1.25) +
+      geom_ribbon(alpha = 0.25) +
+      facet_wrap(facets = "target_var", scales = "free") +
+      theme_bw()
+    
+    ggplot2::ggsave(plot = response_curves_spaghetti_gg, filename = paste0("figs/rf/", biome_shortname, "_response-curves-ranger-important-variables-spaghetti_", nonspatial_version, ".png"))
+    ggplot2::ggsave(plot = response_curves_highlight_gg, filename = paste0("figs/rf/", biome_shortname, "_response-curves-ranger-important-variables-highlight_", nonspatial_version, ".png"))
+    
+    data.frame(biome = biome_shortname, driver = biome_nonspatial$forest$independent.variable.names)
   })
+
+
+
 
 
 indep_vars <- 
   lapply(biome_shortnames, FUN = function(biome_shortname) {
-  biome_nonspatial <-
-    list.files("data/out/rf", full.names = TRUE) %>% 
-    data.frame(fname = .) %>% 
-    dplyr::filter(grepl(pattern = nonspatial_version, x = fname), 
-                  grepl(pattern = "95th", x = fname),
-                  grepl(pattern = "_nonspatial_", x = fname),
-                  grepl(pattern = biome_shortname, x = fname)) %>%
-    dplyr::pull(fname) %>% 
-    readr::read_rds()
-  
-  data.frame(biome = biome_shortname, driver = biome_nonspatial$forest$independent.variable.names)
-})
+    biome_nonspatial <-
+      list.files("data/out/rf", full.names = TRUE) %>% 
+      data.frame(fname = .) %>% 
+      dplyr::filter(grepl(pattern = nonspatial_version, x = fname), 
+                    grepl(pattern = "95th", x = fname),
+                    grepl(pattern = "_nonspatial_", x = fname),
+                    grepl(pattern = biome_shortname, x = fname)) %>%
+      dplyr::pull(fname) %>% 
+      readr::read_rds()
+    
+    data.frame(biome = biome_shortname, driver = biome_nonspatial$forest$independent.variable.names)
+  })
 
 predictor_table <- read.csv("tables/driver-descriptions.csv")
 names(indep_vars) <- biome_shortnames

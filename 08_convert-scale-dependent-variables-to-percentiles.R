@@ -5,15 +5,16 @@ library(ggplot2)
 
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 
-fired_drivers_fname <- "data/out/FIRED-daily-scale-drivers_california_v7.csv"
+drivers_version <- "v8"
+analysis_ready_drivers_version <- "v7"
 
-drivers_version <- "v6"
+fired_drivers_fname <- paste0("data/out/FIRED-daily-scale-drivers_california_", drivers_version, ".csv")
 
-for(i in seq_along(biome_shortnames)[-1]) {
+for(i in seq_along(biome_shortnames)) {
   
   biome_shortname <- biome_shortnames[i]
   
-  analysis_ready_drivers_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_", drivers_version, ".csv")
+  analysis_ready_drivers_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_", analysis_ready_drivers_version, ".csv")
   
   static_drivers <- 
     list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", pattern = "static", full.names = TRUE)

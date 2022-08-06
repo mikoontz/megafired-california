@@ -46,7 +46,8 @@ for(i in seq_along(biome_shortnames)) {
   fluc_drivers[, `:=`(.geo = NULL, `system:index` = NULL,
                       veg_structure_rumple = ndvi_surf_area / ndvi_proj_area,
                       ndvi_proj_area = NULL, ndvi_surf_area = NULL,
-                      lcms_landcover_02 = NULL, lcms_landcover_06 = NULL)]
+                      lcms_landcover_02_tm00 = NULL, lcms_landcover_06_tm00 = NULL,
+                      lcms_landcover_02_tm01 = NULL, lcms_landcover_06_tm01 = NULL)]
   
   
   fi_drivers <- 
@@ -55,7 +56,8 @@ for(i in seq_along(biome_shortnames)) {
     dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("csp_ergo_landforms"), .fns = ~ .x / proj_area)) %>% 
     dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("lcms"), .fns = ~ .x*30*30)) %>% 
     dplyr::mutate(dplyr::across(.cols = dplyr::starts_with("lcms"), .fns = ~ .x / proj_area)) %>% 
-    dplyr::select(-c(lcms_landcover_13, lcms_landcover_14, lcms_landcover_15, lcms_change_05)) %>% 
+    dplyr::select(-c(lcms_landcover_13_tm00, lcms_landcover_14_tm00, lcms_landcover_15_tm00, lcms_change_05_tm00),
+                  -c(lcms_landcover_13_tm01, lcms_landcover_14_tm01, lcms_landcover_15_tm01, lcms_change_05_tm01)) %>% 
     dplyr::mutate(landform_diversity = vegan::diversity(cbind(csp_ergo_landforms_11, csp_ergo_landforms_12, csp_ergo_landforms_13, csp_ergo_landforms_14, csp_ergo_landforms_15, csp_ergo_landforms_21, csp_ergo_landforms_22, csp_ergo_landforms_23, csp_ergo_landforms_24, csp_ergo_landforms_31, csp_ergo_landforms_32, csp_ergo_landforms_33, csp_ergo_landforms_34, csp_ergo_landforms_41, csp_ergo_landforms_42))) %>%
     # "barriers to spread" include all types of peaks/ridges, mountain/divides, and cliffs but not valleys/narrow valleys
     dplyr::mutate(barriers_to_spread = csp_ergo_landforms_11 + csp_ergo_landforms_12 + csp_ergo_landforms_13 + csp_ergo_landforms_14 + csp_ergo_landforms_15) %>% 
@@ -63,8 +65,8 @@ for(i in seq_along(biome_shortnames)) {
     dplyr::mutate(upper_slopes = csp_ergo_landforms_21 + csp_ergo_landforms_22 + csp_ergo_landforms_23) %>% 
     dplyr::mutate(lower_slopes = csp_ergo_landforms_31 + csp_ergo_landforms_32 + csp_ergo_landforms_33) %>% 
     dplyr::mutate(flat = csp_ergo_landforms_24 + csp_ergo_landforms_34) %>% 
-    dplyr::mutate(landcover_diversity = vegan::diversity(cbind(lcms_landcover_01, lcms_landcover_03, lcms_landcover_04, lcms_landcover_05, lcms_landcover_07, lcms_landcover_08, lcms_landcover_09, lcms_landcover_10, lcms_landcover_11, lcms_landcover_12)),
-                  change_diversity = vegan::diversity(cbind(lcms_change_01, lcms_change_02, lcms_change_03, lcms_change_04))) %>% 
+    dplyr::mutate(landcover_diversity = vegan::diversity(cbind(lcms_landcover_01_tm01, lcms_landcover_03_tm01, lcms_landcover_04_tm01, lcms_landcover_05_tm01, lcms_landcover_07_tm01, lcms_landcover_08_tm01, lcms_landcover_09_tm01, lcms_landcover_10_tm01, lcms_landcover_11_tm01, lcms_landcover_12_tm01)),
+                  change_diversity = vegan::diversity(cbind(lcms_change_01_tm01, lcms_change_02_tm01, lcms_change_03_tm01, lcms_change_04_tm01))) %>% 
     dplyr::select(did, id, date, everything())
   
   fi_drivers_long <-
@@ -79,7 +81,8 @@ for(i in seq_along(biome_shortnames)) {
   # Get drivers as measured from within fire footprints
   fired_drivers <-
     data.table::fread(fired_drivers_fname) %>% 
-    dplyr::select(-c(lcms_landcover_13, lcms_landcover_14, lcms_landcover_15, lcms_change_05)) %>% 
+    dplyr::select(-c(lcms_landcover_13_tm00, lcms_landcover_14_tm00, lcms_landcover_15_tm00, lcms_change_05_tm00),
+                  -c(lcms_landcover_13_tm01, lcms_landcover_14_tm01, lcms_landcover_15_tm01, lcms_change_05_tm01)) %>% 
     dplyr::mutate(landform_diversity = vegan::diversity(cbind(csp_ergo_landforms_11, csp_ergo_landforms_12, csp_ergo_landforms_13, csp_ergo_landforms_14, csp_ergo_landforms_15, csp_ergo_landforms_21, csp_ergo_landforms_22, csp_ergo_landforms_23, csp_ergo_landforms_24, csp_ergo_landforms_31, csp_ergo_landforms_32, csp_ergo_landforms_33, csp_ergo_landforms_34, csp_ergo_landforms_41, csp_ergo_landforms_42))) %>%
     # "barriers to spread" include all types of peaks/ridges, mountain/divides, and cliffs but not valleys/narrow valleys
     dplyr::mutate(barriers_to_spread = csp_ergo_landforms_11 + csp_ergo_landforms_12 + csp_ergo_landforms_13 + csp_ergo_landforms_14 + csp_ergo_landforms_15) %>% 
@@ -87,8 +90,8 @@ for(i in seq_along(biome_shortnames)) {
     dplyr::mutate(upper_slopes = csp_ergo_landforms_21 + csp_ergo_landforms_22 + csp_ergo_landforms_23) %>% 
     dplyr::mutate(lower_slopes = csp_ergo_landforms_31 + csp_ergo_landforms_32 + csp_ergo_landforms_33) %>% 
     dplyr::mutate(flat = csp_ergo_landforms_24 + csp_ergo_landforms_34) %>% 
-    dplyr::mutate(landcover_diversity = vegan::diversity(cbind(lcms_landcover_01, lcms_landcover_03, lcms_landcover_04, lcms_landcover_05, lcms_landcover_07, lcms_landcover_08, lcms_landcover_09, lcms_landcover_10, lcms_landcover_11, lcms_landcover_12)),
-                  change_diversity = vegan::diversity(cbind(lcms_change_01, lcms_change_02, lcms_change_03, lcms_change_04))) %>% 
+    dplyr::mutate(landcover_diversity = vegan::diversity(cbind(lcms_landcover_01_tm01, lcms_landcover_03_tm01, lcms_landcover_04_tm01, lcms_landcover_05_tm01, lcms_landcover_07_tm01, lcms_landcover_08_tm01, lcms_landcover_09_tm01, lcms_landcover_10_tm01, lcms_landcover_11_tm01, lcms_landcover_12_tm01)),
+                  change_diversity = vegan::diversity(cbind(lcms_change_01_tm01, lcms_change_02_tm01, lcms_change_03_tm01, lcms_change_04_tm01))) %>% 
     dplyr::select(did, id, date, everything())
   
   fired_long <-
@@ -135,7 +138,8 @@ for(i in seq_along(biome_shortnames)) {
   # version 4 uses the actual FIRED polygons affine transformed to be on top of 1000 random points throughout the
   # temperate conifer forest biome
   # version 5 uses the actual FIRED polygons affine transformed to be on top of 500 random points throughout each biome
-  # version 6 cleans up the workflow and only uses data properly and cleanly created 
+  # version 6 cleans up the workflow and only uses data properly and cleanly created data
+  # version 7 uses LCMS data from the year before the fire rather than the year of the fire
   
   data.table::fwrite(x = out, file = analysis_ready_drivers_fname)
 }

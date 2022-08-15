@@ -6,7 +6,7 @@ library(ggplot2)
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 
 drivers_version <- "v8"
-analysis_ready_drivers_version <- "v7"
+adjusted_drivers_version <- "v8"
 
 fired_drivers_fname <- paste0("data/out/FIRED-daily-scale-drivers_california_", drivers_version, ".csv")
 
@@ -14,7 +14,7 @@ for(i in seq_along(biome_shortnames)) {
   
   biome_shortname <- biome_shortnames[i]
   
-  analysis_ready_drivers_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", biome_shortname, "_", analysis_ready_drivers_version, ".csv")
+  adjusted_drivers_fname <- paste0("data/out/FIRED-daily-scale-drivers_california_", biome_shortname, "_", adjusted_drivers_version, ".csv")
   
   static_drivers <- 
     list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", pattern = "static", full.names = TRUE)
@@ -65,8 +65,14 @@ for(i in seq_along(biome_shortnames)) {
     dplyr::mutate(upper_slopes = csp_ergo_landforms_21 + csp_ergo_landforms_22 + csp_ergo_landforms_23) %>% 
     dplyr::mutate(lower_slopes = csp_ergo_landforms_31 + csp_ergo_landforms_32 + csp_ergo_landforms_33) %>% 
     dplyr::mutate(flat = csp_ergo_landforms_24 + csp_ergo_landforms_34) %>% 
-    dplyr::mutate(landcover_diversity = vegan::diversity(cbind(lcms_landcover_01_tm01, lcms_landcover_03_tm01, lcms_landcover_04_tm01, lcms_landcover_05_tm01, lcms_landcover_07_tm01, lcms_landcover_08_tm01, lcms_landcover_09_tm01, lcms_landcover_10_tm01, lcms_landcover_11_tm01, lcms_landcover_12_tm01)),
-                  change_diversity = vegan::diversity(cbind(lcms_change_01_tm01, lcms_change_02_tm01, lcms_change_03_tm01, lcms_change_04_tm01))) %>% 
+    dplyr::mutate(landcover_diversity_tm00 = vegan::diversity(cbind(lcms_landcover_01_tm00, lcms_landcover_03_tm00, lcms_landcover_04_tm00, lcms_landcover_05_tm00, lcms_landcover_07_tm00, lcms_landcover_08_tm00, lcms_landcover_09_tm00, lcms_landcover_10_tm00, lcms_landcover_11_tm00, lcms_landcover_12_tm00)),
+                  change_diversity_tm00 = vegan::diversity(cbind(lcms_change_01_tm00, lcms_change_02_tm00, lcms_change_03_tm00, lcms_change_04_tm00)),
+                  landcover_diversity_tm01 = vegan::diversity(cbind(lcms_landcover_01_tm01, lcms_landcover_03_tm01, lcms_landcover_04_tm01, lcms_landcover_05_tm01, lcms_landcover_07_tm01, lcms_landcover_08_tm01, lcms_landcover_09_tm01, lcms_landcover_10_tm01, lcms_landcover_11_tm01, lcms_landcover_12_tm01)),
+                  change_diversity_tm01 = vegan::diversity(cbind(lcms_change_01_tm01, lcms_change_02_tm01, lcms_change_03_tm01, lcms_change_04_tm01)),
+                  change_diversity_tm02 = vegan::diversity(cbind(lcms_change_01_tm02, lcms_change_02_tm02, lcms_change_03_tm02, lcms_change_04_tm02)),
+                  change_diversity_tm03 = vegan::diversity(cbind(lcms_change_01_tm03, lcms_change_02_tm03, lcms_change_03_tm03, lcms_change_04_tm03)),
+                  change_diversity_tm04 = vegan::diversity(cbind(lcms_change_01_tm04, lcms_change_02_tm04, lcms_change_03_tm04, lcms_change_04_tm04)),
+                  change_diversity_tm05 = vegan::diversity(cbind(lcms_change_01_tm05, lcms_change_02_tm05, lcms_change_03_tm05, lcms_change_04_tm05))) %>% 
     dplyr::select(did, id, date, everything())
   
   fi_drivers_long <-
@@ -90,8 +96,14 @@ for(i in seq_along(biome_shortnames)) {
     dplyr::mutate(upper_slopes = csp_ergo_landforms_21 + csp_ergo_landforms_22 + csp_ergo_landforms_23) %>% 
     dplyr::mutate(lower_slopes = csp_ergo_landforms_31 + csp_ergo_landforms_32 + csp_ergo_landforms_33) %>% 
     dplyr::mutate(flat = csp_ergo_landforms_24 + csp_ergo_landforms_34) %>% 
-    dplyr::mutate(landcover_diversity = vegan::diversity(cbind(lcms_landcover_01_tm01, lcms_landcover_03_tm01, lcms_landcover_04_tm01, lcms_landcover_05_tm01, lcms_landcover_07_tm01, lcms_landcover_08_tm01, lcms_landcover_09_tm01, lcms_landcover_10_tm01, lcms_landcover_11_tm01, lcms_landcover_12_tm01)),
-                  change_diversity = vegan::diversity(cbind(lcms_change_01_tm01, lcms_change_02_tm01, lcms_change_03_tm01, lcms_change_04_tm01))) %>% 
+    dplyr::mutate(landcover_diversity_tm00 = vegan::diversity(cbind(lcms_landcover_01_tm00, lcms_landcover_03_tm00, lcms_landcover_04_tm00, lcms_landcover_05_tm00, lcms_landcover_07_tm00, lcms_landcover_08_tm00, lcms_landcover_09_tm00, lcms_landcover_10_tm00, lcms_landcover_11_tm00, lcms_landcover_12_tm00)),
+                  change_diversity_tm00 = vegan::diversity(cbind(lcms_change_01_tm00, lcms_change_02_tm00, lcms_change_03_tm00, lcms_change_04_tm00)),
+                  landcover_diversity_tm01 = vegan::diversity(cbind(lcms_landcover_01_tm01, lcms_landcover_03_tm01, lcms_landcover_04_tm01, lcms_landcover_05_tm01, lcms_landcover_07_tm01, lcms_landcover_08_tm01, lcms_landcover_09_tm01, lcms_landcover_10_tm01, lcms_landcover_11_tm01, lcms_landcover_12_tm01)),
+                  change_diversity_tm01 = vegan::diversity(cbind(lcms_change_01_tm01, lcms_change_02_tm01, lcms_change_03_tm01, lcms_change_04_tm01)),
+                  change_diversity_tm02 = vegan::diversity(cbind(lcms_change_01_tm02, lcms_change_02_tm02, lcms_change_03_tm02, lcms_change_04_tm02)),
+                  change_diversity_tm03 = vegan::diversity(cbind(lcms_change_01_tm03, lcms_change_02_tm03, lcms_change_03_tm03, lcms_change_04_tm03)),
+                  change_diversity_tm04 = vegan::diversity(cbind(lcms_change_01_tm04, lcms_change_02_tm04, lcms_change_03_tm04, lcms_change_04_tm04)),
+                  change_diversity_tm05 = vegan::diversity(cbind(lcms_change_01_tm05, lcms_change_02_tm05, lcms_change_03_tm05, lcms_change_04_tm05))) %>% 
     dplyr::select(did, id, date, everything())
   
   fired_long <-
@@ -141,5 +153,5 @@ for(i in seq_along(biome_shortnames)) {
   # version 6 cleans up the workflow and only uses data properly and cleanly created data
   # version 7 uses LCMS data from the year before the fire rather than the year of the fire
   
-  data.table::fwrite(x = out, file = analysis_ready_drivers_fname)
+  data.table::fwrite(x = out, file = adjusted_drivers_fname)
 }

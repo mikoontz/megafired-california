@@ -539,3 +539,43 @@ sum(predictor_table$driver %in% indep_vars[[biome_shortname]]$driver)
 nrow(indep_vars[[biome_shortname]])
 
 indep_vars[[biome_shortname]]$driver[!(indep_vars[[biome_shortname]]$driver %in% predictor_table$driver)]
+
+
+
+# Includes Sobol-MDA approach
+# https://github.com/clementbenard/ranger/commit/75c0f90c1c85581ace5dc3f39ea32c62a94be2c5
+# remotes::install_github(repo = "clementbenard/ranger", ref = "75c0f90c1c85581ace5dc3f39ea32c62a94be2c5")
+# remotes::install_github(repo = "clementbenard/ranger")
+
+party_imp <- permimp::permimp(object = final_party_model, conditional = TRUE, AUC = TRUE, threshold = 0.8)
+# 
+# # # https://link.springer.com/article/10.1007/s11634-016-0276-4
+# imp_p <- vita::NTA(as.matrix(party_imp$values))
+# summary(imp_p)$cmat %>%
+#   as.data.frame() %>%
+#   dplyr::filter(`p-value` <= 0.05) %>%
+#   dplyr::arrange(desc(`CV-PerVarImp`))
+
+# CV-PerVarImp    p-value
+# barren_grass_forb_herb_mix_tm01 6.388551e-04 0.00000000
+# sqrt_aoi_tm1                    1.009734e-04 0.00000000
+# barren_shrub_mix_tm01           1.000166e-04 0.00000000
+# mountain_divide                 8.034414e-05 0.00000000
+# road_density_mpha               5.592944e-05 0.00000000
+# spei5y                          5.199631e-05 0.00000000
+# cliff                           1.960194e-05 0.00000000
+# peak_ridge_cool                 1.912447e-05 0.00000000
+# barren_trees_mix_tm01           1.877983e-05 0.00000000
+# min_wind_speed_pct              1.755426e-05 0.00000000
+# change_diversity_tm01           1.508939e-05 0.00000000
+# wind_terrain_anisotropy         1.456523e-05 0.00000000
+# fuel_slow_loss_tm01             1.151352e-05 0.00000000
+# fuel_stable_tm01                1.130654e-05 0.00000000
+# concurrent_fires                9.302766e-06 0.00000000
+# spei180d                        8.113308e-06 0.00000000
+# lower_slope                     8.097090e-06 0.00000000
+# wind_anisotropy                 7.797262e-06 0.00000000
+# wind_terrain_alignment          5.877176e-06 0.04761905
+# elevation                       5.847678e-06 0.04761905
+# lower_slope_warm                5.467980e-06 0.04761905
+# veg_structure_rumple            5.228789e-06 0.04761905

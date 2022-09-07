@@ -1,3 +1,7 @@
+library(mlr3)
+library(mlr3learners)
+library(mlr3extralearners)
+library(mlr3spatiotempcv)
 library(dplyr)
 library(purrr)
 library(yardstick)
@@ -6,7 +10,8 @@ library(sf)
 library(tidyr)
 library(pbapply)
 library(data.table)
-library(ranger)
+library(cpi)
+# library(ranger)
 
 analysis_ready_nonspatial_version <- "v1"
 analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
@@ -27,22 +32,206 @@ target_event_ids <-
 
 fires_all <- fires_all[id %in% target_event_ids,]
 
-# Remove all event days that occur after the first EWE for that event
-# fires <-
-#   fires %>%
-#   dplyr::filter(cumu_ewe <= 1)
+biome_shortname <- biome_shortnames[counter]
+print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
 
-# Just include eco regions that have experienced more than 10 EWE's
-# target_eco_names <- 
-#   fires_all %>% 
-#   group_by(eco_name_daily, ewe) %>% 
-#   tally() %>% 
-#   filter(ewe == 1, n > 10) %>% 
-#   pull(eco_name_daily)
+fires <- as.data.frame(fires_all)
+fires <- fires[fires$biome_shortname == biome_shortname, ]
+
+human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
+topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "valley", "valley_narrow", "landform_diversity")
+weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
+                     "max_temp_pct", "min_temp_pct", "bi_pct", "erc_pct",
+                     "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
+                     "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
+
+fuel_lcms_change_tm01 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm01")
+fuel_lcms_change_tm02 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm02")
+fuel_lcms_change_tm03 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm03")
+fuel_lcms_change_tm04 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm04")
+fuel_lcms_change_tm05 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm05")
+
+fuel_lcms_landcover_tm01 <- paste0(c("trees", "shrubs_trees_mix", "grass_forbs_herb_trees_mix", "barren_trees_mix", "shrubs", "grass_forb_herb_shrub_mix", "barren_shrub_mix", "grass_forb_herb", "barren_grass_forb_herb_mix", "barren", "landcover_diversity"), "_tm01")
+
+fuel_drivers <- c("ndvi", "veg_structure_rumple", fuel_lcms_change_tm01, fuel_lcms_change_tm02, fuel_lcms_change_tm03, fuel_lcms_change_tm04, fuel_lcms_change_tm05, fuel_lcms_landcover_tm01)
+
+interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment")
+
+predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1")
+
+# No NAs
+apply(fires[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+
+# Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+na_cols <- colnames(fires[, predictor.variable.names])[which(apply(fires[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+
+fires <-
+  fires %>%
+  dplyr::select(-all_of(na_cols))
+
+# Now drop all fires that have an NA in any column
+bad_fires <- unique(fires[!complete.cases(fires[, predictor.variable.names]), "id"])
+
+fires <- fires[!(fires$id %in% bad_fires), ]
+
+# no columnns with 0 variance (rounded to 4 decimal places)
+zero_variance_columns <- colnames(fires[, predictor.variable.names])[round(apply(fires[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
+
+predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+
+fires <-
+  fires %>%
+  dplyr::select(-all_of(zero_variance_columns))
+
+# BEGIN TUNING of the conditional random forest using spatial cross validation
+# Build a cforest() model with the best spatially cross-validated AUC value
+
+data <- fires[, c("did", "ewe", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
+# data$npl <- factor(data$npl, levels = 1:5)
+
+class.wgts <- 1 / table(data$ewe)
+
+# https://github.com/mlr-org/mlr3/issues/563
+data$wt <- as.numeric(class.wgts[data$ewe + 1])
+
+# Define the learner to be a {ranger} regression and give it the tuned hyperparameters
+learner_ewe <- mlr3::lrn("classif.glmnet", predict_type = "prob", lambda = 0.1)
+
+task_ewe <- mlr3::as_task_classif(x = data[, c("ewe", "eco_name_daily", predictor.variable.names)], 
+                                  target = "ewe", 
+                                  id = "ewe")
+
+# weight column is the "wt" column, to help with class imbalance
+task_ewe$set_col_roles(cols = "wt", roles = "weight")
+# eco_name_daily becomes a grouping column for the spatial cross validation
+task_ewe$set_col_roles(cols = "eco_name_daily", roles = "group")
+
+# Next we build a resampler (we want to continue doing spatial cross validation to check on our variable importance)
+resampling_ewe <- mlr3::rsmp(.key = "repeated_cv", folds = length(unique(data$eco_name_daily)), repeats = 5)
+
+cl <- parallel::makeCluster(parallel::detectCores() - 1)  
+doParallel::registerDoParallel(cl)  
+
+out <- cpi::cpi(task = task_ewe, learner = learner_ewe, measure = "classif.logloss", resampling = resampling_ewe, test = "fisher")
+
+parallel::stopCluster(cl = cl)
+
+library(glmnet)
+
+fm1 <- glmnet::glmnet(x = as.matrix(data[, predictor.variable.names]), y = data$ewe, family = "binomial", weights = data$wt, nlambda = 200)
+fm1 <- glmnet::cv.glmnet(x = as.matrix(data[, predictor.variable.names]), 
+                         y = data$ewe, 
+                         family = "binomial", 
+                         weights = data$wt, 
+                         nlambda = 100, 
+                         nfolds = 5,
+                         type.measure = "auc")
+
+plot(fm1)
+
+
+library(mlr3verse)
+# https://stackoverflow.com/questions/66696405/how-to-repeat-hyperparameter-tuning-alpha-and-or-lambda-of-glmnet-in-mlr3
+
+(start_time <- Sys.time())
+# define train task
+train.task <- mlr3::as_task_classif(x = data[, c("ewe", "wt", "eco_name_daily", predictor.variable.names)], 
+                                    target = "ewe", 
+                                    id = "ewe")
+
+# weight column is the "wt" column, to help with class imbalance
+train.task$set_col_roles(cols = "wt", roles = "weight")
+# eco_name_daily becomes a grouping column for the spatial cross validation
+train.task$set_col_roles(cols = "eco_name_daily", roles = "group")
+
+# create elastic net regression
+glmnet_lrn <- lrn("classif.glmnet", predict_type = "prob")
+
+# turn to learner
+learner <- as_learner(glmnet_lrn)
+
+# make search space
+search_space <-
+  paradox::ps(
+    alpha = paradox::p_dbl(lower = 0, upper = 1),
+    lambda = paradox::p_dbl(lower = 0.01, upper = 100, logscale = TRUE)
+  )
+
+# Next we build a resampler (we want to continue doing spatial cross validation to check on our variable importance)
+resampling_ewe <- mlr3::rsmp(.key = "repeated_cv", folds = length(unique(data$eco_name_daily)), repeats = 5)
+
+# tune the learner
+at <- AutoTuner$new(
+  learner = learner,
+  resampling = resampling_ewe,
+  measure = msr("classif.fbeta"),
+  search_space = search_space,
+  terminator = terminator,
+  tuner=tuner)
+
+at <- 
+  mlr3tuning::auto_tuner(method = mlr3tuning::tnr("grid_search", resolution = 20),
+                         learner = mlr3::lrn("classif.glmnet", predict_type = "prob"),
+                         resampling = resampling_ewe,
+                         measure = mlr3::msr("classif.logloss"),
+                         search_space = search_space,
+                         terminator = mlr3tuning::trm("evals", n_evals = 200))
+
+
+tuned <- at$train(task = train.task)
+(end_time <- Sys.time())
+(difftime(time1 = end_time, time2 = start_time))
+
+out <- coef(tuned$model$learner$model, 
+            alpha = tuned$tuning_result$alpha, 
+            s = exp(tuned$tuning_result$lambda))
+
+out %>% as.matrix() %>% as.data.frame() %>% arrange(desc(abs(s1)))
+
+tuned$tuning_result
+# task_ewe <- mlr3::as_task_regr(data[, c("ewe", "wt", "eco_name_daily", predictor.variable.names)], 
+#                                target = "ewe", 
+#                                id = "ewe")
 # 
-# fires_all <-
-#   fires_all %>% 
-#   dplyr::filter(eco_name_daily %in% target_eco_names)
+# # weight column is the "wt" column, to help with class imbalance
+# task_ewe$set_col_roles(cols = "wt", roles = "weight")
+# # eco_name_daily becomes a grouping column for the spatial cross validation
+# task_ewe$set_col_roles(cols = "eco_name_daily", roles = "group")
+
+
+fitted_mod <- resample(task = task_ewe, learner = learner_ewe, resampling = resampler_ewe, store_models = TRUE)
+
+parallel::stopCluster(cl = cl)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 spatial_cv <- function(splits, 
                        mtry = floor(sqrt(length(predictor.variable.names))), 
@@ -383,4 +572,3 @@ tuning_metrics %>%
   print(n = 20)
 
 
-  

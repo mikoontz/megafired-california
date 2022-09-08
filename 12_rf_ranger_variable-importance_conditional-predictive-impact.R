@@ -4,7 +4,7 @@ library(mlr3pipelines)
 library(ranger)
 # detach("package:cpi", unload=TRUE)
 # remove.packages("cpi")
-remotes::install_github(repo = "mikoontz/cpi") # install from my patch
+# remotes::install_github(repo = "mikoontz/cpi") # install from my patch
 # install.packages("cpi") # install from CRAN
 library(cpi)
 library(rsample)
@@ -129,11 +129,11 @@ for (counter in 1:4) {
   #                                case.weights = as.numeric(class.wgts[analysis_data$ewe + 1]),
   #                                seed = 1)
   # 
-  # model_check_ranger <- 
-  #   data.frame(o = assessment_data$ewe, 
-  #              p = predict(object = fitted_model, 
-  #                          data = assessment_data, 
-  #                          type = "response")$predictions) %>% 
+  # model_check_ranger <-
+  #   data.frame(o = assessment_data$ewe,
+  #              p = predict(object = fitted_model,
+  #                          data = assessment_data,
+  #                          type = "response")$predictions) %>%
   #   mutate(o_fac = factor(o, levels = 0:1),
   #          p_fac = factor(ifelse(p > 0.5, yes = 1, no = 0), levels = 0:1))
   # 
@@ -144,6 +144,9 @@ for (counter in 1:4) {
   # yardstick::accuracy(model_check_ranger, truth = o_fac, estimate = p_fac)
   
   # mlr3 approach
+  
+  # number of repeats of the spatial cross validation to account for stochastic nature of the model fitting
+  n_repeats <- 10
   
   class.wgts <- 1 / table(data$ewe)
   
@@ -185,7 +188,7 @@ for (counter in 1:4) {
     # task_ewe$set_col_roles(cols = "eco_name_daily", roles = "group")
     # 
     # Next we build a resampler (we want to continue doing spatial cross validation to check on our variable importance)
-    resampler_ewe <- mlr3::rsmp(.key = "repeated_cv", folds = length(unique(data$eco_name_daily)), repeats = 10)
+    resampling_ewe <- mlr3::rsmp(.key = "repeated_cv", folds = length(unique(data$eco_name_daily)), repeats = n_repeats)
     
     # # Next we can train the model
     # learner_ewe$train(task = task_ewe)
@@ -194,7 +197,7 @@ for (counter in 1:4) {
     # spat_cv_ewe <- 
     #   mlr3::resample(
     #     task = task_ewe, learner = learner_ewe,
-    #     resampling = resampler_ewe)
+    #     resampling = resampling_ewe)
     # 
     # spat_cv_ewe$aggregate(measures = msr("regr.rmse"))
     
@@ -236,10 +239,10 @@ for (counter in 1:4) {
     # Next we build a resampler (we want to continue doing spatial cross validation to check on our variable importance)
     # A key difference for TGSS biome is that we want to use the coordinates themselves
     # Here's how we do it typically in {mlr3}
-    # resampler_ewe <- mlr3::rsmp(.key = "repeated_spcv_coords", folds = 5, repeats = 10)
+    # resampling_ewe <- mlr3::rsmp(.key = "repeated_spcv_coords", folds = 5, repeats = 10)
     
     # But we want to use the same spatial fold generating method that we used to tune the model (i.e., from {spatialsample})
-    resampler_ewe <- mlr3::rsmp(.key = "repeated_cv", folds = length(unique(data$spatial_fold)), repeats = 10)
+    resampling_ewe <- mlr3::rsmp(.key = "repeated_cv", folds = length(unique(data$spatial_fold)), repeats = n_repeats)
     
   }
   
@@ -247,177 +250,303 @@ for (counter in 1:4) {
   cl <- parallel::makeCluster(parallel::detectCores() - 1)  
   doParallel::registerDoParallel(cl)  
   
-  (start_time <- Sys.time())
-  print(paste0("Starting conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", start_time, "..."))
-  
-  out_fisher <- cpi::cpi(task = task_ewe,
-                         learner = learner_ewe,
-                         knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
-                         measure = "classif.fbeta", # we'll use the classification error as the best measure for our problem
-                         resampling = resampler_ewe,
-                         test = "fisher", # nonparametric significance test
-                         B = 1999, 
-                         resonse_is_prob = TRUE)
-  
-  (end_time <- Sys.time())
-  print(paste0("Finished conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", end_time, ". "))
-  print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-  
   ###
   
   (start_time <- Sys.time())
-  print(paste0("Starting conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", start_time, "..."))
-
-  out_fisher <- cpi::cpi(task = task_ewe,
-                         learner = learner_ewe,
-                         knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
-                         measure = "classif.fbeta", # we'll use the classification error as the best measure for our problem
-                         resampling = resampler_ewe,
-                         test = "fisher", # nonparametric significance test
-                         B = 1999)
-
-  (end_time <- Sys.time())
-  print(paste0("Finished conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", end_time, ". "))
-  print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-
-  ###
-
-  (start_time <- Sys.time())
-  print(paste0("Starting conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", start_time, "..."))
-
-  out_wilcox <- cpi::cpi(task = task_ewe,
-                         learner = learner_ewe,
-                         knockoff_fun = seqknockoff::knockoffs_seq,
-                         measure = "classif.ce", # we'll use the classification error as the best measure for our problem
-                         resampling = resampler_ewe,
-                         test = "wilcox")
-
-  (end_time <- Sys.time())
-  print(paste0("Finished conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", end_time, ". "))
-  print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-
-  ##
+  print(paste0("Starting conditional predictive impact calculations based on the F score for ", biome_shortname, " at ", start_time, "..."))
   
-  (start_time <- Sys.time())
-  print(paste0("Starting conditional predictive impact calculations (t test) for ", biome_shortname, " at ", start_time, "..."))
-  
-  out_t <- cpi::cpi(task = task_ewe, 
-                         learner = learner_ewe, 
-                         knockoff_fun = seqknockoff::knockoffs_seq,
-                         measure = "classif.ce", # we'll use the classification error as the best measure for our problem
-                         resampling = resampler_ewe,
-                         test = "t")
+  # When we use the fbeta metric, it's just a single value from the whole observed/predicted set, rather than a value for
+  # each observation, like with the other metrics. So the statistical tests implemented in {cpi} are useless here. But
+  # because there isn't an option to just not do a statistical test, we'll use the fisher test with only 1 replication to
+  # speed things up.
+  out_fbeta <- cpi::cpi(task = task_ewe,
+                        learner = learner_ewe,
+                        knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
+                        measure = "classif.fbeta",
+                        resampling = resampling_ewe,
+                        test = "fisher",
+                        B = 1,
+                        response_is_prob = TRUE)
   
   (end_time <- Sys.time())
-  print(paste0("Finished conditional predictive impact calculations (t test) for ", biome_shortname, " at ", end_time, ". "))
+  print(paste0("Finished conditional predictive impact calculations based on the F score for ", biome_shortname, " at ", end_time, ". "))
   print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
   
-  ###
-  
+  # ###
+  # 
   # (start_time <- Sys.time())
-  # print(paste0("Starting conditional predictive impact calculations (bayes test) for ", biome_shortname, " at ", start_time, "..."))
-  #
-  # out_bayes <- cpi::cpi(task = task_ewe,
+  # print(paste0("Starting conditional predictive impact calculations based on the logloss metric with a fisher test for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_fisher <- cpi::cpi(task = task_ewe,
+  #                        learner = learner_ewe,
+  #                        knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
+  #                        measure = "classif.logloss", # we'll use the classification error as the best measure for our problem
+  #                        resampling = resampling_ewe,
+  #                        test = "fisher", # nonparametric significance test
+  #                        B = 1999, 
+  #                        response_is_prob = TRUE)
+  # 
+  # (end_time <- Sys.time())
+  # print(paste0("Finished conditional predictive impact calculations based on the logloss metric with a fisher test for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # out_fisher %>% arrange(desc(CPI)) %>% filter(p.value <= 0.05)
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_wilcox <- cpi::cpi(task = task_ewe,
+  #                        learner = learner_ewe,
+  #                        knockoff_fun = seqknockoff::knockoffs_seq,
+  #                        measure = "classif.logloss", # we'll use the classification error as the best measure for our problem
+  #                        resampling = resampling_ewe,
+  #                        test = "wilcox")
+  # 
+  # (end_time <- Sys.time())
+  # print(paste0("Finished conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting conditional predictive impact calculations (t test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_t <- cpi::cpi(task = task_ewe, 
+  #                   learner = learner_ewe, 
+  #                   knockoff_fun = seqknockoff::knockoffs_seq,
+  #                   measure = "classif.logloss", # we'll use the log loss error as the best measure for our problem
+  #                   resampling = resampling_ewe,
+  #                   test = "t",
+  #                   response_is_prob = TRUE)
+  # 
+  # (end_time <- Sys.time())
+  # print(paste0("Finished conditional predictive impact calculations (t test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting conditional predictive impact calculations (binomial test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_t <- cpi::cpi(task = task_ewe, 
+  #                   learner = learner_ewe, 
+  #                   knockoff_fun = seqknockoff::knockoffs_seq,
+  #                   measure = "classif.logloss", # we'll use the log loss error as the best measure for our problem
+  #                   resampling = resampling_ewe,
+  #                   test = "binomial",
+  #                   response_is_prob = TRUE)
+  # 
+  # (end_time <- Sys.time())
+  # print(paste0("Finished conditional predictive impact calculations (binomial test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  ###
+  
+  (start_time <- Sys.time())
+  print(paste0("Starting grouped conditional predictive impact calculations based on the F score for ", biome_shortname, " at ", start_time, "..."))
+  out_grouped_fbeta <- cpi::cpi(task = task_ewe,
+                                learner = learner_ewe,
+                                knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor,
+                                measure = "classif.fbeta", # we'll use the classification error as the best measure for our problem
+                                groups = list(human = which(task_ewe$feature_names %in% human_drivers),
+                                              topography = which(task_ewe$feature_names %in% topography_drivers),
+                                              weather = which(task_ewe$feature_names %in% weather_drivers),
+                                              fuel = which(task_ewe$feature_names %in% fuel_drivers),
+                                              wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
+                                              fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
+                                resampling = resampling_ewe,
+                                test = "fisher", # nonparametric significance test
+                                B = 1,
+                                response_is_prob = TRUE)
+  
+  (end_time <- Sys.time())
+  print(paste0("Finished grouped conditional predictive impact calculations based on the F score for ", biome_shortname, " at ", end_time, ". "))
+  print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting grouped conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", start_time, "..."))
+  # out_grouped_fisher <- cpi::cpi(task = task_ewe,
+  #                                learner = learner_ewe,
+  #                                knockoff_fun = function(x) knockoff::create.second_order(as.matrix(x)),
+  #                                measure = "classif.logloss", # we'll use the classification error as the best measure for our problem
+  #                                groups = list(human = which(task_ewe$feature_names %in% human_drivers),
+  #                                              topography = which(task_ewe$feature_names %in% topography_drivers),
+  #                                              weather = which(task_ewe$feature_names %in% weather_drivers),
+  #                                              fuel = which(task_ewe$feature_names %in% fuel_drivers),
+  #                                              wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
+  #                                              fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
+  #                                resampling = resampling_ewe,
+  #                                test = "fisher", # nonparametric significance test
+  #                                B = 1999,
+  #                                response_is_prob = TRUE)
+  # 
+  # (end_time <- Sys.time())
+  # print(paste0("Finished grouped conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting grouped conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_grouped_wilcox <- cpi::cpi(task = task_ewe,
+  #                                learner = learner_ewe,
+  #                                knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
+  #                                measure = "classif.logloss", # we'll use the classification error as the best measure for our problem
+  #                                groups = list(human = which(task_ewe$feature_names %in% human_drivers),
+  #                                              topography = which(task_ewe$feature_names %in% topography_drivers),
+  #                                              weather = which(task_ewe$feature_names %in% weather_drivers),
+  #                                              fuel = which(task_ewe$feature_names %in% fuel_drivers),
+  #                                              wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
+  #                                              fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
+  #                                resampling = resampling_ewe,
+  #                                test = "wilcox",
+  #                                response_is_prob = TRUE)
+  # (end_time <- Sys.time())
+  # print(paste0("Finished grouped conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting grouped conditional predictive impact calculations (t test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_grouped_t <- cpi::cpi(task = task_ewe,
+  #                           learner = learner_ewe,
+  #                           knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
+  #                           measure = "classif.logloss", # we'll use the classification error as the best measure for our problem
+  #                           groups = list(human = which(task_ewe$feature_names %in% human_drivers),
+  #                                         topography = which(task_ewe$feature_names %in% topography_drivers),
+  #                                         weather = which(task_ewe$feature_names %in% weather_drivers),
+  #                                         fuel = which(task_ewe$feature_names %in% fuel_drivers),
+  #                                         wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
+  #                                         fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
+  #                           resampling = resampling_ewe,
+  #                           test = "t",
+  #                           response_is_prob = TRUE)
+  # (end_time <- Sys.time())
+  # print(paste0("Finished grouped conditional predictive impact calculations (t test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting grouped conditional predictive impact calculations (binomial test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_grouped_binomial <- cpi::cpi(task = task_ewe,
+  #                                learner = learner_ewe,
+  #                                knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
+  #                                measure = "classif.logloss", # we'll use the classification error as the best measure for our problem
+  #                                groups = list(human = which(task_ewe$feature_names %in% human_drivers),
+  #                                              topography = which(task_ewe$feature_names %in% topography_drivers),
+  #                                              weather = which(task_ewe$feature_names %in% weather_drivers),
+  #                                              fuel = which(task_ewe$feature_names %in% fuel_drivers),
+  #                                              wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
+  #                                              fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
+  #                                resampling = resampling_ewe,
+  #                                test = "binomial",
+  #                                response_is_prob = TRUE)
+  # (end_time <- Sys.time())
+  # print(paste0("Finished grouped conditional predictive impact calculations (binomial test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  
+  ###
+  
+  parallel::stopCluster(cl = cl)
+  
+  data.table::fwrite(x = out_fbeta, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-fbeta_", biome_shortname, ".csv"))
+  data.table::fwrite(x = out_grouped_fbeta, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-fbeta_grouped_", biome_shortname, ".csv"))
+  
+  # data.table::fwrite(x = out_fisher, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-logloss_fisher_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_wilcox, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-logloss_wilcox_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_t, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-logloss_t_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_binomial, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-logloss_binomial_", biome_shortname, ".csv"))
+  
+  # data.table::fwrite(x = out_grouped_fisher, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-logloss_grouped_fisher_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_grouped_wilcox, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-logloss_grouped_wilcox_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_grouped_t, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-logloss_grouped_t_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_grouped_binomial, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-logloss_grouped_binomial_", biome_shortname, ".csv"))
+  
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_fisher <- cpi::cpi(task = task_ewe,
+  #                        learner = learner_ewe,
+  #                        knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
+  #                        measure = "classif.ce", # we'll use the classification error as the best measure for our problem
+  #                        resampling = resampling_ewe,
+  #                        test = "fisher", # nonparametric significance test
+  #                        B = 1999)
+  # 
+  # (end_time <- Sys.time())
+  # print(paste0("Finished conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_wilcox <- cpi::cpi(task = task_ewe,
   #                        learner = learner_ewe,
   #                        knockoff_fun = seqknockoff::knockoffs_seq,
   #                        measure = "classif.ce", # we'll use the classification error as the best measure for our problem
-  #                        resampling = resampler_ewe,
-  #                        test = "bayes")
-  #
-  # (end_time <- Sys.time())
-  # print(paste0("Finished conditional predictive impact calculations (bayes test) for ", biome_shortname, " at ", end_time, ". "))
-  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-
-  ##
-
-  (start_time <- Sys.time())
-  print(paste0("Starting grouped conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", start_time, "..."))
-  out_grouped_fisher <- cpi::cpi(task = task_ewe,
-                                 learner = learner_ewe,
-                                 knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
-                                 measure = "classif.ce", # we'll use the classification error as the best measure for our problem
-                                 groups = list(human = which(task_ewe$feature_names %in% human_drivers),
-                                               topography = which(task_ewe$feature_names %in% topography_drivers),
-                                               weather = which(task_ewe$feature_names %in% weather_drivers),
-                                               fuel = which(task_ewe$feature_names %in% fuel_drivers),
-                                               wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
-                                               fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
-                                 resampling = "oob",
-                                 test = "fisher", # nonparametric significance test
-                                 B = 1999)
-
-  (end_time <- Sys.time())
-  print(paste0("Finished grouped conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", end_time, ". "))
-  print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-
-  (start_time <- Sys.time())
-  print(paste0("Starting grouped conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", start_time, "..."))
-  out_grouped_fisher <- cpi::cpi(task = task_ewe,
-                                 learner = learner_ewe,
-                                 knockoff_fun = function(x) knockoff::create.second_order(as.matrix(x)),
-                                 measure = "classif.ce", # we'll use the classification error as the best measure for our problem
-                                 groups = list(human = which(task_ewe$feature_names %in% human_drivers),
-                                               topography = which(task_ewe$feature_names %in% topography_drivers),
-                                               weather = which(task_ewe$feature_names %in% weather_drivers),
-                                               fuel = which(task_ewe$feature_names %in% fuel_drivers),
-                                               wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
-                                               fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
-                                 resampling = "oob",
-                                 test = "fisher", # nonparametric significance test
-                                 B = 1999)
-  
-  (end_time <- Sys.time())
-  print(paste0("Finished grouped conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", end_time, ". "))
-  print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-  
-  ###
-
-  (start_time <- Sys.time())
-  print(paste0("Starting grouped conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", start_time, "..."))
-
-  out_grouped_wilcox <- cpi::cpi(task = task_ewe,
-                                 learner = learner_ewe,
-                                 knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
-                                 measure = "classif.ce", # we'll use the classification error as the best measure for our problem
-                                 groups = list(human = which(task_ewe$feature_names %in% human_drivers),
-                                               topography = which(task_ewe$feature_names %in% topography_drivers),
-                                               weather = which(task_ewe$feature_names %in% weather_drivers),
-                                               fuel = which(task_ewe$feature_names %in% fuel_drivers),
-                                               wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
-                                               fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
-                                 resampling = resampler_ewe,
-                                 test = "wilcox")
-  (end_time <- Sys.time())
-  print(paste0("Finished grouped conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", end_time, ". "))
-  print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-
-  ###
-
-  (start_time <- Sys.time())
-  print(paste0("Starting grouped conditional predictive impact calculations (t test) for ", biome_shortname, " at ", start_time, "..."))
-  
-  out_grouped_t <- cpi::cpi(task = task_ewe,
-                                 learner = learner_ewe,
-                                 knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
-                                 measure = "classif.ce", # we'll use the classification error as the best measure for our problem
-                                 groups = list(human = which(task_ewe$feature_names %in% human_drivers),
-                                               topography = which(task_ewe$feature_names %in% topography_drivers),
-                                               weather = which(task_ewe$feature_names %in% weather_drivers),
-                                               fuel = which(task_ewe$feature_names %in% fuel_drivers),
-                                               wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
-                                               fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
-                                 resampling = resampler_ewe,
-                                 test = "t")
-  (end_time <- Sys.time())
-  print(paste0("Finished grouped conditional predictive impact calculations (t test) for ", biome_shortname, " at ", end_time, ". "))
-  print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-  
-  ###
-  
-  # (start_time <- Sys.time())
-  # print(paste0("Starting grouped conditional predictive impact calculations (bayes test) for ", biome_shortname, " at ", start_time, "..."))
+  #                        resampling = resampling_ewe,
+  #                        test = "wilcox")
   # 
-  # out_grouped_bayes <- cpi::cpi(task = task_ewe,
+  # (end_time <- Sys.time())
+  # print(paste0("Finished conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ##
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting conditional predictive impact calculations (t test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_t <- cpi::cpi(task = task_ewe, 
+  #                        learner = learner_ewe, 
+  #                        knockoff_fun = seqknockoff::knockoffs_seq,
+  #                        measure = "classif.ce", # we'll use the classification error as the best measure for our problem
+  #                        resampling = resampling_ewe,
+  #                        test = "t")
+  # 
+  # (end_time <- Sys.time())
+  # print(paste0("Finished conditional predictive impact calculations (t test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting grouped conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", start_time, "..."))
+  # out_grouped_fisher <- cpi::cpi(task = task_ewe,
+  #                                learner = learner_ewe,
+  #                                knockoff_fun = function(x) knockoff::create.second_order(as.matrix(x)),
+  #                                measure = "classif.ce", # we'll use the classification error as the best measure for our problem
+  #                                groups = list(human = which(task_ewe$feature_names %in% human_drivers),
+  #                                              topography = which(task_ewe$feature_names %in% topography_drivers),
+  #                                              weather = which(task_ewe$feature_names %in% weather_drivers),
+  #                                              fuel = which(task_ewe$feature_names %in% fuel_drivers),
+  #                                              wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
+  #                                              fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
+  #                                resampling = "oob",
+  #                                test = "fisher", # nonparametric significance test
+  #                                B = 1999)
+  # 
+  # (end_time <- Sys.time())
+  # print(paste0("Finished grouped conditional predictive impact calculations (fisher test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting grouped conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_grouped_wilcox <- cpi::cpi(task = task_ewe,
   #                                learner = learner_ewe,
   #                                knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
   #                                measure = "classif.ce", # we'll use the classification error as the best measure for our problem
@@ -427,23 +556,42 @@ for (counter in 1:4) {
   #                                              fuel = which(task_ewe$feature_names %in% fuel_drivers),
   #                                              wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
   #                                              fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
-  #                                resampling = resampler_ewe,
-  #                                test = "bayes")
+  #                                resampling = resampling_ewe,
+  #                                test = "wilcox")
   # (end_time <- Sys.time())
-  # print(paste0("Finished grouped conditional predictive impact calculations (bayes test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Finished grouped conditional predictive impact calculations (wilcox test) for ", biome_shortname, " at ", end_time, ". "))
   # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-  
-  parallel::stopCluster(cl = cl)
-  
-  data.table::fwrite(x = out_fisher, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_fisher_", biome_shortname, ".csv"))
-  data.table::fwrite(x = out_wilcox, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_wilcox_", biome_shortname, ".csv"))
-  data.table::fwrite(x = out_t, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_t_", biome_shortname, ".csv"))
-  # data.table::fwrite(x = out_bayes, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_bayes_", biome_shortname, ".csv"))
-  data.table::fwrite(x = out_grouped_fisher, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_grouped_fisher_", biome_shortname, ".csv"))
-  data.table::fwrite(x = out_grouped_wilcox, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_grouped_wilcox_", biome_shortname, ".csv"))
-  data.table::fwrite(x = out_grouped_t, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_grouped_t_", biome_shortname, ".csv"))
-  # data.table::fwrite(x = out_grouped_bayes, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_grouped_bayes_", biome_shortname, ".csv"))
-  
+  # 
+  # ###
+  # 
+  # (start_time <- Sys.time())
+  # print(paste0("Starting grouped conditional predictive impact calculations (t test) for ", biome_shortname, " at ", start_time, "..."))
+  # 
+  # out_grouped_t <- cpi::cpi(task = task_ewe,
+  #                                learner = learner_ewe,
+  #                                knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor
+  #                                measure = "classif.ce", # we'll use the classification error as the best measure for our problem
+  #                                groups = list(human = which(task_ewe$feature_names %in% human_drivers),
+  #                                              topography = which(task_ewe$feature_names %in% topography_drivers),
+  #                                              weather = which(task_ewe$feature_names %in% weather_drivers),
+  #                                              fuel = which(task_ewe$feature_names %in% fuel_drivers),
+  #                                              wind_terrain = which(task_ewe$feature_names %in% interacting_drivers),
+  #                                              fire = which(task_ewe$feature_names %in% "sqrt_aoi_tm1")),
+  #                                resampling = resampling_ewe,
+  #                                test = "t")
+  # (end_time <- Sys.time())
+  # print(paste0("Finished grouped conditional predictive impact calculations (t test) for ", biome_shortname, " at ", end_time, ". "))
+  # print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
+  # 
+  # parallel::stopCluster(cl = cl)
+  # 
+  # data.table::fwrite(x = out_fisher, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_fisher_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_wilcox, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_wilcox_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_t, file = paste0("data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_t_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_grouped_fisher, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_grouped_fisher_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_grouped_wilcox, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_grouped_wilcox_", biome_shortname, ".csv"))
+  # data.table::fwrite(x = out_grouped_t, paste0(file = "data/out/rf/rf_ranger_variable-importance_cpi_classif-accuracy_grouped_t_", biome_shortname, ".csv"))
+  # 
 }
 
 # Warning message during cpi() run for dxs biome: 

@@ -239,7 +239,7 @@ for(counter in 1:4) {
   })
   
   out_all <- data.table::rbindlist(out)
-  data.table::fwrite(x = out_all, file = paste0("data/out/rf/rf_ranger_spatial-cv-coarse-tuning_", biome_shortname, ".csv"))
+  data.table::fwrite(x = out_all, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning_", biome_shortname, ".csv"))
 }
 
 
@@ -365,12 +365,12 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
     dplyr::mutate(biome = biome_shortname) %>% 
     dplyr::select(biome, dplyr::everything())
   
-  data.table::fwrite(x = results, file = paste0("data/out/rf/rf_ranger_spatial-cv-coarse-tuning-metrics_", biome_shortname, ".csv"))
+  data.table::fwrite(x = results, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning-metrics_", biome_shortname, ".csv"))
 })
 
 # Look at the coarse tuning results and see how we can fine tune the hyperparameters
 tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = paste0("data/out/rf/rf_ranger_spatial-cv-coarse-tuning-metrics_", biome_shortname, ".csv"))
+  data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning-metrics_", biome_shortname, ".csv"))
 })
 
 tuning_metrics <- data.table::rbindlist(tuning_metrics_l)

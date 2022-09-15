@@ -297,7 +297,7 @@ for (counter in 1:4) {
   })
   
   out_all <- data.table::rbindlist(out)
-  data.table::fwrite(x = out_all, file = paste0("data/out/rf/rf_ranger_spatial-cv-fine-tuning_", biome_shortname, ".csv"))
+  data.table::fwrite(x = out_all, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-fine-tuning_", biome_shortname, ".csv"))
 }
 
 # Take the spatial CV results (observation for held out fold and predictions) and calculate various model skill metrics
@@ -422,12 +422,12 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
     dplyr::mutate(biome = biome_shortname) %>% 
     dplyr::select(biome, dplyr::everything())
   
-  data.table::fwrite(x = results, file = paste0("data/out/rf/rf_ranger_spatial-cv-fine-tuning-metrics_", biome_shortname, ".csv"))
+  data.table::fwrite(x = results, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-fine-tuning-metrics_", biome_shortname, ".csv"))
 })
 
 # Look at the coarse tuning results and see how we can fine tune the hyperparameters
 fine_tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = paste0("data/out/rf/rf_ranger_spatial-cv-fine-tuning-metrics_", biome_shortname, ".csv"))
+  data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-fine-tuning-metrics_", biome_shortname, ".csv"))
 })
 
 fine_tuning_metrics <- data.table::rbindlist(fine_tuning_metrics_l)

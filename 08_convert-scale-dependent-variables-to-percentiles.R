@@ -5,8 +5,8 @@ library(ggplot2)
 
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 
-drivers_version <- "v8"
-adjusted_drivers_version <- "v8"
+drivers_version <- "v9"
+adjusted_drivers_version <- paste0(drivers_version, "_adjusted")
 
 fired_drivers_fname <- paste0("data/out/FIRED-daily-scale-drivers_california_", drivers_version, ".csv")
 
@@ -152,6 +152,7 @@ for(i in seq_along(biome_shortnames)) {
   # version 5 uses the actual FIRED polygons affine transformed to be on top of 500 random points throughout each biome
   # version 6 cleans up the workflow and only uses data properly and cleanly created data
   # version 7 uses LCMS data from the year before the fire rather than the year of the fire
+  # Versions 9 and later use the same version as the output version from previous effort, but with "adjusted" appended to filename
   
   data.table::fwrite(x = out, file = adjusted_drivers_fname)
 }

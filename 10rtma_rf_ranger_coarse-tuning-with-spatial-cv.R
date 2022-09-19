@@ -8,7 +8,7 @@ library(pbapply)
 library(data.table)
 library(ranger)
 
-analysis_ready_nonspatial_version <- "v1"
+analysis_ready_nonspatial_version <- "v2"
 analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
 
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
@@ -27,9 +27,20 @@ target_event_ids <-
 
 fires_all <- fires_all[id %in% target_event_ids,]
 
+# Subset to just years where there are RTMA data (2011 and later)
+fires_all <-
+  fires_all %>%
+  dplyr::filter(date >= as.Date("2011-01-01"))
+
+# drop ERA5 columns in favor of RTMA columns for the weather variables
+fires_all <-
+  fires_all %>% 
+  dplyr::select(-contains("era5"))
+
+
 # Remove all event days that occur after the first EWE for that event
-# fires <-
-#   fires %>%
+# fires_all <-
+#   fires_all %>%
 #   dplyr::filter(cumu_ewe <= 1)
 
 # Just include eco regions that have experienced more than 10 EWE's
@@ -76,7 +87,7 @@ spatial_cv <- function(splits,
                                  minprop = minprop,
                                  min.node.size = min.node.size,
                                  case.weights = class.wgts[analysis_data$ewe + 1],
-                                 num.threads = 10)
+                                 num.threads = 11)
   
   tibble::tibble(
     o = assessment_data$ewe,
@@ -84,7 +95,7 @@ spatial_cv <- function(splits,
   )
 }
 
-spatial_cv_tune <- function(folds, mtry, num.trees, sample.fraction, alpha, minprop, min.node.size, classification_thresh, class.wgts, iter = 10) {
+spatial_cv_tune <- function(folds, mtry, num.trees, sample.fraction, alpha, minprop, min.node.size, class.wgts, iter = 10) {
   
   results <- vector(mode = "list", length = iter)
   
@@ -111,7 +122,6 @@ spatial_cv_tune <- function(folds, mtry, num.trees, sample.fraction, alpha, minp
       dplyr::mutate(mtry = mtry,
                     num.trees = num.trees,
                     sample.fraction = sample.fraction,
-                    classification_thresh = classification_thresh,
                     alpha = alpha,
                     minprop = minprop,
                     min.node.size = min.node.size,
@@ -133,10 +143,11 @@ for(counter in 1:4) {
   
   human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
   topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "valley", "valley_narrow", "landform_diversity")
-  weather_drivers <- c("wind_anisotropy", "max_wind_speed_pct", "min_wind_speed_pct",
-                       "max_temp_pct", "min_temp_pct", "bi_pct", "erc_pct",
-                       "max_rh_pct", "min_rh_pct", "max_vpd_pct", "min_vpd_pct", "max_soil_water_pct", "min_soil_water_pct",
-                       "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct")
+  weather_drivers <- c("wind_anisotropy_rtma", "max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct", "max_wind_filled_gust_rtma_pct", "min_wind_filled_gust_rtma_pct",
+                       "max_temp_rtma_pct", "min_temp_rtma_pct", 
+                       "max_rh_rtma_pct", "min_rh_rtma_pct", "max_vpd_rtma_pct", "min_vpd_rtma_pct",
+                       "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct",
+                       "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y")
   
   fuel_lcms_change_tm01 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm01")
   fuel_lcms_change_tm02 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm02")
@@ -148,26 +159,25 @@ for(counter in 1:4) {
   
   fuel_drivers <- c("ndvi", "veg_structure_rumple", fuel_lcms_change_tm01, fuel_lcms_change_tm02, fuel_lcms_change_tm03, fuel_lcms_change_tm04, fuel_lcms_change_tm05, fuel_lcms_landcover_tm01)
   
-  interacting_drivers <- c("wind_terrain_anisotropy", "wind_terrain_alignment")
+  interacting_drivers <- c("wind_terrain_anisotropy_rtma", "wind_terrain_alignment_rtma", "min_wind_terrain_alignment_rtma", "max_wind_terrain_alignment_rtma")
   
   predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1")
   
   # No NAs
   apply(fires[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
   
-  # Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
-  na_cols <- colnames(fires[, predictor.variable.names])[which(apply(fires[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+  # Some NAs in the RTMA data, so we'll have to drop those rows
+  # # Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+  # na_cols <- colnames(fires[, predictor.variable.names])[which(apply(fires[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+  # 
+  # predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+  # 
+  # fires <-
+  #   fires %>%
+  #   dplyr::select(-all_of(na_cols))
   
-  predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
-  
-  fires <-
-    fires %>%
-    dplyr::select(-all_of(na_cols))
-  
-  # Now drop all fires that have an NA in any column
-  bad_fires <- unique(fires[!complete.cases(fires[, predictor.variable.names]), "id"])
-  
-  fires <- fires[!(fires$id %in% bad_fires), ]
+  # Now drop all rows that have an NA in any column
+  fires <- fires[complete.cases(fires), ]
   
   # no columnns with 0 variance (rounded to 4 decimal places)
   zero_variance_columns <- colnames(fires[, predictor.variable.names])[round(apply(fires[, predictor.variable.names], MARGIN = 2, FUN = var), 4) == 0]
@@ -206,20 +216,18 @@ for(counter in 1:4) {
   rf_formula <- as.formula(paste0("ewe ~ ", paste(predictor.variable.names, collapse = " + ")))
   
   # sample.fraction_vec <- c(seq(0.632 - 0.15, 0.632, length.out = 3), seq(0.632, 0.632 + 0.15, length.out = 3)[-1])
-  sample.fraction_vec <- c(0.55, 0.632, 0.75)
+  sample.fraction_vec <- c(0.5, 0.6, 0.7, 0.8)
   
   mtry_vec <- seq(from = floor(sqrt(length(predictor.variable.names))) - 3,
-                  to = floor(length(predictor.variable.names) / 2),
-                  by = 5)
+                  to = floor(length(predictor.variable.names) / 1.75),
+                  by = 2)
   
   tune.df <- expand.grid(mtry = mtry_vec, 
                          num.trees = 500, 
                          sample.fraction = sample.fraction_vec,
-                         # classification_thresh = c(0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55),
-                         classification_thresh = 0.5,
-                         alpha = c(0.1, 0.5, 0.9),
-                         minprop = c(0, 0.1, 0.25), 
-                         min.node.size = c(1, 3, 10),
+                         alpha = c(0.8, 0.9, 1.0),
+                         minprop = c(0, 0.1), 
+                         min.node.size = c(1, 5, 10),
                          class.wgts = TRUE,
                          iter = 5
   )
@@ -230,7 +238,6 @@ for(counter in 1:4) {
                            mtry = tune.df$mtry[i],
                            num.trees = tune.df$num.trees[i], 
                            sample.fraction = tune.df$sample.fraction[i],
-                           classification_thresh = tune.df$classification_thresh[i],
                            alpha = tune.df$alpha[i],
                            minprop = tune.df$minprop[i],
                            min.node.size = tune.df$min.node.size[i],
@@ -239,7 +246,7 @@ for(counter in 1:4) {
   })
   
   out_all <- data.table::rbindlist(out)
-  data.table::fwrite(x = out_all, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning_", biome_shortname, ".csv"))
+  data.table::fwrite(x = out_all, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning_rtma_", biome_shortname, ".csv"))
 }
 
 # We can further tune the "classification threshold" for saying something is an EWE or not
@@ -249,7 +256,12 @@ for(counter in 1:4) {
 
 # Take the spatial CV results (observation for held out fold and predictions) and calculate various model skill metrics
 pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
-  biome_tune <- data.table::fread(file.path("data", "out", "rf", "tuning", paste0("rf_ranger_spatial-cv-coarse-tuning_", biome_shortname, ".csv")))
+  biome_tune <- data.table::fread(file.path("data", "out", "rf", "tuning", paste0("rf_ranger_spatial-cv-coarse-tuning_rtma_", biome_shortname, ".csv")))
+  classification_thresh <- seq(from = 0.05, to = 0.95, by = 0.05)
+  
+  biome_tune[, classification_thresh := list(classification_thresh)]
+  biome_tune[, classification_thresh := unlist(classification_thresh)]
+  
   biome_tune[, `:=`(o_fac = factor(o, levels = c(0, 1)),
                     p_fac = factor(ifelse(p >= classification_thresh, yes = 1, no = 0), levels = c(0, 1)))]
   
@@ -369,12 +381,12 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
     dplyr::mutate(biome = biome_shortname) %>% 
     dplyr::select(biome, dplyr::everything())
   
-  data.table::fwrite(x = results, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning-metrics_", biome_shortname, ".csv"))
+  data.table::fwrite(x = results, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning-metrics_rtma_", biome_shortname, ".csv"))
 })
 
 # Look at the coarse tuning results and see how we can fine tune the hyperparameters
 tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning-metrics_", biome_shortname, ".csv"))
+  data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning-metrics_rtma_", biome_shortname, ".csv"))
 })
 
 tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
@@ -387,4 +399,3 @@ tuning_metrics %>%
   print(n = 20)
 
 
-  

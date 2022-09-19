@@ -5,9 +5,10 @@ library(tidyr)
 library(data.table)
 
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
-drivers_version <- "v8"
+drivers_version <- "v9"
+adjusted_drivers_version <- paste0(drivers_version, "_adjusted")
 
-analysis_ready_nonspatial_version <- "v1"
+analysis_ready_nonspatial_version <- "v2"
 analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
 
 # For defining "ewe" or not, what is the percentage threshold? E.g., 0.95 means an "ewe" is in the top
@@ -23,11 +24,12 @@ fires_all_list <-
     driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
     
     fires <- 
-      data.table::fread(paste0("data/out/FIRED-daily-scale-drivers_california_", biome_shortname, "_", drivers_version, ".csv")) %>% 
-      dplyr::select(-max_wind_speed, -min_wind_speed, -max_rh, -min_rh, -max_temp, -min_temp, -max_soil_water, -min_soil_water, -max_vpd, -min_vpd,
+      data.table::fread(paste0("data/out/FIRED-daily-scale-drivers_california_", biome_shortname, "_", adjusted_drivers_version, ".csv")) %>% 
+      dplyr::select(-max_wind_speed_era5, -min_wind_speed_era5, -max_rh_era5, -min_rh_era5, -max_temp_era5, -min_temp_era5, -max_soil_water_era5, -min_soil_water_era5, -max_vpd_era5, -min_vpd_era5,
+                    -max_wind_speed_rtma, -min_wind_speed_rtma, -max_wind_gust_rtma, -min_wind_gust_rtma, -max_wind_filled_gust_rtma, -min_wind_filled_gust_rtma,
+                    -max_rh_rtma, -min_rh_rtma, -max_temp_rtma, -min_temp_rtma,
                     -cumu_count, -cumu_area_ha,
                     -biggest_poly_area_ha, -x_3310, -y_3310, -biggest_poly_frac,
-                    -ends_with("rtma"), -ends_with("rtma_pct"),
                     -bi, -erc, -fm100, -fm1000, -pdsi, -starts_with("spi"), -starts_with("eddi"),
                     -starts_with("raw"),
       ) %>% 
@@ -49,13 +51,21 @@ fires_all_list <-
                     starts_with("csp_ergo_landforms"), elevation, friction, 
                     friction_walking_only, landform_diversity, 
                     starts_with("lcms_change"), starts_with("lcms_landcover"), 
-                    ndvi, road_density_mpha, rumple_index, 
-                    valleys, veg_structure_rumple, npl,  
-                    concurrent_fires, wind_anisotropy, wind_terrain_anisotropy, 
-                    wind_terrain_alignment, max_wind_speed_pct, min_wind_speed_pct, 
-                    max_rh_pct, min_rh_pct, max_temp_pct, min_temp_pct, 
-                    max_soil_water_pct, min_soil_water_pct, max_vpd_pct, 
-                    min_vpd_pct, starts_with("spei"), pdsi_z, erc_pct, bi_pct, 
+                    valleys, road_density_mpha, rumple_index, 
+                    ndvi, veg_structure_rumple, npl, concurrent_fires, 
+                    wind_anisotropy_era5, wind_terrain_anisotropy_era5, 
+                    wind_terrain_alignment_era5, max_wind_terrain_alignment_era5, min_wind_terrain_alignment_era5, 
+                    max_wind_speed_era5_pct, min_wind_speed_era5_pct, 
+                    max_rh_era5_pct, min_rh_era5_pct, max_temp_era5_pct, min_temp_era5_pct, 
+                    max_soil_water_era5_pct, min_soil_water_era5_pct, max_vpd_era5_pct, min_vpd_era5_pct, 
+                    wind_anisotropy_rtma, wind_terrain_anisotropy_rtma,
+                    wind_terrain_alignment_rtma, max_wind_terrain_alignment_rtma, min_wind_terrain_alignment_rtma,
+                    max_wind_terrain_alignment_rtma_pct, min_wind_terrain_alignment_rtma_pct,
+                    max_wind_speed_rtma_pct, min_wind_speed_rtma_pct,
+                    max_wind_filled_gust_rtma_pct, min_wind_filled_gust_rtma_pct,
+                    max_rh_rtma_pct, min_rh_rtma_pct, max_temp_rtma_pct, min_temp_rtma_pct,
+                    max_vpd_rtma_pct, min_vpd_rtma_pct,
+                    starts_with("spei"), pdsi_z, erc_pct, bi_pct, 
                     fm100_pct, fm1000_pct, 
                     sqrt_aoi_tm1, cum_area_ha_tminus1, event_day) %>% 
       as.data.frame()

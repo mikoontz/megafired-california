@@ -9,7 +9,7 @@ library(USAboundaries)
 
 static_version <- "v4"
 fluc_version <- "v5"
-driver_version <- "v8"
+driver_version <- "v9"
 
 #### --- input FIRED data
 fired_events <- 
@@ -139,29 +139,31 @@ era5_drivers_summarized <-
   era5_drivers %>%
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   group_by(id, date, did) %>%
-  summarize(wind_anisotropy = sd(cos(wind_dir_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
-            wind_terrain_anisotropy = sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
-            wind_terrain_alignment = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
-            max_wind_speed = max(wind_speed),
-            min_wind_speed = min(wind_speed),
-            max_wind_speed_pct = max(wind_speed_pct),
-            min_wind_speed_pct = min(wind_speed_pct),
-            max_rh = max(rh),
-            min_rh = min(rh),
-            max_rh_pct = max(rh_pct),
-            min_rh_pct = min(rh_pct),
-            max_temp = max(temperature_2m - 273.15),
-            min_temp = min(temperature_2m - 273.15),
-            max_temp_pct = max(temperature_2m_pct),
-            min_temp_pct = min(temperature_2m_pct),
-            max_soil_water = max(volumetric_soil_water_layer_1),
-            min_soil_water = min(volumetric_soil_water_layer_1),
-            max_soil_water_pct = max(volumetric_soil_water_layer_1_pct),
-            min_soil_water_pct = min(volumetric_soil_water_layer_1_pct),
-            max_vpd = max(vpd_hPa),
-            min_vpd = min(vpd_hPa),
-            max_vpd_pct = max(vpd_hPa_pct),
-            min_vpd_pct = min(vpd_hPa_pct)) %>%
+  summarize(wind_anisotropy_era5 = sd(cos(wind_dir_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
+            wind_terrain_anisotropy_era5 = sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
+            wind_terrain_alignment_era5 = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
+            min_wind_terrain_alignment_era5 = min(abs(cos(wind_aspect_alignment_rad))),
+            max_wind_terrain_alignment_era5 = max(abs(cos(wind_aspect_alignment_rad))),
+            max_wind_speed_era5 = max(wind_speed),
+            min_wind_speed_era5 = min(wind_speed),
+            max_wind_speed_era5_pct = max(wind_speed_pct),
+            min_wind_speed_era5_pct = min(wind_speed_pct),
+            max_rh_era5 = max(rh),
+            min_rh_era5 = min(rh),
+            max_rh_era5_pct = max(rh_pct),
+            min_rh_era5_pct = min(rh_pct),
+            max_temp_era5 = max(temperature_2m - 273.15),
+            min_temp_era5 = min(temperature_2m - 273.15),
+            max_temp_era5_pct = max(temperature_2m_pct),
+            min_temp_era5_pct = min(temperature_2m_pct),
+            max_soil_water_era5 = max(volumetric_soil_water_layer_1),
+            min_soil_water_era5 = min(volumetric_soil_water_layer_1),
+            max_soil_water_era5_pct = max(volumetric_soil_water_layer_1_pct),
+            min_soil_water_era5_pct = min(volumetric_soil_water_layer_1_pct),
+            max_vpd_era5 = max(vpd_hPa),
+            min_vpd_era5 = min(vpd_hPa),
+            max_vpd_era5_pct = max(vpd_hPa_pct),
+            min_vpd_era5_pct = min(vpd_hPa_pct)) %>%
   ungroup()
 #### --- end era5 drivers prep
 
@@ -179,7 +181,7 @@ rtma_drivers[, `:=`(`system:index` = NULL,
                     WDIR = NULL,
                     .geo = NULL)]
 
-vars_rtma <- c('TMP', 'vpd_hPa', 'rh', 'WIND', 'GUST')
+vars_rtma <- c('TMP', 'vpd_hPa', 'rh', 'WIND', 'GUST', 'wind_filled_gust', 'wind_aspect_alignment_rad')
 
 bandnames_rtma <- 
   expand.grid(pcts = pcts, vars = vars_rtma) %>% 
@@ -193,10 +195,11 @@ vpd_rtma <- r_rtma[[402:802]]
 rh_rtma <- r_rtma[[803:1203]]
 wind_rtma <- r_rtma[[1204:1604]]
 gust_rtma <- r_rtma[[1605:2005]]
+wind_filled_gust_rtma <- r_rtma[[2006:2406]]
+wind_terrain_alignment_rtma <- r_rtma[[2407:2807]]
 
-
-l <- list(temp_rtma, vpd_rtma, rh_rtma, wind_rtma, gust_rtma)
-var <- list('TMP', 'vpd_hPa', 'rh', 'WIND', 'GUST')
+l <- list(temp_rtma, vpd_rtma, rh_rtma, wind_rtma, gust_rtma, wind_filled_gust_rtma, wind_terrain_alignment_rtma)
+var <- list('TMP', 'vpd_hPa', 'rh', 'WIND', 'GUST', 'wind_filled_gust', 'wind_aspect_alignment_rad')
 
 rtma_pct_out <- pblapply(seq_along(l), FUN = function(i) match_percentile(r = l[[i]], var = var[[i]], drivers_DT = rtma_drivers))
 rtma_pct_out <- do.call(what = cbind, args = rtma_pct_out)
@@ -209,14 +212,22 @@ rtma_drivers_summarized <-
   summarize(wind_anisotropy_rtma = sd(cos(WDIR_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
             wind_terrain_anisotropy_rtma = sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
             wind_terrain_alignment_rtma = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
+            min_wind_terrain_alignment_rtma = min(abs(cos(wind_aspect_alignment_rad))),
+            max_wind_terrain_alignment_rtma = max(abs(cos(wind_aspect_alignment_rad))),
+            min_wind_terrain_alignment_rtma_pct = min(wind_aspect_alignment_rad_pct),
+            max_wind_terrain_alignment_rtma_pct = max(wind_aspect_alignment_rad_pct),
             max_wind_speed_rtma = max(WIND),
             min_wind_speed_rtma = min(WIND),
             max_wind_gust_rtma = max(GUST),
             min_wind_gust_rtma = min(GUST),
+            max_wind_filled_gust_rtma = max(wind_filled_gust),
+            min_wind_filled_gust_rtma = min(wind_filled_gust),
             max_wind_speed_rtma_pct = max(WIND_pct),
             min_wind_speed_rtma_pct = min(WIND_pct),
             max_wind_gust_rtma_pct = max(GUST_pct),
             min_wind_gust_rtma_pct = min(GUST_pct),
+            max_wind_filled_gust_rtma_pct = max(wind_filled_gust_pct),
+            min_wind_filled_gust_rtma_pct = min(wind_filled_gust_pct),
             max_rh_rtma = max(rh),
             min_rh_rtma = min(rh),
             max_rh_rtma_pct = max(rh_pct),
@@ -232,10 +243,18 @@ rtma_drivers_summarized <-
   ungroup()
 
 frap <- read.csv("data/out/fired-frap-mtbs-join.csv")
+frap %>% filter(name_frap == "TUBBS")
 creek <- rtma_drivers_summarized[rtma_drivers_summarized$id == 135921, ]
+tubbs <- rtma_drivers_summarized[rtma_drivers_summarized$id == 117324, ]
+
 creek$max_wind_gust_rtma_pct
 creek$min_wind_speed_rtma_pct
 creek$max_vpd_rtma_pct
+
+tubbs$max_wind_gust_rtma_pct
+tubbs$min_wind_gust_rtma_pct
+tubbs$min_wind_speed_rtma_pct
+tubbs$max_vpd_rtma_pct
 
 #### --- end RTMA drivers prep
 
@@ -467,6 +486,9 @@ out <-
 # fire-independent scaling relationships
 
 # version 8 uses LCMS data from previous year instead of fire year
+
+# version 9 uses RTMA data with the "gust" field filled in with the "wind" field in the case when the 
+# "gust" field was empty
 
 
 sf::st_write(obj = out_sf, dsn = paste0("data/out/FIRED-daily-scale-drivers_california_", driver_version, ".gpkg"), 

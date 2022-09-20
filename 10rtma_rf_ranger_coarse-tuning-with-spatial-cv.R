@@ -7,6 +7,9 @@ library(tidyr)
 library(pbapply)
 library(data.table)
 library(ranger)
+library(PRROC)
+# library(mlr3measures)
+# library(MLmetrics)
 
 analysis_ready_nonspatial_version <- "v2"
 analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
@@ -256,132 +259,78 @@ for(counter in 1:4) {
 
 # Take the spatial CV results (observation for held out fold and predictions) and calculate various model skill metrics
 pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
+  # biome_shortname <- "tcf"
   biome_tune <- data.table::fread(file.path("data", "out", "rf", "tuning", paste0("rf_ranger_spatial-cv-coarse-tuning_rtma_", biome_shortname, ".csv")))
-  classification_thresh <- seq(from = 0.05, to = 0.95, by = 0.05)
   
-  biome_tune[, classification_thresh := list(classification_thresh)]
-  biome_tune[, classification_thresh := unlist(classification_thresh)]
+  classification_thresh_vec <- seq(from = 0.05, to = 0.95, by = 0.05)
+  biome_tune[, classification_thresh := list(classification_thresh_vec)]
+  
+  biome_tune <- 
+    biome_tune[, unlist(classification_thresh), 
+               by = list(id, o, p, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, alpha, minprop, min.node.size, class.wgts, iter)]
+  
+  colnames(biome_tune)[colnames(biome_tune) == "V1"] <- "classification_thresh"
   
   biome_tune[, `:=`(o_fac = factor(o, levels = c(0, 1)),
                     p_fac = factor(ifelse(p >= classification_thresh, yes = 1, no = 0), levels = c(0, 1)))]
   
-  spat_cv_fscore <- 
-    biome_tune %>% 
-    dplyr::group_by(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter) %>%
-    yardstick::f_meas(truth = o_fac, estimate = p_fac, estimator = "binary", event_level = "second") %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric, iter) %>% 
-    dplyr::summarize(.estimate = weighted.mean(x = .estimate, w = assessment_ewe_1)) %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>%
-    dplyr::summarize(mean_estimate = mean(.estimate, na.rm = TRUE),
-                     sd_estimate = sd(.estimate, na.rm = TRUE),
-                     n = n(),
-                     min_estimate = min(.estimate),
-                     max_estimate = max(.estimate),
-                     lwr = mean_estimate - sd_estimate,
-                     upr = mean_estimate + sd_estimate)
+  # For ROC-AUC: Youden WJ (1950). “Index for rating diagnostic tests.” Cancer, 3(1), 32–35. doi:10.1002/1097-0142(1950)3:1<32::aid-cncr2820030106>3.0.co;2-3.
+  # For PR-AUC: Davis J, Goadrich M (2006). “The relationship between precision-recall and ROC curves.” In Proceedings of the 23rd International Conference on Machine Learning. ISBN 9781595933836.
+  # For PR-AUC: J. Grau, I. Grosse, and J. Keilwagen. PRROC: computing and visualizing precision-recall and receiver operating characteristic curves in R. Bioinformatics, 31(15):2595-2597, 2015.
+  # For MCC: Chicco, D., & Jurman, G. (2020). The advantages of the Matthews correlation coefficient (MCC) over F1 score and accuracy in binary classification evaluation. BMC Genomics, 21(1), 6. https://doi. org/10.1186/s12864-019-6413-7
+  # Also for MCC: Chicco, D., Tötsch, N., & Jurman, G. (2021). The Matthews correlation coefficient (MCC) is more reliable than balanced accuracy, bookmaker informedness, and markedness in two-class confusion matrix evaluation. BioData Mining, 14, 13. https://doi.org/10.1186/s13040-021-00244-z
+  metrics <- c("tp", "fp", "fn", "tn", "accuracy", "rmse", "logloss", "roc_auc", "pr_auc", "precision", "recall", "specificity", "f_meas", "informedness", "mcc")
   
-  spat_cv_auc <-
-    biome_tune %>% 
-    dplyr::group_by(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter) %>%
-    yardstick::roc_auc(truth = o_fac, estimate = p, estimator = "binary", event_level = "second") %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric, iter) %>% 
-    dplyr::summarize(.estimate = weighted.mean(x = .estimate, w = assessment_ewe_1)) %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>%
-    dplyr::summarize(mean_estimate = mean(.estimate, na.rm = TRUE),
-                     sd_estimate = sd(.estimate, na.rm = TRUE),
-                     n = n(),
-                     min_estimate = min(.estimate),
-                     max_estimate = max(.estimate),
-                     lwr = mean_estimate - sd_estimate,
-                     upr = mean_estimate + sd_estimate)
-  
-  spat_cv_precision <-
-    biome_tune %>% 
-    dplyr::group_by(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter) %>%
-    yardstick::precision(truth = o_fac, estimate = p_fac, estimator = "binary", event_level = "second") %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric, iter) %>% 
-    dplyr::summarize(.estimate = weighted.mean(x = .estimate, w = assessment_ewe_1)) %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>%
-    dplyr::summarize(mean_estimate = mean(.estimate, na.rm = TRUE),
-                     sd_estimate = sd(.estimate, na.rm = TRUE),
-                     n = n(),
-                     min_estimate = min(.estimate),
-                     max_estimate = max(.estimate),
-                     lwr = mean_estimate - sd_estimate,
-                     upr = mean_estimate + sd_estimate)
-  
-  spat_cv_recall <-
-    biome_tune %>% 
-    dplyr::group_by(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter) %>%
-    yardstick::recall(truth = o_fac, estimate = p_fac, estimator = "binary", event_level = "second") %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric, iter) %>% 
-    dplyr::summarize(.estimate = weighted.mean(x = .estimate, w = assessment_ewe_1)) %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>%
-    dplyr::summarize(mean_estimate = mean(.estimate, na.rm = TRUE),
-                     sd_estimate = sd(.estimate, na.rm = TRUE),
-                     n = n(),
-                     min_estimate = min(.estimate),
-                     max_estimate = max(.estimate),
-                     lwr = mean_estimate - sd_estimate,
-                     upr = mean_estimate + sd_estimate)
-  
-  spat_cv_rmse <-
-    biome_tune %>% 
-    dplyr::group_by(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter) %>%
-    yardstick::rmse(truth = o, estimate = p, estimator = "binary", event_level = "second") %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric, iter) %>% 
-    dplyr::summarize(.estimate = weighted.mean(x = .estimate, w = assessment_ewe_1)) %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>%
-    dplyr::summarize(mean_estimate = mean(.estimate, na.rm = TRUE),
-                     sd_estimate = sd(.estimate, na.rm = TRUE),
-                     n = n(),
-                     min_estimate = min(.estimate),
-                     max_estimate = max(.estimate),
-                     lwr = mean_estimate - sd_estimate,
-                     upr = mean_estimate + sd_estimate)
-  
-  spat_cv_accuracy <-
-    biome_tune %>% 
-    dplyr::group_by(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter) %>%
-    yardstick::accuracy(truth = o_fac, estimate = p_fac, estimator = "binary", event_level = "second") %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric, iter) %>% 
-    dplyr::summarize(.estimate = weighted.mean(x = .estimate, w = assessment_ewe_1)) %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>%
-    dplyr::summarize(mean_estimate = mean(.estimate, na.rm = TRUE),
-                     sd_estimate = sd(.estimate, na.rm = TRUE),
-                     n = n(),
-                     min_estimate = min(.estimate),
-                     max_estimate = max(.estimate),
-                     lwr = mean_estimate - sd_estimate,
-                     upr = mean_estimate + sd_estimate)
-  
-  spat_cv_specificity <-
-    biome_tune %>% 
-    dplyr::group_by(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter) %>%
-    yardstick::specificity(truth = o_fac, estimate = p_fac, estimator = "binary", event_level = "second") %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric, iter) %>% 
-    dplyr::summarize(.estimate = weighted.mean(x = .estimate, w = assessment_ewe_1)) %>% 
-    dplyr::group_by(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>%
-    dplyr::summarize(mean_estimate = mean(.estimate, na.rm = TRUE),
-                     sd_estimate = sd(.estimate, na.rm = TRUE),
-                     n = n(),
-                     min_estimate = min(.estimate),
-                     max_estimate = max(.estimate),
-                     lwr = mean_estimate - sd_estimate,
-                     upr = mean_estimate + sd_estimate)
+  results <-
+    biome_tune[, .(tp = as.numeric(length(which(o == 1 & p_fac == "1"))),
+                   fp = as.numeric(length(which(o == 0 & p_fac == "1"))),
+                   fn = as.numeric(length(which(o == 1 & p_fac == "0"))),
+                   tn = as.numeric(length(which(o == 0 & p_fac == "0"))),
+                   accuracy = mean(o_fac == p_fac),
+                   rmse = sqrt(mean((o - p)^2)),
+                   # logloss code from {MLmetrics} package
+                   logloss = -mean(o * log(pmax(pmin(p, 1 - 1e-15), 1e-15)) + (1 - o) * log(1 - pmax(pmin(p, 1 - 1e-15), 1e-15))),
+                   # roc_auc code from {mlr3measures} package
+                   roc_auc = (mean(rank(p, ties.method = "average")[which(o == 1)]) - (as.numeric(length(which(o == 1))) + 1)/2) / as.numeric(length(which(o == 0))),
+                   pr_auc = PRROC::pr.curve(scores.class0 = p, weights.class0 = o)[[2]]),
+               by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter)]
   
   results <- 
-    rbind(spat_cv_fscore,
-          spat_cv_auc,
-          spat_cv_precision,
-          spat_cv_recall,
-          spat_cv_rmse,
-          spat_cv_accuracy,
-          spat_cv_specificity) %>% 
-    dplyr::mutate(biome = biome_shortname) %>% 
-    dplyr::select(biome, dplyr::everything())
+    results[, `:=`(precision = tp / (tp + fp),
+                   recall = tp / (tp + fn),
+                   specificity = tn / (tn + fp))]
   
-  data.table::fwrite(x = results, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning-metrics_rtma_", biome_shortname, ".csv"))
+  results <-
+    results[, `:=`(f_meas = 2 * (precision * recall / (precision + recall)),
+                   informedness = (tp / (tp + fn)) + (tn / (tn + fp)) - 1,
+                   mcc = ((tp * tn) - (fn * fp)) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))]
+  
+  # https://stackoverflow.com/questions/35618545/applying-a-function-to-all-columns-of-a-data-table-together-with-a-group-by
+  results <-
+    results[, lapply(.SD, FUN = weighted.mean, w = assessment_ewe_1),
+            by = .(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter), .SDcols = metrics]
+  
+  # Melt data to get to long form for next pieces
+  # https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reshape.html
+  results <- data.table::melt(results, 
+                              id.vars = c("mtry", "num.trees", "sample.fraction", "classification_thresh", "alpha", "minprop", "min.node.size", "class.wgts", "iter"),
+                              measure.vars = metrics,
+                              variable.name = ".metric",
+                              value.name = ".estimate")
+  results <-
+    results[, .(mean_estimate = mean(.estimate, na.rm = TRUE),
+                sd_estimate = sd(.estimate, na.rm = TRUE),
+                n = .N,
+                min_estimate = min(.estimate),
+                max_estimate = max(.estimate)),
+            by = .(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric)]
+  
+  results <-
+    results[, `:=`(lwr = mean_estimate - sd_estimate,
+                   upr = mean_estimate + sd_estimate,
+                   biome = biome_shortname)]
+  
+  data.table::fwrite(x = results, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv"))
 })
 
 # Look at the coarse tuning results and see how we can fine tune the hyperparameters

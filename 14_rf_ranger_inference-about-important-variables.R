@@ -67,7 +67,7 @@ fitted_models_l <- lapply(X = biome_shortnames, FUN = function(biome_shortname) 
 })
 
 # For each biome, create the response plot
-for (counter in 2:4) {
+for (counter in 1:4) {
   biome_shortname <- biome_shortnames[counter]
   
   key_vars <-

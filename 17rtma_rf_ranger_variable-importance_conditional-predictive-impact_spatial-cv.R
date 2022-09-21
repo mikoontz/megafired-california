@@ -71,7 +71,7 @@ for (counter in (1:4)) {
   weather_drivers <- c("wind_anisotropy_rtma", "max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct", "max_wind_filled_gust_rtma_pct", "min_wind_filled_gust_rtma_pct",
                        "max_temp_rtma_pct", "min_temp_rtma_pct", 
                        "max_rh_rtma_pct", "min_rh_rtma_pct", "max_vpd_rtma_pct", "min_vpd_rtma_pct",
-                       "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct",
+                       "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct", "pdsi_z",
                        "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y")
   
   fuel_lcms_change_tm01 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm01")

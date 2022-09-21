@@ -7,9 +7,6 @@ library(tidyr)
 library(pbapply)
 library(data.table)
 library(ranger)
-library(PRROC)
-# library(mlr3measures)
-# library(MLmetrics)
 
 analysis_ready_nonspatial_version <- "v2"
 analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
@@ -30,20 +27,9 @@ target_event_ids <-
 
 fires_all <- fires_all[id %in% target_event_ids,]
 
-# Subset to just years where there are RTMA data (2011 and later)
-fires_all <-
-  fires_all %>%
-  dplyr::filter(date >= as.Date("2011-01-01"))
-
-# drop ERA5 columns in favor of RTMA columns for the weather variables
-fires_all <-
-  fires_all %>% 
-  dplyr::select(-contains("era5"))
-
-
 # Remove all event days that occur after the first EWE for that event
-# fires_all <-
-#   fires_all %>%
+# fires <-
+#   fires %>%
 #   dplyr::filter(cumu_ewe <= 1)
 
 # Just include eco regions that have experienced more than 10 EWE's
@@ -146,11 +132,10 @@ for(counter in 1:4) {
   
   human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
   topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "valley", "valley_narrow", "landform_diversity")
-  weather_drivers <- c("wind_anisotropy_rtma", "max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct", "max_wind_filled_gust_rtma_pct", "min_wind_filled_gust_rtma_pct",
-                       "max_temp_rtma_pct", "min_temp_rtma_pct", 
-                       "max_rh_rtma_pct", "min_rh_rtma_pct", "max_vpd_rtma_pct", "min_vpd_rtma_pct",
-                       "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct",
-                       "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y")
+  weather_drivers <- c("wind_anisotropy_era5", "max_wind_speed_era5_pct", "min_wind_speed_era5_pct",
+                       "max_temp_era5_pct", "min_temp_era5_pct", "bi_pct", "erc_pct",
+                       "max_rh_era5_pct", "min_rh_era5_pct", "max_vpd_era5_pct", "min_vpd_era5_pct", "max_soil_water_era5_pct", "min_soil_water_era5_pct",
+                       "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct", "pdsi_z")
   
   fuel_lcms_change_tm01 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm01")
   fuel_lcms_change_tm02 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm02")
@@ -162,22 +147,25 @@ for(counter in 1:4) {
   
   fuel_drivers <- c("ndvi", "veg_structure_rumple", fuel_lcms_change_tm01, fuel_lcms_change_tm02, fuel_lcms_change_tm03, fuel_lcms_change_tm04, fuel_lcms_change_tm05, fuel_lcms_landcover_tm01)
   
-  interacting_drivers <- c("wind_terrain_anisotropy_rtma", "wind_terrain_alignment_rtma", "min_wind_terrain_alignment_rtma", "max_wind_terrain_alignment_rtma")
+  interacting_drivers <- c("wind_terrain_anisotropy_era5", "wind_terrain_alignment_era5")
   
   predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1")
   
   # No NAs
   apply(fires[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
   
-  # Some NAs in the RTMA data, so we'll have to drop those rows
-  # # Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
-  # na_cols <- colnames(fires[, predictor.variable.names])[which(apply(fires[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
-  # 
-  # predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
-  # 
-  # fires <-
-  #   fires %>%
-  #   dplyr::select(-all_of(na_cols))
+  # Remove these columns that have more NA's than most so we opt to drop them instead of dropping the rows
+  na_cols <- colnames(fires[, predictor.variable.names])[which(apply(fires[, predictor.variable.names], 2, function(x) return(sum(is.na(x)))) > 50)]
+  
+  predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% na_cols)]
+  
+  fires <-
+    fires %>%
+    dplyr::select(-all_of(na_cols))
+  
+  # # Now drop all fires that have an NA in any column
+  # bad_fires <- unique(fires[!complete.cases(fires[, predictor.variable.names]), "id"])
+  # fires <- fires[!(fires$id %in% bad_fires), ]
   
   # Now drop all rows that have an NA in any column
   fires <- fires[complete.cases(fires), ]
@@ -191,13 +179,12 @@ for(counter in 1:4) {
     fires %>%
     dplyr::select(-all_of(zero_variance_columns))
   
-  # BEGIN TUNING of the conditional random forest using spatial cross validation
-  # Build a cforest() model with the best spatially cross-validated AUC value
-  
-  data <- fires[, c("did", "ewe", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
+  data <- fires[, c("did", "ewe", "biome_name_daily", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
   data$npl <- factor(data$npl, levels = 1:5)
-  # data$ewe <- factor(data$ewe, levels = c(0, 1))
+  data$concurrent_fires <- as.numeric(data$concurrent_fires)
   
+  # BEGIN TUNING of the random forest using spatial cross validation
+  # First set up spatial folds
   # https://spatialsample.tidymodels.org/articles/spatialsample.html
   if (biome_shortname == "tgss") {
     folds <-
@@ -212,14 +199,20 @@ for(counter in 1:4) {
       spatialsample::spatial_leave_location_out_cv(group = eco_name_daily)
   }
   
-  # splits <- folds$splits[[1]]
+  lookup_table <-
+    folds %>% 
+    purrr::pmap(.f = function(id, splits) {
+      return(data.frame(biome_name_daily = rsample::assessment(splits)$biome_name_daily,
+                        biome_shortname = biome_shortname,
+                        eco_name_daily = rsample::assessment(splits)$eco_name_daily, 
+                        did = rsample::assessment(splits)$did,
+                        spatial_fold = id))
+    }) %>% 
+    data.table::rbindlist()
   
-  # autoplot(folds)
+  data.table::fwrite(x = lookup_table, file = paste0("data/out/rf/tuning/spatial-fold-lookup-table_", biome_shortname, ".csv"))
   
   rf_formula <- as.formula(paste0("ewe ~ ", paste(predictor.variable.names, collapse = " + ")))
-  
-  # sample.fraction_vec <- c(seq(0.632 - 0.15, 0.632, length.out = 3), seq(0.632, 0.632 + 0.15, length.out = 3)[-1])
-  sample.fraction_vec <- c(0.5, 0.6, 0.7, 0.8)
   
   mtry_vec <- seq(from = floor(sqrt(length(predictor.variable.names))) - 3,
                   to = floor(length(predictor.variable.names) / 1.75),
@@ -227,7 +220,7 @@ for(counter in 1:4) {
   
   tune.df <- expand.grid(mtry = mtry_vec, 
                          num.trees = 500, 
-                         sample.fraction = sample.fraction_vec,
+                         sample.fraction = c(0.5, 0.6, 0.7, 0.8),
                          alpha = c(0.8, 0.9, 1.0),
                          minprop = c(0, 0.1), 
                          min.node.size = c(1, 5, 10),
@@ -249,7 +242,7 @@ for(counter in 1:4) {
   })
   
   out_all <- data.table::rbindlist(out)
-  data.table::fwrite(x = out_all, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning_rtma_", biome_shortname, ".csv"))
+  data.table::fwrite(x = out_all, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-tuning_", biome_shortname, ".csv"))
 }
 
 # We can further tune the "classification threshold" for saying something is an EWE or not
@@ -259,8 +252,7 @@ for(counter in 1:4) {
 
 # Take the spatial CV results (observation for held out fold and predictions) and calculate various model skill metrics
 pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
-  # biome_shortname <- "tcf"
-  biome_tune <- data.table::fread(file.path("data", "out", "rf", "tuning", paste0("rf_ranger_spatial-cv-coarse-tuning_rtma_", biome_shortname, ".csv")))
+  biome_tune <- data.table::fread(file.path("data", "out", "rf", "tuning", paste0("rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, ".csv")))
   
   classification_thresh_vec <- seq(from = 0.05, to = 0.95, by = 0.05)
   biome_tune[, classification_thresh := list(classification_thresh_vec)]
@@ -330,21 +322,34 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
                    upr = mean_estimate + sd_estimate,
                    biome = biome_shortname)]
   
-  data.table::fwrite(x = results, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv"))
+  data.table::fwrite(x = results, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-tuning-metrics_", biome_shortname, ".csv"))
 })
 
 # Look at the coarse tuning results and see how we can fine tune the hyperparameters
 tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-coarse-tuning-metrics_rtma_", biome_shortname, ".csv"))
+  tuning_metrics <- data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-tuning-metrics_", biome_shortname, ".csv"))
+  
+  tune_gg_data <- 
+    tuning_metrics %>%
+    filter(.metric %in% c("informedness", "mcc")) %>% 
+    dplyr::select(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, .metric, mean_estimate) %>% 
+    tidyr::pivot_wider(id_cols = c(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size), names_from = ".metric", values_from = "mean_estimate") %>% 
+    arrange(desc(informedness))
+  
+  informedness_mcc_gg <-
+    ggplot(tune_gg_data, aes(x = informedness, y = mcc)) + 
+    geom_point() +
+    theme_bw()
+  
+  ggsave(filename = paste0("figs/informedness-vs-mcc_", biome_shortname, ".png"), plot = informedness_mcc_gg)
+  
+  class_thresh_effect_gg <-
+    ggplot(data = filter(.data = tuning_metrics, !(.metric %in% c("tp", "fp", "fn", "tn", "rmse"))), mapping = aes(x = classification_thresh, y = mean_estimate)) +
+    geom_point() +
+    geom_smooth() + 
+    facet_wrap(facets = ".metric") +
+    theme_bw()
+  
+  ggsave(filename = paste0("figs/classification-threshold-effect_", biome_shortname, ".png"), plot = class_thresh_effect_gg)
+  
 })
-
-tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
-
-tuning_metrics %>%
-  filter(.metric == "f_meas") %>% 
-  group_by(biome) %>% 
-  arrange(desc(mean_estimate)) %>% 
-  slice(1:5) %>% 
-  print(n = 20)
-
-

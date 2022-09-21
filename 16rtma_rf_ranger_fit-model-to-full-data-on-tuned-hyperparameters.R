@@ -9,21 +9,23 @@ dir.create("data/out/rf/fitted", showWarnings = FALSE)
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 
 # Tuned hyperparameters
-fine_tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-fine-tuning-metrics_", biome_shortname, ".csv"))
-})
-
-fine_tuning_metrics <- data.table::rbindlist(fine_tuning_metrics_l)
+# fine_tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
+#   data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-fine-tuning-metrics_", biome_shortname, ".csv"))
+# })
+# 
+# fine_tuning_metrics <- data.table::rbindlist(fine_tuning_metrics_l)
+biome_shortname <- "tcf"
+fine_tuning_metrics <- data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv"))
 
 tuned_hyperparameters <-
   fine_tuning_metrics %>% 
-  filter(.metric == "f_meas") %>% 
+  filter(.metric == "informedness") %>% 
   group_by(biome) %>% 
   arrange(desc(lwr)) %>% 
   slice(1)
 
 # Get data
-analysis_ready_nonspatial_version <- "v1"
+analysis_ready_nonspatial_version <- "v2"
 analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
 
 # Read analysis-ready data
@@ -39,6 +41,16 @@ target_event_ids <-
 
 fires_all <- fires_all[id %in% target_event_ids,]
 
+# Subset to just years where there are RTMA data (2011 and later)
+fires_all <-
+  fires_all %>%
+  dplyr::filter(date >= as.Date("2011-01-01"))
+
+# drop ERA5 columns in favor of RTMA columns for the weather variables
+fires_all <-
+  fires_all %>% 
+  dplyr::select(-contains("era5"))
+
 for (counter in 1:4) {
   biome_shortname <- biome_shortnames[counter]
   print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
@@ -48,10 +60,11 @@ for (counter in 1:4) {
   
   human_drivers <- c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha")
   topography_drivers <- c("elevation", "rumple_index", "peak_ridge_warm", "peak_ridge", "peak_ridge_cool", "mountain_divide", "cliff", "upper_slope_warm", "upper_slope", "upper_slope_cool", "lower_slope_warm", "lower_slope", "lower_slope_cool", "valley", "valley_narrow", "landform_diversity")
-  weather_drivers <- c("wind_anisotropy_era5", "max_wind_speed_era5_pct", "min_wind_speed_era5_pct",
-                       "max_temp_era5_pct", "min_temp_era5_pct", "bi_pct", "erc_pct",
-                       "max_rh_era5_pct", "min_rh_era5_pct", "max_vpd_era5_pct", "min_vpd_era5_pct", "max_soil_water_era5_pct", "min_soil_water_era5_pct",
-                       "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "fm100_pct", "fm1000_pct", "pdsi_z")
+  weather_drivers <- c("wind_anisotropy_rtma", "max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct", "max_wind_filled_gust_rtma_pct", "min_wind_filled_gust_rtma_pct",
+                       "max_temp_rtma_pct", "min_temp_rtma_pct", 
+                       "max_rh_rtma_pct", "min_rh_rtma_pct", "max_vpd_rtma_pct", "min_vpd_rtma_pct",
+                       "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct",
+                       "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y")
   
   fuel_lcms_change_tm01 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm01")
   fuel_lcms_change_tm02 <- paste0(c("fuel_slow_loss", "fuel_fast_loss", "fuel_gain", "fuel_stable", "change_diversity"), "_tm02")
@@ -63,7 +76,7 @@ for (counter in 1:4) {
   
   fuel_drivers <- c("ndvi", "veg_structure_rumple", fuel_lcms_change_tm01, fuel_lcms_change_tm02, fuel_lcms_change_tm03, fuel_lcms_change_tm04, fuel_lcms_change_tm05, fuel_lcms_landcover_tm01)
   
-  interacting_drivers <- c("wind_terrain_anisotropy_era5", "wind_terrain_alignment_era5")
+  interacting_drivers <- c("wind_terrain_anisotropy_rtma", "wind_terrain_alignment_rtma", "min_wind_terrain_alignment_rtma", "max_wind_terrain_alignment_rtma")
   
   predictor.variable.names <- c(human_drivers, topography_drivers, weather_drivers, fuel_drivers, interacting_drivers, "sqrt_aoi_tm1")
   
@@ -122,5 +135,5 @@ for (counter in 1:4) {
   fitted_model$biome <- biome_shortname
   fitted_model$forest$data <- data[, c("ewe", predictor.variable.names)]
   
-  readr::write_rds(x = fitted_model, file = paste0("data/out/rf/fitted/rf_ranger_fitted-model_", biome_shortname, ".rds"))
+  readr::write_rds(x = fitted_model, file = paste0("data/out/rf/fitted/rf_ranger_fitted-model_rtma_", biome_shortname, ".rds"))
 }

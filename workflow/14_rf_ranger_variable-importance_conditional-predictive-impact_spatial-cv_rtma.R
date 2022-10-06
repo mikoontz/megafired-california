@@ -16,6 +16,9 @@ library(foreach)
 
 dir.create("data/out/rf/conditional-predictive-impact/", showWarnings = FALSE, recursive = TRUE)
 
+# Get the function to take the generic analysis ready data and prepare it for {ranger}
+source("workflow/10_generic-analysis-ready-data-to-ranger-ready-data_function.R")
+
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 
 # Spatial fold assignments for each biome based on the folds assigned during tuning
@@ -90,18 +93,11 @@ fold_n <-
   dplyr::group_by(biome_name_daily, biome_shortname, eco_name_daily, spatial_fold) %>% 
   dplyr::tally()
 
-for (counter in (1:4)) {
-  biome_shortname <- biome_shortnames[counter]
+for (biome_idx in (1:4)) {
+  biome_shortname <- biome_shortnames[biome_idx]
   print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
   
   fold_assignments <- fold_lookup_tables[fold_lookup_tables$biome_shortname == biome_shortname, ]
-  
-  # Any folds in this biome that have very low sample size? Spoiler: it's TCF Great Basin Montane Forests
-  low_n_folds <- 
-    fold_assignments %>% 
-    dplyr::group_by(eco_name_daily, spatial_fold) %>% 
-    dplyr::tally() %>% 
-    dplyr::filter(n < 40)
   
   biome_tuned_hyperparameters <- tuned_hyperparameters[tuned_hyperparameters$biome == biome_shortname, ]
   
@@ -116,7 +112,6 @@ for (counter in (1:4)) {
   fuel_drivers <- ranger_ready$fuel_drivers
   interacting_drivers <- ranger_ready$interacting_drivers
   fire_drivers <- ranger_ready$fire_drivers
-  
   
   rf_formula <- as.formula(paste0("ewe ~ ", paste(predictor.variable.names, collapse = " + ")))
   
@@ -136,12 +131,15 @@ for (counter in (1:4)) {
       split <- rsample::make_splits(x = analysis_data, assessment = assessment_data)
       
       return(split)
-    })
+    }) 
   
   folds <- 
     rsample::manual_rset(splits = splits, ids = fold_ids) %>% 
-    dplyr::filter(id != low_n_folds$spatial_fold)
-
+    dplyr::mutate(biome_shortname = biome_shortname) %>% 
+    dplyr::left_join(fold_n, by = c(id = "spatial_fold", "biome_shortname")) %>% 
+    dplyr::filter(n >= 40) %>% 
+    dplyr::select(splits, id)
+  
   # number of repeats of the spatial cross validation to account for stochastic nature of the model fitting
   n_repeats <- 10
   
@@ -154,16 +152,59 @@ for (counter in (1:4)) {
   
   # Iterate through each split, using the resample::analysis(split) data as training data for the mlr3 task
   # and rsample::assessment(split) data as the test_data for the call to the cpi function 
-  cpi_mcc <- function(i) {
+  cpi_mcc <- function(idx) {
     analysis_data <- 
-      folds_repeat$splits[[i]] %>% 
+      folds_repeat$splits[[idx]] %>% 
       rsample::analysis() %>% 
       sf::st_drop_geometry()
     
     assessment_data <- 
-      folds_repeat$splits[[i]] %>% 
+      folds_repeat$splits[[idx]] %>% 
       rsample::assessment() %>% 
       sf::st_drop_geometry()
+    
+    # Sometimes there aren't representative levels of all the NPL categories in the test data, so we reduce the possible
+    # number of levels of NPL to just the represented ones
+    # Our knockoff generating approach throws a warning that we are in "dangerous ground" when our categorical variable
+    # has fewer than 8 observations per level of the categorical variable. Here, we drop rows in the assessment
+    # dataset if their NPL level is part of a representation across the whole assessment dataset of fewer than 8
+    # other instances. That is, if there are only 2 rows with an NPL of 3, then both of those rows get dropped
+    
+    # This code is set up to handle multiple factors in the dataset, even though there is only one for now (NPL)
+    factor_cols <- which(sapply(assessment_data, is.factor))
+    
+    if (length(factor_cols) > 0) {
+      factor_col_tallies <- lapply(assessment_data[factor_cols], table)
+      
+      for(factor_col_idx in seq_along(names(factor_col_tallies))) {
+        # the name of the column that is the factor 
+        factor_col <- names(factor_col_tallies)[factor_col_idx]
+        # the names of the factor levels that have poor representation in the data (fewer than 5 rows)
+        low_n_levels <- names(factor_col_tallies[[factor_col_idx]])[factor_col_tallies[[factor_col_idx]] <= 5]
+        # the row numbers of the data corresponding to rows belonging to one of the poorly represented factor levels
+        low_n_idx <- which(assessment_data[[factor_col]] %in% low_n_levels)
+        
+        if (length(low_n_idx) > 0) {
+          # drop all rows when factor levels are poorly represented
+          assessment_data <- assessment_data[-low_n_idx, ]
+        }
+        
+        # re-establish the possible factor levels in the data
+        assessment_data[, factor_col] <- factor(assessment_data[, factor_col], levels = unique(assessment_data[[factor_col]]))
+      }
+    }
+    # sequential knockoffs also can't handle when there is zero variance in a feature
+    # in the future, we will check the individual spatial folds for this criteria, and drop features ahead
+    # of the tuning step that have no variation in the feature values (we only do this for the whole dataset
+    # in a biome, not at the spatial fold level; turns out it's important at the spatial fold level too)
+    constant_cols <- names(which(sapply(assessment_data[setdiff(predictor.variable.names, names(factor_cols))], var) == 0))
+    
+    if (length(constant_cols) > 0) {
+      assessment_data[constant_cols] <- 
+        assessment_data[constant_cols] + rnorm(n = nrow(assessment_data), 
+                                               mean = 0, 
+                                               sd = abs(mean(assessment_data[, constant_cols]) / 100))
+    }
     
     class.wgts <- 1 / table(analysis_data$ewe)
     
@@ -208,7 +249,7 @@ for (counter in (1:4)) {
     
     out <- 
       out_mcc %>% 
-      dplyr::mutate(id = folds_repeat$id[i], iter = folds_repeat$iter[i], biome = biome_shortname)
+      dplyr::mutate(id = folds_repeat$id[idx], iter = folds_repeat$iter[idx], biome = biome_shortname)
     
     return(out)
   }
@@ -216,16 +257,61 @@ for (counter in (1:4)) {
   ## Grouped version
   # Iterate through each split, using the resample::analysis(split) data as training data for the mlr3 task
   # and rsample::assessment(split) data as the test_data for the call to the cpi function 
-  cpi_mcc_grouped <- function(i) {
+  cpi_mcc_grouped <- function(idx) {
     analysis_data <- 
-      folds_repeat$splits[[i]] %>% 
+      folds_repeat$splits[[idx]] %>% 
       rsample::analysis() %>% 
       sf::st_drop_geometry()
     
     assessment_data <- 
-      folds_repeat$splits[[i]] %>% 
+      folds_repeat$splits[[idx]] %>% 
       rsample::assessment() %>% 
       sf::st_drop_geometry()
+    
+    # Sometimes there aren't representative levels of all the NPL categories in the test data, so we reduce the possible
+    # number of levels of NPL to just the represented ones
+    # Our knockoff generating approach throws a warning that we are in "dangerous ground" when our categorical variable
+    # has fewer than 8 observations per level of the categorical variable. Here, we drop rows in the assessment
+    # dataset if their NPL level is part of a representation across the whole assessment dataset of fewer than 8
+    # other instances. That is, if there are only 2 rows with an NPL of 3, then both of those rows get dropped
+    
+    # This code is set up to handle multiple factors in the dataset, even though there is only one for now (NPL)
+    factor_cols <- which(sapply(assessment_data, is.factor))
+    
+    if (length(factor_cols) > 0) {
+      factor_col_tallies <- lapply(assessment_data[factor_cols], table)
+      
+      for(factor_col_idx in seq_along(names(factor_col_tallies))) {
+        
+        # the name of the column that is the factor 
+        factor_col <- names(factor_col_tallies)[factor_col_idx]
+        # the names of the factor levels that have poor representation in the data (fewer than 5 rows)
+        low_n_levels <- names(factor_col_tallies[[factor_col_idx]])[factor_col_tallies[[factor_col_idx]] <= 5]
+        # the row numbers of the data corresponding to rows belonging to one of the poorly represented factor levels
+        low_n_idx <- which(assessment_data[[factor_col]] %in% low_n_levels)
+        
+        if (length(low_n_idx) > 0) {
+          # drop all rows when factor levels are poorly represented
+          assessment_data <- assessment_data[-low_n_idx, ]
+        }
+        
+        # re-establish the possible factor levels in the data
+        assessment_data[, factor_col] <- factor(assessment_data[, factor_col], levels = unique(assessment_data[[factor_col]]))
+      }
+    }
+    
+    # sequential knockoffs also can't handle when there is zero variance in a feature
+    # in the future, we will check the individual spatial folds for this criteria, and drop features ahead
+    # of the tuning step that have no variation in the feature values (we only do this for the whole dataset
+    # in a biome, not at the spatial fold level; turns out it's important at the spatial fold level too)
+    constant_cols <- names(which(sapply(assessment_data[setdiff(predictor.variable.names, names(factor_cols))], var) == 0))
+    
+    if (length(constant_cols) > 0) {
+      assessment_data[constant_cols] <- 
+        assessment_data[constant_cols] + rnorm(n = nrow(assessment_data), 
+                                               mean = 0, 
+                                               sd = abs(mean(assessment_data[, constant_cols]) / 100))
+    }
     
     class.wgts <- 1 / table(analysis_data$ewe)
     
@@ -260,7 +346,7 @@ for (counter in (1:4)) {
     out_mcc <- cpi::cpi(task = task_ewe,
                         learner = learner_ewe,
                         knockoff_fun = seqknockoff::knockoffs_seq, # use sequential knockoffs to handle the npl factor,
-                        measure = "classif.fbeta", # we'll use the classification error as the best measure for our problem
+                        measure = "classif.fbeta", # we'll use the Matthew's correlation coefficient as the best measure for our problem
                         groups = list(human = which(task_ewe$feature_names %in% human_drivers),
                                       topography = which(task_ewe$feature_names %in% topography_drivers),
                                       weather = which(task_ewe$feature_names %in% weather_drivers),
@@ -276,7 +362,7 @@ for (counter in (1:4)) {
     
     out <- 
       out_mcc %>% 
-      dplyr::mutate(id = folds_repeat$id[i], iter = folds_repeat$iter[i], biome = biome_shortname)
+      dplyr::mutate(id = folds_repeat$id[idx], iter = folds_repeat$iter[idx], biome = biome_shortname)
     
     return(out)
   }
@@ -290,11 +376,11 @@ for (counter in (1:4)) {
   print(paste0("Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", start_time, "..."))
   
   out <- 
-    foreach(i = (1:nrow(folds_repeat)), 
+    foreach(idx = (1:nrow(folds_repeat)), 
             .combine = rbind, 
             .packages = c("dplyr", "cpi", "mlr3", "mlr3learners", "rsample", "sf"),
             .errorhandling = "remove") %dopar% 
-    cpi_mcc(i)
+    cpi_mcc(idx)
   
   (end_time <- Sys.time())
   print(paste0("Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", end_time, ". "))
@@ -308,12 +394,12 @@ for (counter in (1:4)) {
                      lwr = cpi - se) %>%
     dplyr::left_join(fold_n, by = c(biome = "biome_shortname", "spatial_fold")) %>% 
     dplyr::group_by(Variable, biome) %>% 
-    dplyr::summarize(n_pos = length(which(lwr > 0)),
-                     n_neg = length(which(lwr < 0)),
-                     n_0 = length(which(lwr == 0)),
+    dplyr::summarize(n_pos = length(which(cpi > 0)),
+                     n_neg = length(which(cpi < 0)),
+                     n_0 = length(which(cpi == 0)),
                      cpi = weighted.mean(x = cpi, w = n), n = n()) %>% 
     dplyr::arrange(desc(cpi)) %>%
-    dplyr::filter(n_pos >= 1 & n_pos >= n_neg) %>% 
+    dplyr::filter(n_pos >= 1 & n_pos >= n_neg) %>%
     print(n = 40)
   
   ###
@@ -322,11 +408,11 @@ for (counter in (1:4)) {
   print(paste0("Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", start_time, "..."))
   
   out_grouped <- 
-    foreach(i = (1:nrow(folds_repeat)), 
+    foreach(idx = (1:nrow(folds_repeat)), 
             .combine = rbind, 
             .packages = c("dplyr", "cpi", "mlr3", "mlr3learners", "rsample", "sf"),
             .errorhandling = "remove") %dopar% 
-    cpi_mcc_grouped(i)
+    cpi_mcc_grouped(idx)
   
   
   (end_time <- Sys.time())
@@ -334,13 +420,6 @@ for (counter in (1:4)) {
   print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
   
   # Group across folds (summarizing across iterations) to see CPI of each variable for each fold
-  # out_grouped %>%
-  #   dplyr::group_by(Group, id, biome) %>%
-  #   dplyr::summarize(CPI = mean(CPI),
-  #                    n = n())
-  # 
-  # Group across iterations (summarizing across folds), then group across folds (summarizing CPI per variable for whole biome)
-  # in order to 
   out_grouped %>% 
     dplyr::group_by(Group, spatial_fold = id, biome) %>%
     dplyr::summarize(cpi = mean(CPI),
@@ -349,21 +428,13 @@ for (counter in (1:4)) {
                      lwr = cpi - se) %>%
     dplyr::left_join(fold_n, by = c(biome = "biome_shortname", "spatial_fold")) %>% 
     dplyr::group_by(Group, biome) %>% 
-    dplyr::summarize(n_pos = length(which(lwr > 0)),
-                     n_neg = length(which(lwr < 0)),
-                     n_0 = length(which(lwr == 0)),
+    dplyr::summarize(n_pos = length(which(cpi > 0)),
+                     n_neg = length(which(cpi < 0)),
+                     n_0 = length(which(cpi == 0)),
                      cpi = weighted.mean(x = cpi, w = n), n = n()) %>% 
     dplyr::arrange(desc(cpi)) %>%
     dplyr::filter(n_pos >= 1 & n_pos >= n_neg) %>% 
     print(n = 40)
-  
-  # out_grouped %>%
-  #   dplyr::group_by(Group, iter, biome) %>%
-  #   dplyr::summarize(CPI = mean(CPI)) %>% 
-  #   dplyr::group_by(Group, biome) %>% 
-  #   dplyr::summarize(CPI = mean(CPI)) %>% 
-  #   dplyr::arrange(desc(CPI)) %>% 
-  #   print(n = 30)
   
   ###
   
@@ -373,3 +444,4 @@ for (counter in (1:4)) {
   data.table::fwrite(x = out_grouped, paste0(file = "data/out/rf/conditional-predictive-impact/rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv"))
   
 }
+

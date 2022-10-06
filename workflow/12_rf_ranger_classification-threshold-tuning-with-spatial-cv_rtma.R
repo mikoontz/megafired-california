@@ -13,6 +13,7 @@ library(ggplot2)
 # library(mlr3measures)
 # library(MLmetrics)
 
+dir.create("figs/rf/tuning", showWarnings = FALSE, recursive = TRUE)
 # We can tune the "classification threshold" for saying something is an EWE or not
 # No need to fit more models for this step, we merely adjust our classification threshold, convert the
 # pseudo-probability predictions from the models already fit to crisp 0 or 1 values, then calculate the 
@@ -158,7 +159,7 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
     geom_point() +
     theme_bw()
   
-  ggsave(filename = paste0("figs/rf/informedness-vs-mcc_rtma_", biome_shortname, ".png"), plot = informedness_mcc_gg)
+  ggsave(filename = paste0("figs/rf/tuning/informedness-vs-mcc_rtma_", biome_shortname, ".png"), plot = informedness_mcc_gg)
   
   class_thresh_effect_data <-
     tuning_metrics %>% 
@@ -178,7 +179,7 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
     facet_wrap(facets = ".metric") +
     theme_bw()
   
-  ggsave(filename = paste0("figs/rf/classification-threshold-effect_rtma_", biome_shortname, ".png"), plot = class_thresh_effect_gg)
+  ggsave(filename = paste0("figs/rf/tuning/classification-threshold-effect_rtma_", biome_shortname, ".png"), plot = class_thresh_effect_gg)
   
 })
 

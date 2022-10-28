@@ -6,6 +6,7 @@ library(parallel)
 library(tidyr)
 
 dir.create("data/out/rf/fitted", showWarnings = FALSE)
+dir.create("tables/rf", recursive = TRUE, showWarnings = FALSE)
 
 # Get the function to take the generic analysis ready data and prepare it for {ranger}
 source("workflow/10_generic-analysis-ready-data-to-ranger-ready-data_function.R")
@@ -62,6 +63,7 @@ mcc_results <-
   tidyr::pivot_wider(names_from = ".metric", values_from = "mean_mcc")
 
 model_skill_results <- merge(tuned_hyperparameters, mcc_results)
+write.csv(x = model_skill_results, file = "tables/rf/model-skill-results.csv")
 
 # Get data
 analysis_ready_nonspatial_version <- "v2"

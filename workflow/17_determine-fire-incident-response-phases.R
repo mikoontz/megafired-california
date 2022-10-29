@@ -29,15 +29,21 @@ last_simple_size <-
 
 last_simple_size %>% arrange(desc(cum_ha))
 
-ggplot2::ggplot(last_simple_size, aes(x = cum_ha)) +
+zero_offset <- 0.1
+mean_switching_cumarea <- 10^mean(log10(last_simple_size$cum_ha + zero_offset))
+mean_switching_cumarea / 0.404686
+median_switching_cumarea <- 10^median(log10(last_simple_size$cum_ha + zero_offset))
+median_switching_cumarea / 0.404686
+
+last_simple_gg <-
+  ggplot2::ggplot(last_simple_size, aes(x = cum_ha + zero_offset)) +
   geom_histogram() +
-  scale_x_log10()
+  scale_x_log10(labels = c("0", "10", "100", "1,000", "10,000", "100,000"), breaks = c(zero_offset, 10^(1:5))) +
+  labs(x = "Cumulative area prior to switching to\nincident management designed for a complex event (ha)",
+       y = "Count") +
+  geom_vline(xintercept = mean_switching_cumarea, color = "red") +
+  # geom_vline(xintercept = median_switching_cumarea, color = "blue") + 
+  theme_bw()
 
-ics[ics$FIRE_EVENT_ID == "CA-LPF-001087|2007|1", ]
+ggsave(filename = "figs/switching-size-to-complex-event.png", plot = last_simple_gg)
 
-10^mean(log10(last_simple_size$cum_ha + 1)) / 0.404686
-
-last_simple_size[last_simple_size$cum_ha == 0, ]
-
-test <- sf::read_sf("C:/Users/mikoo/Downloads/cbi_data_review_v4(1)/conus_cbi_v4.shp")
-names(test)

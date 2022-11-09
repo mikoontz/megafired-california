@@ -210,11 +210,6 @@ figs_drought[[2]]
 figs_drought[[3]]
 figs_drought[[4]]
 
-# figs_non_normalized <- 
-# lapply(biome_shortnames, FUN = function(x) {
-#   ard_biome <- ard_fires[[x]]
-#   cpi_summary_across_folds_biome <- cpi_summary_across_folds[cpi_summary_across_folds$biome == x, ]
-
 # This represents the distributions of all 0 to 1 and 0 to 100 scaled data
 plot_data_non_normalized <-
   ard_fires %>% 
@@ -291,3 +286,7 @@ out_gg_3 <-
   labs(x = "Variable value (bounded by [0,1])",
        y = "Covariate") +
   scale_x_continuous(limits = c(0, 1))
+
+out_gg_1
+out_gg_2
+out_gg_3

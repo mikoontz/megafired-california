@@ -1,4 +1,4 @@
-# Plot the conditional predictive impact of variables
+# Plot the distribution of covariate values
 
 library(data.table)
 library(dplyr)
@@ -108,43 +108,186 @@ fires_all <-
 
 ard_fires <- lapply(biome_shortnames, FUN = prep_fires, fires_all = fires_all) %>% setNames(biome_shortnames)
 
-
-
-
-ard_biome <- ard_fires[["tcf"]]
-
-ard_biome$human_drivers
-
 scale_drought <- c("pdsi_z", "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y")
 scale_0_to_100 <- c("max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct", "max_wind_filled_gust_rtma_pct", "min_wind_filled_gust_rtma_pct", "max_temp_rtma_pct", "min_temp_rtma_pct", "max_rh_rtma_pct", "min_rh_rtma_pct", "max_vpd_rtma_pct", "min_vpd_rtma_pct", "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct")
 scale_not_normalized <- c("npl", "concurrent_fires", "wind_anisotropy_rtma", "wind_terrain_anisotropy_rtma", "wind_terrain_alignment_rtma", "sqrt_aoi_tm1")  
-scale_0_to_1 <- c(ard_biome$fuel_drivers, ard_biome$topography_drivers, "friction_walking_only", "road_density_mpha")
+scale_0_to_1 <- c(ard_fires[[1]]$fuel_drivers, ard_fires[[1]]$topography_drivers, "friction_walking_only", "road_density_mpha")
 
-plot_data_0_to_1 <- 
-  ard_biome$data %>% 
-  dplyr::select("did", ard_biome$predictor.variable.names) %>% 
-  dplyr::mutate(dplyr::across(tidyselect::all_of(scale_0_to_100), ~ .x / 100)) %>% 
-  dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought)))
+figs_0_to_1 <- 
+  lapply(biome_shortnames, FUN = function(x) {
+    ard_biome <- ard_fires[[x]]
+    cpi_summary_across_folds_biome <- cpi_summary_across_folds[cpi_summary_across_folds$biome == x, ]
+    
+    # This represents the distributions of all 0 to 1 and 0 to 100 scaled data
+    plot_data_0_to_1 <-
+      ard_biome$data %>% 
+      dplyr::select("did", "biome_name_daily", ard_biome$predictor.variable.names) %>% 
+      dplyr::mutate(dplyr::across(tidyselect::all_of(scale_0_to_100), ~ .x / 100)) %>% 
+      dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought))) %>% 
+      dplyr::rename(biome_fullname = biome_name_daily)
+    
+    plot_data_0_to_1_long <- 
+      plot_data_0_to_1 %>% 
+      tidyr::pivot_longer(cols = !c(did, biome_fullname), names_to = "variable", values_to = "value")
+    
+    plot_data_0_to_1_long_summarized <-
+      plot_data_0_to_1_long %>% 
+      dplyr::group_by(biome_fullname, variable) %>% 
+      dplyr::summarize(mean = mean(value, na.rm = TRUE),
+                       sd = sd(value, na.rm = TRUE),
+                       count = sum(!is.na(value)),
+                       min = min(value, na.rm = TRUE),
+                       max = max(value, na.rm = TRUE),
+                       lwr10pct = quantile(value, probs = 0.10),
+                       upr90pct = quantile(value, probs = 0.90),
+                       lwr25pct = quantile(value, probs = 0.25),
+                       upr75pct = quantile(value, probs = 0.75),
+                       lwr95CI = mean(value, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(value)) - 1) * sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+                       upr95CI = mean(value, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(value)) - 1) * sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))))
+    
+    out_gg <-
+      ggplot(plot_data_0_to_1_long_summarized, mapping = aes(x = mean, y = factor(variable, levels = rev(cpi_summary_across_folds_biome$Variable)))) +
+      ggdist::geom_pointinterval(mapping = aes(xmin = lwr10pct, xmax = upr90pct)) +
+      ggdist::geom_pointinterval(mapping = aes(xmin = lwr25pct, xmax = upr75pct), lwd = 2) +
+      ggdist::geom_pointinterval(mapping = aes(xmin = lwr95CI, xmax = upr95CI), lwd = 2, color = "red") +
+      theme_bw() +
+      facet_wrap(facets = "biome_fullname") +
+      labs(x = "Variable value as a percentile (0 to 1 scale)",
+           y = "Covariate")
+  })
 
-plot_data_0_to_1_long <-
-  plot_data_0_to_1 %>% 
-  tidyr::pivot_longer(cols = !did, names_to = "variable", values_to = "value")
+figs_0_to_1[[1]]
+figs_0_to_1[[2]]
+figs_0_to_1[[3]]
+figs_0_to_1[[4]]
 
-ggplot(plot_data_0_to_1_long, aes(x = value)) + 
-  geom_density() +
-  facet_wrap(facets = "variable", scales = "free_y") +
-  geom_vline(xintercept = 0.5, color = "red") +
-  theme_bw()
+figs_drought <- 
+  lapply(biome_shortnames, FUN = function(x) {
+    ard_biome <- ard_fires[[x]]
+    cpi_summary_across_folds_biome <- cpi_summary_across_folds[cpi_summary_across_folds$biome == x, ]
+    
+    # This represents the distributions of all 0 to 1 and 0 to 100 scaled data
+    plot_data_drought <-
+      ard_biome$data %>% 
+      dplyr::select("did", "biome_name_daily", ard_biome$predictor.variable.names) %>% 
+      dplyr::mutate(dplyr::across(tidyselect::all_of(scale_0_to_100), ~ .x / 100)) %>% 
+      dplyr::select(tidyselect::all_of(c("did", "biome_name_daily", scale_drought))) %>% 
+      dplyr::rename(biome_fullname = biome_name_daily) %>% 
+      tibble::as_tibble()
+    
+    plot_data_drought_long <- 
+      plot_data_drought %>% 
+      tidyr::pivot_longer(cols = !c(did, biome_fullname), names_to = "variable", values_to = "value")
+    
+    plot_data_drought_long_summarized <-
+      plot_data_drought_long %>% 
+      dplyr::group_by(biome_fullname, variable) %>% 
+      dplyr::summarize(mean = mean(value, na.rm = TRUE),
+                       sd = sd(value, na.rm = TRUE),
+                       count = sum(!is.na(value)),
+                       min = min(value, na.rm = TRUE),
+                       max = max(value, na.rm = TRUE),
+                       lwr10pct = quantile(value, probs = 0.10),
+                       upr90pct = quantile(value, probs = 0.90),
+                       lwr25pct = quantile(value, probs = 0.25),
+                       upr75pct = quantile(value, probs = 0.75),
+                       lwr95CI = mean(value, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(value)) - 1) * sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+                       upr95CI = mean(value, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(value)) - 1) * sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))))
+    
+    out_gg <-
+      ggplot(plot_data_drought_long_summarized, mapping = aes(x = mean, y = factor(variable, levels = rev(cpi_summary_across_folds_biome$Variable)))) +
+      ggdist::geom_pointinterval(mapping = aes(xmin = lwr10pct, xmax = upr90pct)) +
+      ggdist::geom_pointinterval(mapping = aes(xmin = lwr25pct, xmax = upr75pct), lwd = 2) +
+      ggdist::geom_pointinterval(mapping = aes(xmin = lwr95CI, xmax = upr95CI), lwd = 2, color = "red") +
+      theme_bw() +
+      facet_wrap(facets = "biome_fullname") +
+      labs(x = "Variable value (normalized to z-score)",
+           y = "Covariate")
+  })
 
-ggplot(plot_data_0_to_1_long, aes(x = value, y = factor(variable, levels = rev(cpi_summary_across_folds_tcf$Variable)))) + 
-  geom_point() +
-  # facet_wrap(facets = "variable", scales = "free_y") +
-  # geom_vline(xintercept = 0.5, color = "red") +
-  theme_bw()
+figs_drought[[1]]
+figs_drought[[2]]
+figs_drought[[3]]
+figs_drought[[4]]
 
-ggplot(plot_data_0_to_1_long, aes(x = value, y = factor(variable, levels = rev(cpi_summary_across_folds_tcf$Variable)))) + 
-  geom_boxplot() +
+# figs_non_normalized <- 
+# lapply(biome_shortnames, FUN = function(x) {
+#   ard_biome <- ard_fires[[x]]
+#   cpi_summary_across_folds_biome <- cpi_summary_across_folds[cpi_summary_across_folds$biome == x, ]
+
+# This represents the distributions of all 0 to 1 and 0 to 100 scaled data
+plot_data_non_normalized <-
+  ard_fires %>% 
+  lapply(FUN = function(x) x$data) %>%
+  data.table::rbindlist(fill = TRUE) %>% 
+  dplyr::select(tidyselect::all_of(c("did", "biome_name_daily", scale_not_normalized))) %>% 
+  dplyr::rename(biome_fullname = biome_name_daily) %>% 
+  tibble::as_tibble()
+
+plot_data_non_normalized_long <- 
+  plot_data_non_normalized %>%
+  dplyr::mutate(biome_fullname = factor(biome_fullname, levels = biome_lookup),
+                npl = as.numeric(as.character(npl)),
+                wind_terrain_anisotropy_rtma = wind_terrain_anisotropy_rtma*2) %>% # this bounds the variable by [0,1] like wind anisotropy and wind terrain alignment instead of [0,0.5]
+  tidyr::pivot_longer(cols = !c(did, biome_fullname), names_to = "variable", values_to = "value")
+
+plot_data_non_normalized_long_summarized <-
+  plot_data_non_normalized_long %>% 
+  dplyr::group_by(biome_fullname, variable) %>% 
+  dplyr::summarize(mean = mean(value, na.rm = TRUE),
+                   sd = sd(value, na.rm = TRUE),
+                   count = sum(!is.na(value)),
+                   min = min(value, na.rm = TRUE),
+                   max = max(value, na.rm = TRUE),
+                   lwr10pct = quantile(value, probs = 0.10),
+                   upr90pct = quantile(value, probs = 0.90),
+                   lwr25pct = quantile(value, probs = 0.25),
+                   upr75pct = quantile(value, probs = 0.75),
+                   lwr95CI = mean(value, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(value)) - 1) * sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+                   upr95CI = mean(value, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(value)) - 1) * sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))))
+
+out_gg_1 <-
+  ggplot(plot_data_non_normalized_long_summarized[plot_data_non_normalized_long_summarized$variable %in% c("sqrt_aoi_tm1", "concurrent_fires"), ], mapping = aes(x = mean, y = factor(variable, levels = rev(cpi_summary_across_folds_biome$Variable)))) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr10pct, xmax = upr90pct)) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr25pct, xmax = upr75pct), lwd = 2) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr95CI, xmax = upr95CI), lwd = 2, color = "red") +
   theme_bw() +
-  geom_vline(xintercept = 0.5, color = "red")
+  facet_wrap(facets = "biome_fullname") +
+  labs(x = "Variable value",
+       y = "Covariate")
 
-summary(ard_fires[["tcf"]]$data[, ard_fires[["tcf"]]$predictor.variable.names])
+out_gg_2 <-
+  ggplot(plot_data_non_normalized_long_summarized[plot_data_non_normalized_long_summarized$variable %in% c("npl"), ], mapping = aes(x = mean, y = factor(variable, levels = rev(cpi_summary_across_folds_biome$Variable)))) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr10pct, xmax = upr90pct)) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr25pct, xmax = upr75pct), lwd = 2) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr95CI, xmax = upr95CI), lwd = 2, color = "red") +
+  theme_bw() +
+  facet_wrap(facets = "biome_fullname") +
+  labs(x = "Variable value",
+       y = "Covariate") +
+  scale_x_continuous(limits = c(1, 5))
+
+# wind_aspect_alignment_rad = wind direction (radians) - slope aspect (radians); wind blowing uphill = 0, wind blowing downhill = pi, wind blowing across slope is pi/2 or 3pi/2
+# wind terrain alignment = abs(cos(wind_aspect_alignment_rad)); wind blowing uphill and wind blowing downhill get max value of 1; wind blowing across slope gets value of 0
+# Daily wind terrain alignment = mean(wind_terrain_alignment)
+# daily wind anisotropy = sd(cos(wind direction (radians))); 
+# daily wind terrain anisotropy = sd(wind terrain alignment)
+
+# https://stats.stackexchange.com/questions/45588/variance-of-a-bounded-random-variable; If X [m, M], then var(X) <= (M - m)^2 / 4, then sd(X) <= (M - m) / 2
+# Therefore, maximum standard deviation of variable bounded by [0, 1] is 0.5
+# Therefore, maximum standard deviation of variable bounded by [-1, 1] is 1
+
+# Wind terrain alignment is bound by [0, 1] because of the abs(cos(X)) function applied
+# wind anisotropy is bound by [0, 1] because standard deviation has to be greater than 0, and the internal cos(X) function is bound by [-1, 1]
+# wind terrain alignment anisotropy is bound by [0, 0.5] because standard deviation is greater than 0, and max standard deviation of variable bounded by [0, 1] is 0.5
+# Above, we multiplied terrain alignment anisotropy by 2 to make it bound by [0,1] like these other variables
+out_gg_3 <-
+  ggplot(plot_data_non_normalized_long_summarized[plot_data_non_normalized_long_summarized$variable %in% c("wind_anisotropy_rtma", "wind_terrain_alignment_rtma", "wind_terrain_anisotropy_rtma"), ], mapping = aes(x = mean, y = factor(variable, levels = rev(cpi_summary_across_folds_biome$Variable)))) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr10pct, xmax = upr90pct)) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr25pct, xmax = upr75pct), lwd = 2) +
+  ggdist::geom_pointinterval(mapping = aes(xmin = lwr95CI, xmax = upr95CI), lwd = 2, color = "red") +
+  theme_bw() +
+  facet_wrap(facets = "biome_fullname") +
+  labs(x = "Variable value (bounded by [0,1])",
+       y = "Covariate") +
+  scale_x_continuous(limits = c(0, 1))

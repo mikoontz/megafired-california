@@ -126,6 +126,42 @@ figs_0_to_1 <-
       dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought))) %>% 
       dplyr::rename(biome_fullname = biome_name_daily)
     
+    # spot_check_01 <-
+    #   ard_biome$data %>%
+    #   dplyr::select("did", "biome_name_daily", ard_biome$predictor.variable.names) %>%
+    #   dplyr::mutate(dplyr::across(tidyselect::all_of(scale_0_to_100), ~ .x / 100)) %>%
+    #   dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought))) %>%
+    #   dplyr::rename(biome_fullname = biome_name_daily) %>%
+    #   dplyr::pull(barren_grass_forb_herb_mix_tm01)
+    # thresh <- ecdf(spot_check_01)(0.5)
+    # 
+    # spot_check_02 <-
+    #   ard_biome$data %>% 
+    #   dplyr::select("did", "biome_name_daily", "ewe", ard_biome$predictor.variable.names) %>% 
+    #   dplyr::mutate(id = stringr::str_sub(did, start = 1, end = -12)) %>% 
+    #   dplyr::mutate(dplyr::across(tidyselect::all_of(scale_0_to_100), ~ .x / 100)) %>% 
+    #   dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought))) %>% 
+    #   dplyr::rename(biome_fullname = biome_name_daily) %>% 
+    #   dplyr::mutate(barren_grass_forb_herb_mix_tm01_cover = ifelse(barren_grass_forb_herb_mix_tm01 >= 0.5, yes = "high", no = "low"))
+    # 
+    # spot_check_02 %>% 
+    #   dplyr::group_by(barren_grass_forb_herb_mix_tm01_cover, ewe) %>% 
+    #   dplyr::tally()
+    # 
+    # spot_check_02 %>% 
+    #   dplyr::filter(barren_grass_forb_herb_mix_tm01_cover == "low") %>% 
+    #   group_by(id, ewe) %>% 
+    #   tally() %>% 
+    #   arrange(desc(n))
+    # 
+    # common_names <- 
+    #   read.csv("data/out/fired-frap-mtbs-join.csv") %>% 
+    #   dplyr::filter(id_fired %in% c("135646", "122950", "122694", "135752")) %>% 
+    #   dplyr::mutate(id_fired = factor(id_fired, levels = c("135646", "122950", "122694", "135752"))) %>% 
+    #   dplyr::arrange(id_fired)
+    # 
+    # common_names
+    
     plot_data_0_to_1_long <- 
       plot_data_0_to_1 %>% 
       tidyr::pivot_longer(cols = !c(did, biome_fullname), names_to = "variable", values_to = "value")

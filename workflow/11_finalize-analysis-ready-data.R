@@ -11,6 +11,12 @@ adjusted_drivers_version <- paste0(drivers_version, "_adjusted")
 analysis_ready_nonspatial_version <- "v2"
 analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
 
+other_fires_summary <- 
+  read.csv(file = "data/out/other-fires-summary.csv") %>%
+  dplyr::filter(did %in% fired_daily$did) %>% 
+  dplyr::mutate(date = lubridate::ymd(date)) %>% 
+  as_tibble()
+
 # For defining "ewe" or not, what is the percentage threshold? E.g., 0.95 means an "ewe" is in the top
 # 5th percentile for daily area of increase
 pct_threshold <- 0.95

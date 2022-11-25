@@ -4,6 +4,8 @@ library(dplyr)
 library(stringr)
 library(tidyr)
 
+dir.create("data/out/drivers", recursive = TRUE, showWarnings = FALSE)
+
 # https://www.nifc.gov/sites/default/files/2020-09/PreparednessLevels.xlsx
 if(!file.exists("data/raw/PreparednessLevels.xlsx")) {
   download.file(url = "https://www.nifc.gov/sites/default/files/2020-09/PreparednessLevels.xlsx",
@@ -48,4 +50,4 @@ unique(npl$year)
 summary(npl)
 npl
 
-write.csv(x = npl, file = "data/out/national-preparedness-level.csv", row.names = FALSE)
+write.csv(x = npl, file = "data/out/drivers/national-preparedness-level.csv", row.names = FALSE)

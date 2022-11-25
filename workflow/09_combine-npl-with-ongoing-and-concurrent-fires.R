@@ -8,19 +8,22 @@ library(pbapply)
 library(USAboundaries)
 
 #### --- input FIRED data
+# We need some of the cumulative area metrics calculated in the "add fire behavior" script, so
+# we read in the fired_daily_ca_behavior-metrics.csv file in order to join with the geometries
+# representing each day's area of increase
 fired_daily_response <- 
-  data.table::fread("data/out/fired_daily_ca_response-vars.csv") %>% 
+  data.table::fread("data/out/fired/05_daily-with-behavior-metrics/fired_daily_ca_behavior-metrics.csv") %>% 
   dplyr::mutate(date = lubridate::ymd(date))
 
 # We need the ignition date for each event, so we go back to some of the original output from the
 # FIRED algorithm
 fired_events <- 
-  sf::st_read("data/out/fired_events_ca.gpkg") %>% 
+  sf::st_read("data/out/fired/01_spatial-subset/fired_events_ca.gpkg") %>% 
   dplyr::select(id, ignition_date, last_date, ignition_year, ignition_month, ignition_day) %>% 
   sf::st_drop_geometry()
 
 fired_daily <- 
-  sf::st_read("data/out/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
+  sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
   dplyr::rename(geometry = geom) %>% 
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   sf::st_set_agr(value = "constant") %>% 
@@ -34,7 +37,7 @@ fired_daily <-
                 c_area_tm1 = cum_area_ha_tminus1)
   
 npl <- 
-  read.csv("data/out/national-preparedness-level.csv") %>% 
+  read.csv("data/out/drivers/national-preparedness-level.csv") %>% 
   dplyr::mutate(date = lubridate::ymd(paste0(year, "-", month, "-", day))) %>% 
   dplyr::select(-c(year, month, day)) %>% 
   as.data.table()
@@ -95,7 +98,7 @@ other_fires_summary <- npl[other_fires_summary, on = "date"]
 other_fires_summary[, c("ig_date", "ig_year", "last_date", "c_area_tm1", "act_aoi") := NULL]
 other_fires_summary <- dplyr::select(other_fires_summary, did, id, date, npl, npl_at_ignition, everything())
 
-write.csv(x = other_fires_summary, file = "data/out/other-fires-summary.csv", row.names = FALSE)
+write.csv(x = other_fires_summary, file = "data/out/drivers/other-fires-summary.csv", row.names = FALSE)
 
 # end_time <- Sys.time()
 # print(difftime(end_time, start_time, units = "mins"))

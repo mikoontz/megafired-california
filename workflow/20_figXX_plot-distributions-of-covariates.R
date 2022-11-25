@@ -109,9 +109,8 @@ fires_all <-
 ard_fires <- lapply(biome_shortnames, FUN = prep_fires, fires_all = fires_all) %>% setNames(biome_shortnames)
 
 scale_drought <- c("pdsi_z", "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y")
-scale_0_to_100 <- c("max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct", "max_wind_filled_gust_rtma_pct", "min_wind_filled_gust_rtma_pct", "max_temp_rtma_pct", "min_temp_rtma_pct", "max_rh_rtma_pct", "min_rh_rtma_pct", "max_vpd_rtma_pct", "min_vpd_rtma_pct", "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct")
 scale_not_normalized <- c("npl", "concurrent_fires", "wind_anisotropy_rtma", "wind_terrain_anisotropy_rtma", "wind_terrain_alignment_rtma", "sqrt_aoi_tm1")  
-scale_0_to_1 <- c(ard_fires[[1]]$fuel_drivers, ard_fires[[1]]$topography_drivers, "friction_walking_only", "road_density_mpha")
+scale_0_to_1 <- c("max_wind_speed_rtma_pct", "min_wind_speed_rtma_pct", "max_wind_filled_gust_rtma_pct", "min_wind_filled_gust_rtma_pct", "max_temp_rtma_pct", "min_temp_rtma_pct", "max_rh_rtma_pct", "min_rh_rtma_pct", "max_vpd_rtma_pct", "min_vpd_rtma_pct", "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct", ard_fires[[1]]$fuel_drivers, ard_fires[[1]]$topography_drivers, "friction_walking_only", "road_density_mpha")
 
 figs_0_to_1 <- 
   lapply(biome_shortnames, FUN = function(x) {
@@ -122,7 +121,6 @@ figs_0_to_1 <-
     plot_data_0_to_1 <-
       ard_biome$data %>% 
       dplyr::select("did", "biome_name_daily", ard_biome$predictor.variable.names) %>% 
-      dplyr::mutate(dplyr::across(tidyselect::all_of(scale_0_to_100), ~ .x / 100)) %>% 
       dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought))) %>% 
       dplyr::rename(biome_fullname = biome_name_daily)
     
@@ -202,7 +200,7 @@ figs_drought <-
     ard_biome <- ard_fires[[x]]
     cpi_summary_across_folds_biome <- cpi_summary_across_folds[cpi_summary_across_folds$biome == x, ]
     
-    # This represents the distributions of all 0 to 1 and 0 to 100 scaled data
+    # This represents the distributions of all 0 to 1 scaled data
     plot_data_drought <-
       ard_biome$data %>% 
       dplyr::select("did", "biome_name_daily", ard_biome$predictor.variable.names) %>% 
@@ -246,7 +244,7 @@ figs_drought[[2]]
 figs_drought[[3]]
 figs_drought[[4]]
 
-# This represents the distributions of all 0 to 1 and 0 to 100 scaled data
+# This represents the distributions of all data that aren't normalized at all
 plot_data_non_normalized <-
   ard_fires %>% 
   lapply(FUN = function(x) x$data) %>%
@@ -258,8 +256,7 @@ plot_data_non_normalized <-
 plot_data_non_normalized_long <- 
   plot_data_non_normalized %>%
   dplyr::mutate(biome_fullname = factor(biome_fullname, levels = biome_lookup),
-                npl = as.numeric(as.character(npl)),
-                wind_terrain_anisotropy_rtma = wind_terrain_anisotropy_rtma*2) %>% # this bounds the variable by [0,1] like wind anisotropy and wind terrain alignment instead of [0,0.5]
+                npl = as.numeric(as.character(npl))) %>% 
   tidyr::pivot_longer(cols = !c(did, biome_fullname), names_to = "variable", values_to = "value")
 
 plot_data_non_normalized_long_summarized <-

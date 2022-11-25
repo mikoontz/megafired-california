@@ -241,4 +241,4 @@ fi_daily_drivers <- prep_static_and_fluc_drivers(static_paths = list.files(path 
                                                                          pattern = "fluc", 
                                                                          full.names = TRUE))
 
-data.table::fwrite(x = fi_daily_drivers, file = "data/out/fi-fluc-static-driver-proportions.csv")
+data.table::fwrite(x = fi_daily_drivers, file = "data/out/drivers/fi-fluc-static-driver-proportions.csv")

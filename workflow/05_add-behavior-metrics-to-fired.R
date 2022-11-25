@@ -8,8 +8,10 @@ library(purrr)
 library(data.table)
 library(patchwork)
 
+dir.create("data/out/fired/05_daily-with-behavior-metrics", recursive = TRUE, showWarnings = FALSE)
+
 daily_orig <- 
-  sf::st_read("data/out/fired_daily_ca_v2.gpkg") %>% 
+  sf::st_read("data/out/fired/01_spatial-subset/fired_daily_ca_v2.gpkg") %>% 
   dplyr::mutate(lc_name = as.factor(lc_name),
                 date = as.Date(date)) %>% 
   dplyr::rename(geometry = geom) %>% 
@@ -17,7 +19,7 @@ daily_orig <-
 
 # We use Resolve Ecoregions within California to divide up the state into different kinds of fire-prone regions
 daily_resolve <- 
-  read.csv("data/out/fired_daily_resolve.csv") %>% 
+  read.csv("data/out/fired/03_joined-with-other-data/fired_daily_resolve.csv") %>% 
   dplyr::mutate(eco_name = as.factor(eco_name),
                 biome_name = as.factor(biome_name)) %>% 
   dplyr::as_tibble() %>% 
@@ -31,7 +33,7 @@ daily <-
 daily 
 
 modis_afd <- 
-  data.table::fread("data/out/mcd14ml_ca.csv", colClasses = c(acq_time = "character")) %>% 
+  data.table::fread("data/out/active-fire/mcd14ml_ca.csv", colClasses = c(acq_time = "character")) %>% 
   sf::st_as_sf(coords = c("x", "y"), crs = 3310, remove = FALSE) %>% 
   dplyr::mutate(acq_date = lubridate::ymd(acq_date)) %>% 
   dplyr::mutate(local_datetime = lubridate::ymd_hm(paste0(acq_date, " ", acq_time))  - lubridate::hours(x = 7),
@@ -144,4 +146,4 @@ daily_with_response <-
 
 # Version 3 includes a few different kinds of response variables to the daily data, and also changes the filename
 # to better reflect it's true nature.
-write.csv(x = daily_with_response, file = "data/out/fired_daily_ca_response-vars.csv", row.names = FALSE)
+write.csv(x = daily_with_response, file = "data/out/fired/05_daily-with-behavior-metrics/fired_daily_ca_behavior-metrics.csv", row.names = FALSE)

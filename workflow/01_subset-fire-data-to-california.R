@@ -6,7 +6,8 @@ library(rmapshaper)
 library(pbapply)
 
 dir.create("data/raw", recursive = TRUE, showWarnings = FALSE)
-dir.create("data/out", recursive = TRUE, showWarnings = FALSE)
+dir.create("data/out/fired/01_spatial-subset", recursive = TRUE, showWarnings = FALSE)
+dir.create("data/out/active-fire", recursive = TRUE, showWarnings = FALSE)
 
 ### FIRED ###
 # To get FIRED perimeters, we ran the firedpy algorithm using this specific commit:
@@ -96,8 +97,8 @@ daily_ca_with_perims <- do.call(what = "rbind", args = daily_ca_with_perims_l)
 # length(unique(daily_ca$id)) ## 4337 unique fire events
 # Version 2 of the daily data includes daily perimeter lengths for each event/day combo
 # as well as a measure of "active fireline
-sf::st_write(daily_ca_with_perims, "data/out/fired_daily_ca_v2.gpkg", delete_dsn = TRUE)
-sf::st_write(events_ca, dsn = "data/out/fired_events_ca.gpkg", delete_dsn = TRUE)
+sf::st_write(daily_ca_with_perims, "data/out/fired/01_spatial-subset/fired_daily_ca_v2.gpkg", delete_dsn = TRUE)
+sf::st_write(events_ca, dsn = "data/out/fired/01_spatial-subset/fired_events_ca.gpkg", delete_dsn = TRUE)
 
 ###
 
@@ -117,4 +118,4 @@ afd_ca <-
          y = sf::st_coordinates(.)[, 2]) %>% 
   sf::st_drop_geometry()
 
-data.table::fwrite(x = afd_ca, file = "data/out/mcd14ml_ca.csv")
+data.table::fwrite(x = afd_ca, file = "data/out/active-fire/mcd14ml_ca.csv")

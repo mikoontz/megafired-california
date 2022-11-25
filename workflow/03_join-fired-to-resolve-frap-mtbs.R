@@ -5,7 +5,42 @@ library(raster)
 library(fasterize)
 library(pbapply)
 
-fired <- sf::st_read("data/out/fired_events_ca.gpkg") %>% mutate(id_fired = id)
+dir.create(path = "data/out/fired/03_joined-with-other-data", recursive = TRUE, showWarnings = FALSE)
+
+### --- Use the Resolve ecoregions to join to the daily fire polygons and the events
+resolve <- 
+  sf::st_read("data/raw/resolve-ecoregions-2017_california.geojson") %>% 
+  sf::st_transform(3310) %>% 
+  dplyr::select(BIOME_NAME, ECO_NAME) %>% 
+  dplyr::rename_all(.funs = tolower) %>% 
+  sf::st_set_agr(value = "constant")
+
+events_resolve_geo <- 
+  sf::st_read(dsn = "data/out/fired/02_time-filter-crs-transform/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
+  sf::st_join(y = resolve, largest = TRUE)
+
+daily_resolve_geo <- 
+  sf::st_read(dsn = "data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
+  sf::st_join(y = resolve, largest = TRUE)
+
+events_resolve_out <- 
+  events_resolve_geo %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::as_tibble()
+
+daily_resolve_out <- 
+  daily_resolve_geo %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::rename(biome_name_daily = biome_name, eco_name_daily = eco_name) %>% 
+  dplyr::left_join(sf::st_drop_geometry(events_resolve_out), by = "id") %>% 
+  dplyr::as_tibble() %>% 
+  dplyr::select(did, id, date, samp_id, biome_name, eco_name, biome_name_daily, eco_name_daily)
+
+write.csv(x = events_resolve_out, file = "data/out/fired/03_joined-with-other-data/fired_events_resolve.csv", row.names = FALSE)
+write.csv(x = daily_resolve_out, file = "data/out/fired/03_joined-with-other-data/fired_daily_resolve.csv", row.names = FALSE)
+
+### Separately, join to MTBS and FRAP
+fired <- sf::st_read("data/out/fired/01_spatial-subset/fired_events_ca.gpkg") %>% mutate(id_fired = id)
 
 frap <- 
   st_read("data/raw/fire20_1.gdb", layer = "firep20_1", as_tibble = FALSE) %>% 
@@ -110,4 +145,4 @@ out <-
   tidyr::pivot_wider(id_cols = c(id_fired, year), names_from = source, values_from = c(id, name, overlapping_area, overlapping_pct)) %>% 
   dplyr::select(id_fired, id_frap, id_mtbs, year, name_frap, name_mtbs, everything())
 
-write.csv(x = out, file = "data/out/fired-frap-mtbs-join.csv", row.names = FALSE)
+write.csv(x = out, file = "data/out/fired/03_joined-with-other-data/fired-frap-mtbs-join.csv", row.names = FALSE)

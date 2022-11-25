@@ -4,14 +4,12 @@ library(stringr)
 library(USAboundaries)
 library(pbapply)
 
-system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_daily_resolve.csv data/out/fired_daily_resolve.csv")
-system2(command = "aws", args = "s3 cp s3://california-megafires/data/out/fired_daily_ca_epsg3310_2003-2020.gpkg data/out/fired_daily_ca_epsg3310_2003-2020.gpkg")
-system2(command = "aws", args = "s3 cp s3://california-megafires/data/raw/resolve-ecoregions-2017_california.geojson data/raw/resolve-ecoregions-2017_california.geojson")
+dir.create("data/out/fired/04_fire-independent-locations", recursive = TRUE, showWarnings = FALSE)
 
-fired_daily_resolve <- read.csv("data/out/fired_daily_resolve.csv")
+fired_daily_resolve <- read.csv("data/out/fired/03_joined-with-other-data/fired_daily_resolve.csv")
 
 fired_daily <-
-  sf::st_read("data/out/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
+  sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
   dplyr::mutate(samp_id = 0) %>% 
   dplyr::select(did, id, date, samp_id) %>% 
   dplyr::rename(geometry = geom) %>% 
@@ -40,7 +38,7 @@ resolve <-
   sf::st_set_agr(value = "constant") %>% 
   sf::st_intersection(y = ca)
 
-set_fire_independent_locations <- function(biome, short_name, buffer = 50000, seed = 1224, n_sets = 5, n_pts = 1000, version) {
+set_fire_independent_locations <- function(biome, short_name, buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500, version) {
   
   # Subset the FIRED data to just the biome of interest
   fired_biome <-
@@ -72,11 +70,11 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
     dplyr::as_tibble() %>% 
     dplyr::mutate(set = sample(1:n_sets, size = nrow(.), replace = TRUE))
   
-  data.table::fwrite(x = biome_sample_points, file = file.path("data", "out", "fired_daily_random-locations", paste0("fired_daily_random-locations_", short_name, "_", version, ".csv")))
-  
+  data.table::fwrite(x = biome_sample_points, file = paste0("data/out/fired/04_fire-independent-locations/fire-independent-locations_", short_name, "_", version, ".csv")))
+
   # Pack each row representing the the actual fire spread geometries with a data.frame
   # that represents the new set of n_pts centroids for those fire spread geometries, then
-  # unnest the data to expand it (n_pts0 rows now for each of the fire/day combinations)
+  # unnest the data to expand it (n_pts rows now for each of the fire/day combinations)
   # Note this could result in millions of geometries
   fired_biome_with_samps <-
     fired_biome %>% 
@@ -88,7 +86,7 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
   # given value will go into the same set (and therefore all FIRED polygons will be represented at
   # that particular random location)
   set_names <- stringr::str_pad(string = as.character(1:n_sets), width = 2, side = "left", pad = "0")
-  fnames <- paste0("fired_daily_random-locations_", short_name, "_", version, "_", set_names)
+  fnames <- paste0("fire-independent-locations_", short_name, "_", version, "_", set_names)
   l <- split(x = fired_biome_with_samps, f = fired_biome_with_samps$set)
   
   out <- pblapply(X = 1:n_sets, cl = n_sets, FUN = function(i) {
@@ -125,10 +123,10 @@ set_fire_independent_locations <- function(biome, short_name, buffer = 50000, se
       dplyr::select(did, id, date, samp_id)
     
     # write to disk
-    dir.create(file.path("data", "out", "fired_daily_random-locations", fnames[i]), recursive = TRUE, showWarnings = FALSE)
+    dir.create(paste0("data/out/fired/04_fire-independent-locations/", fnames[i]), recursive = TRUE, showWarnings = FALSE)
     sf::st_write(obj = fired_biome_with_new_geo_simple, 
-                 dsn = file.path("data", "out", "fired_daily_random-locations", fnames[i], paste0(fnames[i], ".shp")), 
-                 delete_dsn = file.exists(file.path("data", "out", "fired_daily_random-locations", fnames[i], paste0(fnames[i], ".shp"))))
+                 dsn = paste0("data/out/fired/04_fire-independent-locations/", fnames[i], "/", paste0(fnames[i], ".shp")), 
+                 delete_dsn = file.exists(paste0("data/out/fired/04_fire-independent-locations/", fnames[i], "/", paste0(fnames[i], ".shp"))))
     
     # v2 used 1,000 points
     # v3 used 1,000 points and the simplified sf object with just did, date, id, samp_id
@@ -143,8 +141,6 @@ set_fire_independent_locations(biome = "Temperate Conifer Forests", short_name =
                                buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500,
                                version = "v4")
 
-system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
-
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 # Time difference of 86.65956 mins for 1,000 points in the Temperate Conifer Forest
@@ -154,8 +150,6 @@ set_fire_independent_locations(biome = "Mediterranean Forests, Woodlands & Scrub
                                short_name = "mfws", 
                                buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500,
                                version = "v4")
-
-system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
@@ -167,8 +161,6 @@ set_fire_independent_locations(biome = "Temperate Grasslands, Savannas & Shrubla
                                buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500,
                                version = "v4")
 
-system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
-
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))
 
@@ -176,8 +168,6 @@ system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s
 set_fire_independent_locations(biome = "Deserts & Xeric Shrublands", short_name = "dxs", 
                                buffer = 50000, seed = 1224, n_sets = 5, n_pts = 500,
                                version = "v4")
-
-system2(command = "aws", args = "s3 sync data/out/fired_daily_random-locations s3://california-megafires/data/out/fired_daily_random-locations")
 
 (end_time <- Sys.time())
 (difftime(time1 = end_time, time2 = start_time, units = "mins"))

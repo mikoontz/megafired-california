@@ -8,10 +8,26 @@ library(pbapply)
 library(USAboundaries)
 
 fired_daily <- 
-  sf::st_read("data/out/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
+  sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
   dplyr::rename(geometry = geom) %>% 
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   sf::st_set_agr(value = "constant")
+
+# Some important notes on the wind variables derived from ERA5 and RTMA
+# wind_aspect_alignment_rad = wind direction (radians) - slope aspect (radians); wind blowing uphill = 0, wind blowing downhill = pi, wind blowing across slope is pi/2 or 3pi/2
+# wind terrain alignment = abs(cos(wind_aspect_alignment_rad)); wind blowing uphill and wind blowing downhill get max value of 1; wind blowing across slope gets value of 0
+# Daily wind terrain alignment = mean(wind_terrain_alignment)
+# daily wind anisotropy = sd(cos(wind direction (radians))); 
+# daily wind terrain anisotropy = sd(wind terrain alignment)
+
+# https://stats.stackexchange.com/questions/45588/variance-of-a-bounded-random-variable; If X [m, M], then var(X) <= (M - m)^2 / 4, then sd(X) <= (M - m) / 2
+# Therefore, maximum standard deviation of variable bounded by [0, 1] is 0.5
+# Therefore, maximum standard deviation of variable bounded by [-1, 1] is 1
+
+# Wind terrain alignment is bound by [0, 1] because of the abs(cos(X)) function applied
+# wind anisotropy is bound by [0, 1] because standard deviation has to be greater than 0, and the internal cos(X) function is bound by [-1, 1]
+# wind terrain alignment anisotropy is bound by [0, 0.5] because standard deviation is greater than 0, and max standard deviation of variable bounded by [0, 1] is 0.5
+# Above, we multiplied terrain alignment anisotropy by 2 to make it bound by [0,1] like these other variables
 
 ### Machinery to convert some raw values of weather variables to percentiles
 ### through time by using a many-layered raster of the values of the weather
@@ -103,7 +119,9 @@ era5_drivers_summarized <-
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   group_by(id, date, did) %>%
   summarize(wind_anisotropy_era5 = sd(cos(wind_dir_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
-            wind_terrain_anisotropy_era5 = sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
+            # multiply wind terrain anisotropy by 2 to put it on the same [0,1] scale as wind anisotropy and wind terrain alignment
+            # instead of [0,0.5]
+            wind_terrain_anisotropy_era5 = 2*sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
             wind_terrain_alignment_era5 = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
             min_wind_terrain_alignment_era5 = min(abs(cos(wind_aspect_alignment_rad))),
             max_wind_terrain_alignment_era5 = max(abs(cos(wind_aspect_alignment_rad))),
@@ -173,7 +191,9 @@ rtma_drivers_summarized <-
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   group_by(id, date, did) %>%
   summarize(wind_anisotropy_rtma = sd(cos(WDIR_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
-            wind_terrain_anisotropy_rtma = sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
+            # multiply wind terrain anisotropy by 2 to put it on the same [0,1] scale as wind anisotropy and wind terrain alignment
+            # instead of [0,0.5]
+            wind_terrain_anisotropy_rtma = 2*sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
             wind_terrain_alignment_rtma = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
             min_wind_terrain_alignment_rtma = min(abs(cos(wind_aspect_alignment_rad))),
             max_wind_terrain_alignment_rtma = max(abs(cos(wind_aspect_alignment_rad))),
@@ -248,7 +268,7 @@ gridmet_drivers <-
 summary(gridmet_drivers)
 
 ## Reality check with known fires
-frap <- read.csv("data/out/fired-frap-mtbs-join.csv")
+frap <- read.csv("data/out/fired/03_joined-with-other-data/fired-frap-mtbs-join.csv")
 frap %>% filter(name_frap == "TUBBS")
 creek <- rtma_drivers_summarized[rtma_drivers_summarized$id == 135921, ]
 tubbs <- rtma_drivers_summarized[rtma_drivers_summarized$id == 117324, ]
@@ -274,3 +294,5 @@ out <-
   out_sf %>% 
   sf::st_drop_geometry() %>% 
   as.data.table()
+
+data.table::fwrite(x = out, file = "data/out/drivers/weather-drivers-as-percentiles.csv")

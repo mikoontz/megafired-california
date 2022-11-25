@@ -25,7 +25,7 @@ fires_all_list <-
   lapply(biome_shortnames, FUN = function(biome_shortname) {
     
     fired_daily_response <- 
-      data.table::fread(input = "data/out/fired_daily_ca_response-vars.csv")
+      data.table::fread(input = "data/out/fired/05_daily-with-behavior-metrics/fired_daily_ca_behavior-metrics.csv")
     
     driver_descriptions <- read.csv(file = "tables/driver-descriptions.csv")
     

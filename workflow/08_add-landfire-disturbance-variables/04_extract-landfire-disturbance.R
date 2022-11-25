@@ -15,7 +15,7 @@ library(pbapply)
 library(here)
 library(parallel)
 
-dir.create(here::here("data", "out", "landfire-disturbance", "fired_random-locations"), 
+dir.create(here::here("data", "out", "drivers", "landfire-disturbance", "fire-independent-locations"), 
            showWarnings = FALSE, 
            recursive = TRUE)
 
@@ -360,9 +360,9 @@ extract_disturbance_fracs <-
 
 ### Extract disturbance data for FIRED data
 # Note this takes about 5.5 minutes across 12 cores.
-driver_version <- "v10"
+set.seed(1103)
 fired_list <- 
-  sf::st_read(paste0("data/out/FIRED-daily-scale-drivers_california_", driver_version, ".gpkg")) %>% 
+  sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>%  
   dplyr::filter(lubridate::year(date) %in% years) %>% 
   dplyr::select(did, id, date, samp_id) %>% 
   dplyr::mutate(group = sample(x = 1:n_cores, size = nrow(.), replace = TRUE)) %>% 
@@ -379,7 +379,6 @@ parallel::clusterEvalQ(cl = cl, expr = {
   library(terra)
   library(data.table)
 })
-# parallel::clusterExport(cl, c("new_dist_sev_table_simple", "fired", "relevant_files", "years", "extract_disturbance_fracs"))
 parallel::clusterExport(cl, c("new_dist_sev_table_simple", "relevant_files", "extract_disturbance_fracs"))
 
 (start <- Sys.time())
@@ -431,7 +430,7 @@ out_fired <-
 data.table::setnafill(x = out_fired, type = "const", fill = 0, cols = names(out_fired)[!(names(out_fired) %in% c("did", "id", "date", "samp_id"))])
 parallel::stopCluster(cl)
 
-data.table::fwrite(x = out_fired, file = here::here("data", "out", "landfire-disturbance", "fired_daily_disturbance-drivers_v1.csv"))
+data.table::fwrite(x = out_fired, file = here::here("data", "out", "drivers", "landfire-disturbance", "fired_daily_disturbance-drivers_v1.csv"))
 
 
 ### Extract disturbance data for fire-independent data
@@ -439,9 +438,9 @@ data.table::fwrite(x = out_fired, file = here::here("data", "out", "landfire-dis
 # 5.5 minutes, as above, but multiplied by 500 because the randomly located polygons
 # have 500 representations of each of the FIRED polygons (i.e., several days, much babysitting)
 fi_version <- "v4"
-fi_files <- list.files("data/out/fired_daily_random-locations", pattern = paste0("((", fi_version, ").*(.shp))"), full.names = TRUE, recursive = TRUE)
+fi_files <- list.files("data/out/fired/04_fire-independent-locations/", pattern = paste0("((", fi_version, ").*(.shp))"), full.names = TRUE, recursive = TRUE)
 basenames <- gsub(x = basename(fi_files), pattern = paste0("_", fi_version), replacement = "")
-fi_out_names <- here::here("data", "out", "landfire-disturbance", "fired_random-locations", gsub(x = basenames, pattern = ".shp", replacement = "_disturbance-drivers_v1.csv"))
+fi_out_names <- here::here("data", "out", "drivers", "landfire-disturbance", "fire-independent-locations", gsub(x = basenames, pattern = ".shp", replacement = "_disturbance-drivers_v1.csv"))
 
 for(k in seq_along(fi_files)[!file.exists(fi_out_names)]) {
   

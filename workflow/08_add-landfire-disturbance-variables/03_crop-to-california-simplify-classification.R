@@ -3,7 +3,7 @@ library(terra)
 library(USAboundaries)
 library(here)
 
-dir.create("data/ard/landfire-disturbance/ca", showWarnings = FALSE, recursive = TRUE)
+dir.create("data/out/landfire-disturbance/ca", showWarnings = FALSE, recursive = TRUE)
 
 relevant_files <- read.csv(here::here("data", "out", "landfire-disturbance", "file-directory_landfire-disturbance_conus.csv"))
 
@@ -75,7 +75,7 @@ ca <-
 
 relevant_files <-
   relevant_files %>% 
-  dplyr::mutate(ard_path_ca = gsub(x = ard_path, pattern = "conus", replacement = "ca"))
+  dplyr::mutate(out_path_ca = gsub(x = out_path, pattern = "conus", replacement = "ca"))
 
 (start <- Sys.time())
 for (i in 1:nrow(relevant_files)) {
@@ -91,7 +91,7 @@ for (i in 1:nrow(relevant_files)) {
     terra::rast(relevant_files$out_path[i]) %>% 
     terra::crop(y = ca) %>% 
     terra::classify(rcl = reclassification_mat, 
-                    filename = relevant_files$ard_path_ca[i], 
+                    filename = relevant_files$out_path_ca[i], 
                     overwrite = TRUE)
   
 }

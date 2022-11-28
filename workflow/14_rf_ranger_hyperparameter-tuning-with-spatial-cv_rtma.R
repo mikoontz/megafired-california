@@ -11,67 +11,21 @@ library(ggplot2)
 # library(mlr3measures)
 # library(MLmetrics)
 
-analysis_ready_nonspatial_version <- "v2"
-analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
-
-# Get the function to take the generic analysis ready data and prepare it for {ranger}
-source("workflow/10_generic-analysis-ready-data-to-ranger-ready-data_function.R")
-
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 
-# Read analysis-ready data
-fires_all <- data.table::fread(input = analysis_ready_nonspatial_fname)
+driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
+full_predictor_variable_names <- driver_descriptions$variable
 
-# Here is where we can exclude any fires we don't want in the analysis
-
-# Remove fires that never reached more than 121 hectares (300 acres)
-target_event_ids <-
-  sf::read_sf("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
-  dplyr::mutate(area_ha = as.numeric(sf::st_area(.)) / 10000) %>% 
-  dplyr::filter(area_ha >= 121.406) %>% 
-  dplyr::pull(id)
-
-fires_all <- fires_all[id %in% target_event_ids,]
-
-# Subset to just years where there are RTMA data (2011 and later)
-fires_all <-
-  fires_all %>%
-  dplyr::filter(date >= as.Date("2011-01-01"))
-
-# drop ERA5 columns in favor of RTMA columns for the weather variables
-fires_all <-
-  fires_all %>% 
-  dplyr::select(-contains("era5"))
-
-# Remove all event days that occur after the first EWE for that event
-# fires_all <-
-#   fires_all %>%
-#   dplyr::filter(cumu_ewe <= 1)
-
-# Just include eco regions that have experienced more than 10 EWE's
-# target_eco_names <- 
-#   fires_all %>% 
-#   group_by(eco_name_daily, ewe) %>% 
-#   tally() %>% 
-#   filter(ewe == 1, n > 10) %>% 
-#   pull(eco_name_daily)
-# 
-# fires_all <-
-#   fires_all %>% 
-#   dplyr::filter(eco_name_daily %in% target_eco_names)
-
-spatial_cv_tune <- function(iter, predictor.variable.names, folds, tune.df, num.threads) {
+spatial_cv_tune <- function(i, predictor.variable.names, folds, tune.df, num.threads) {
   
   rf_formula <- as.formula(paste0("ewe ~ ", paste(predictor.variable.names, collapse = " + ")))
   
-  mtry <- tune.df$mtry[iter]
-  num.trees <- tune.df$num.trees[iter]
-  sample.fraction <- tune.df$sample.fraction[iter]
-  alpha <- tune.df$alpha[iter]
-  minprop <- tune.df$minprop[iter]
-  min.node.size <- tune.df$min.node.size[iter]
-  class.wgts <- tune.df$class.wgts[iter]
-  iter <- tune.df$iter[iter]
+  mtry <- tune.df$mtry[i]
+  num.trees <- tune.df$num.trees[i]
+  sample.fraction <- tune.df$sample.fraction[i]
+  min.node.size <- tune.df$min.node.size[i]
+  class.wgts <- tune.df$class.wgts[i]
+  iter <- tune.df$iter[i]
   
   results <- vector(mode = "list", length = nrow(folds))
   
@@ -80,9 +34,9 @@ spatial_cv_tune <- function(iter, predictor.variable.names, folds, tune.df, num.
     assessment_data <- sf::st_drop_geometry(rsample::assessment(folds$splits[[k]]))
     
     if (!class.wgts) {
-      case.weights <- c(1, 1)
+      class.weights <- c(1, 1)
     } else {
-      case.weights <- 1 / table(analysis_data$ewe)
+      class.weights <- 1 / table(analysis_data$ewe)
     }
     
     # fit the model to the analysis set
@@ -90,30 +44,27 @@ spatial_cv_tune <- function(iter, predictor.variable.names, folds, tune.df, num.
     # to avoid biased random forests that favor variables with lots of unique values
     fitted_model <- ranger::ranger(formula = rf_formula,
                                    data = analysis_data[, c("ewe", predictor.variable.names)],
-                                   mtry = mtry,
                                    num.trees = num.trees,
+                                   mtry = mtry,
+                                   probability = TRUE,
                                    sample.fraction = sample.fraction,
                                    replace = FALSE,
-                                   splitrule = "maxstat",
-                                   alpha = alpha,
-                                   minprop = minprop,
+                                   splitrule = "gini",
                                    min.node.size = min.node.size,
-                                   case.weights = case.weights[analysis_data$ewe + 1],
+                                   class.weights = class.weights,
                                    num.threads = num.threads)
     
     results[[k]] <- 
       tibble::tibble(
         id = folds$id[k],
         o = assessment_data$ewe,
-        p = predict(fitted_model, data = assessment_data, type = "response")$predictions,
+        p = predict(fitted_model, data = assessment_data, type = "response")$predictions[, "1"],
         assessment_ewe_n = nrow(assessment_data),
-        assessment_ewe_1 = sum(assessment_data$ewe),
+        assessment_ewe_1 = length(which(assessment_data$ewe == 1)),
         assessment_ewe_0 = assessment_ewe_n - assessment_ewe_1,
         mtry = mtry,
         num.trees = num.trees,
         sample.fraction = sample.fraction,
-        alpha = alpha,
-        minprop = minprop,
         min.node.size = min.node.size,
         class.wgts = class.wgts,
         iter = iter
@@ -125,26 +76,21 @@ spatial_cv_tune <- function(iter, predictor.variable.names, folds, tune.df, num.
   return(results_out)
 }
 
-# Check the predictor variables that will be used for the models
-# Only TGSS removes any predictors (because those columns have basically 0 variance) 
-dropped_vars <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  prep_fires(fires_all, biome_shortname)$dropped_cols
-})
-
-# Some dropped rows for each biome (because of NAs in at least one variable)
-dropped_rows <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  length(prep_fires(fires_all, biome_shortname)$dropped_rows)
-})
 
 for(counter in 1:4) {
   biome_shortname <- biome_shortnames[counter]
+  
+  data <- read.csv(paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  data$npl <- factor(data$npl, levels = 1:5)
+  data$ewe <- factor(data$ewe, levels = 0:1)
+  
+  data$concurrent_fires <- as.numeric(data$concurrent_fires)
+  predictor.variable.names <- names(data)[names(data) %in% full_predictor_variable_names]
+  
   print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
   
   # prep_fires() function comes from previous script
-  ranger_ready <- prep_fires(fires_all = fires_all, biome_shortname = biome_shortname)  
-  data <- ranger_ready$data
-  predictor.variable.names <- ranger_ready$predictor.variable.names
-  
+
   # https://spatialsample.tidymodels.org/articles/spatialsample.html
   if (biome_shortname == "tgss") {
     folds <-
@@ -186,8 +132,6 @@ for(counter in 1:4) {
   tune.df <- expand.grid(mtry = mtry_vec, 
                          num.trees = 500, 
                          sample.fraction = c(0.5, 0.6, 0.7, 0.8),
-                         alpha = c(0.8, 0.9, 1.0),
-                         minprop = c(0, 0.1), 
                          min.node.size = c(1, 5, 10),
                          class.wgts = TRUE,
                          iter = 1:10
@@ -210,7 +154,7 @@ for(counter in 1:4) {
   # 
   # parallel::stopCluster(cl = cl)
   
-  out <- pblapply(X = (1:nrow(tune.df)), 
+  out <- pblapply(X = (1:nrow(tune.df))[1], 
                   FUN = spatial_cv_tune, 
                   predictor.variable.names = predictor.variable.names,
                   folds = folds,

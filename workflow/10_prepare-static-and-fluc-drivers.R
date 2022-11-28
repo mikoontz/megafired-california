@@ -86,11 +86,11 @@ prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
   #   grass_forb_herb_original_tm00 + 
   #   grass_forb_herb_trees_mix_tm00 + 
   #   grass_forb_herb_shrub_mix_tm00,
-  # barren_landcover_tm00 = 
+  # barren_tm00 = 
   #   barren_trees_mix_tm00 + 
   #   barren_shrub_mix_tm00 + 
   #   barren_grass_forb_herb_mix_tm00 + 
-  #   barren_tm00 + 
+  #   barren_original_tm00 + 
   #   snow_or_ice_tm00 
   
   # csp_landform_desc <-
@@ -128,7 +128,7 @@ prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
   names(daily_DT) <- gsub(x = names(daily_DT), pattern = "lcms_landcover_09", replacement = "barren_shrub_mix")
   names(daily_DT) <- gsub(x = names(daily_DT), pattern = "lcms_landcover_10", replacement = "grass_forb_herb_original")
   names(daily_DT) <- gsub(x = names(daily_DT), pattern = "lcms_landcover_11", replacement = "barren_grass_forb_herb_mix")
-  names(daily_DT) <- gsub(x = names(daily_DT), pattern = "lcms_landcover_12", replacement = "barren")
+  names(daily_DT) <- gsub(x = names(daily_DT), pattern = "lcms_landcover_12", replacement = "barren_original")
   names(daily_DT) <- gsub(x = names(daily_DT), pattern = "lcms_landcover_13", replacement = "snow_or_ice")
   
   names(daily_DT) <- gsub(x = names(daily_DT), pattern = "csp_ergo_landforms_11", replacement = "peak_ridge_warm")
@@ -158,6 +158,8 @@ prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
                   slope_cool = upper_slope_cool + lower_slope_cool,
                   slope_neutral = upper_slope + lower_slope,
                   flat = upper_slope_flat + lower_slope_flat,
+                  trees_tm00 = 
+                    trees_original_tm00,
                   shrubs_tm00 = 
                     shrubs_trees_mix_tm00 + 
                     shrubs_original_tm00,
@@ -165,12 +167,14 @@ prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
                     grass_forb_herb_original_tm00 + 
                     grass_forb_herb_trees_mix_tm00 + 
                     grass_forb_herb_shrub_mix_tm00,
-                  barren_landcover_tm00 = 
+                  barren_tm00 = 
                     barren_trees_mix_tm00 + 
                     barren_shrub_mix_tm00 + 
                     barren_grass_forb_herb_mix_tm00 + 
-                    barren_tm00 + 
+                    barren_original_tm00 + 
                     snow_or_ice_tm00,
+                  trees_tm01 =
+                    trees_original_tm01,
                   shrubs_tm01 = 
                     shrubs_trees_mix_tm01 + 
                     shrubs_original_tm01,
@@ -178,13 +182,30 @@ prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
                     grass_forb_herb_original_tm01 + 
                     grass_forb_herb_trees_mix_tm01 + 
                     grass_forb_herb_shrub_mix_tm01,
-                  barren_landcover_tm01 = 
+                  barren_tm01 = 
                     barren_trees_mix_tm01 + 
                     barren_shrub_mix_tm01 + 
                     barren_grass_forb_herb_mix_tm01 + 
-                    barren_tm01 + 
+                    barren_original_tm01 + 
                     snow_or_ice_tm01)]
   
+  # Using lumped proportions
+  # daily_DT[, `:=`(landform_diversity = vegan::diversity(cbind(peak_ridge_cliff,
+  #                                                             valleys,
+  #                                                             slope_warm,
+  #                                                             slope_cool,
+  #                                                             slope_neutral,
+  #                                                             flat)),
+  #                 landcover_diversity_tm00 = vegan::diversity(cbind(trees_tm00, 
+  #                                                                   shrubs_tm00, 
+  #                                                                   grass_forb_herb_tm00, 
+  #                                                                   barren_tm00)),
+  #                 landcover_diversity_tm01 = vegan::diversity(cbind(trees_tm01, 
+  #                                                                   shrubs_tm01, 
+  #                                                                   grass_forb_herb_tm01, 
+  #                                                                   barren_tm01)))]
+  
+  # Using original proportions
   daily_DT[, `:=`(landform_diversity = vegan::diversity(cbind(peak_ridge_warm,
                                                               peak_ridge,
                                                               peak_ridge_cool,
@@ -200,27 +221,27 @@ prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
                                                               lower_slope_flat,
                                                               valley_original,
                                                               valley_narrow)),
-                  landcover_diversity_tm00 = vegan::diversity(cbind(trees_original_tm00, 
-                                                                    shrubs_trees_mix_tm00, 
-                                                                    grass_forb_herb_trees_mix_tm00, 
-                                                                    barren_trees_mix_tm00, 
-                                                                    shrubs_original_tm00, 
-                                                                    grass_forb_herb_shrub_mix_tm00, 
-                                                                    barren_shrub_mix_tm00, 
-                                                                    grass_forb_herb_original_tm00, 
-                                                                    barren_grass_forb_herb_mix_tm00, 
-                                                                    barren_tm00,
+                  landcover_diversity_tm00 = vegan::diversity(cbind(trees_original_tm00,
+                                                                    shrubs_trees_mix_tm00,
+                                                                    grass_forb_herb_trees_mix_tm00,
+                                                                    barren_trees_mix_tm00,
+                                                                    shrubs_original_tm00,
+                                                                    grass_forb_herb_shrub_mix_tm00,
+                                                                    barren_shrub_mix_tm00,
+                                                                    grass_forb_herb_original_tm00,
+                                                                    barren_grass_forb_herb_mix_tm00,
+                                                                    barren_original_tm00,
                                                                     snow_or_ice_tm00)),
-                  landcover_diversity_tm01 = vegan::diversity(cbind(trees_original_tm01, 
-                                                                    shrubs_trees_mix_tm01, 
-                                                                    grass_forb_herb_trees_mix_tm01, 
-                                                                    barren_trees_mix_tm01, 
-                                                                    shrubs_original_tm01, 
-                                                                    grass_forb_herb_shrub_mix_tm01, 
-                                                                    barren_shrub_mix_tm01, 
-                                                                    grass_forb_herb_original_tm01, 
-                                                                    barren_grass_forb_herb_mix_tm01, 
-                                                                    barren_tm01,
+                  landcover_diversity_tm01 = vegan::diversity(cbind(trees_original_tm01,
+                                                                    shrubs_trees_mix_tm01,
+                                                                    grass_forb_herb_trees_mix_tm01,
+                                                                    barren_trees_mix_tm01,
+                                                                    shrubs_original_tm01,
+                                                                    grass_forb_herb_shrub_mix_tm01,
+                                                                    barren_shrub_mix_tm01,
+                                                                    grass_forb_herb_original_tm01,
+                                                                    barren_grass_forb_herb_mix_tm01,
+                                                                    barren_original_tm01,
                                                                     snow_or_ice_tm01)))]
   
   data.table::setcolorder(x = daily_DT, neworder = c("did", "id", "date", "samp_id"))
@@ -232,7 +253,7 @@ prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
 fired_daily_drivers <- prep_static_and_fluc_drivers(static_paths = paste0("data/out/ee/FIRED-daily-static-drivers_california_", static_version, ".csv"),
                                                     fluc_paths = paste0("data/out/ee/FIRED-daily-fluctuating-drivers_california_", fluc_version, ".csv"))
 
-data.table::fwrite(x = fired_daily_drivers, file = "data/out/fired-fluc-static-driver-proportions.csv")
+data.table::fwrite(x = fired_daily_drivers, file = "data/out/drivers/fired-fluc-static-driver-proportions.csv")
 
 fi_daily_drivers <- prep_static_and_fluc_drivers(static_paths = list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", 
                                                                            pattern = "static", 

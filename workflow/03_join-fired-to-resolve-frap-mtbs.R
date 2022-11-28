@@ -7,6 +7,31 @@ library(pbapply)
 
 dir.create(path = "data/out/fired/03_joined-with-other-data", recursive = TRUE, showWarnings = FALSE)
 
+### --- Read FIRED data
+fired <- sf::st_read("data/out/fired/01_spatial-subset/fired_events_ca.gpkg") %>% mutate(id_fired = id)
+fired_daily <- sf::st_read(dsn = "data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg")
+
+### --- Some important summary info about the biggest polygons for each day/fire combination
+fired_daily_biggest_poly <-
+  sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020_biggest-poly.gpkg") %>% 
+  dplyr::mutate(biggest_poly_area_ha = as.numeric(sf::st_area(.)) / 10000) %>% 
+  sf::st_set_agr("constant") %>% 
+  sf::st_centroid() %>% 
+  dplyr::mutate(x_biggest_poly_3310 = sf::st_coordinates(.)[, "X"],
+                y_biggest_poly_3310 = sf::st_coordinates(.)[, "Y"]) %>% 
+  sf::st_drop_geometry()
+
+fired_daily_biggest_poly_summary <-
+  fired_daily %>% 
+  dplyr::left_join(fired_daily_biggest_poly, by = c("did", "id", "date", "samp_id")) %>% 
+  dplyr::mutate(daily_area_ha = as.numeric(sf::st_area(.)) / 10000,
+                biggest_poly_frac = biggest_poly_area_ha / daily_area_ha) %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::select(did, id, date, samp_id, subgeo_id, x_biggest_poly_3310, y_biggest_poly_3310, biggest_poly_area_ha, daily_area_ha, biggest_poly_frac)
+
+data.table::fwrite(x = fired_daily_biggest_poly_summary, 
+                   file = "data/out/fired/03_joined-with-other-data/fired-biggest-poly-info.csv")
+
 ### --- Use the Resolve ecoregions to join to the daily fire polygons and the events
 resolve <- 
   sf::st_read("data/raw/resolve-ecoregions-2017_california.geojson") %>% 
@@ -16,11 +41,11 @@ resolve <-
   sf::st_set_agr(value = "constant")
 
 events_resolve_geo <- 
-  sf::st_read(dsn = "data/out/fired/02_time-filter-crs-transform/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
+  fired_daily %>% 
   sf::st_join(y = resolve, largest = TRUE)
 
 daily_resolve_geo <- 
-  sf::st_read(dsn = "data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
+  fired_daily %>% 
   sf::st_join(y = resolve, largest = TRUE)
 
 events_resolve_out <- 
@@ -40,8 +65,6 @@ write.csv(x = events_resolve_out, file = "data/out/fired/03_joined-with-other-da
 write.csv(x = daily_resolve_out, file = "data/out/fired/03_joined-with-other-data/fired_daily_resolve.csv", row.names = FALSE)
 
 ### Separately, join to MTBS and FRAP
-fired <- sf::st_read("data/out/fired/01_spatial-subset/fired_events_ca.gpkg") %>% mutate(id_fired = id)
-
 frap <- 
   st_read("data/raw/fire20_1.gdb", layer = "firep20_1", as_tibble = FALSE) %>% 
   mutate(ALARM_DATE = lubridate::with_tz(time = ALARM_DATE, tzone = "UTC"),

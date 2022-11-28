@@ -3,13 +3,6 @@ library(data.table)
 
 convert_proportions_to_percentiles <- function(fired_drivers, fi_drivers, out_fname = NULL) {
   
-  # drop unnecessary columns
-  fi_drivers[, `:=`(date = as.Date(date),
-                    samp_id = NULL)]
-  
-  fired_drivers[, `:=`(date = as.Date(date),
-                       samp_id = NULL)]
-  
   # data.table wide to long format reshaping (equivalent to tidyr::tidy_longer)
   # https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reshape.html
   fi_drivers_long <- data.table::melt(data = fi_drivers, id.vars = c("did", "date", "id"))
@@ -49,60 +42,74 @@ convert_proportions_to_percentiles <- function(fired_drivers, fi_drivers, out_fn
   }
 }
 
-# Convert fluctuating and static driver proportions from Earth Engine to percentiles
+### Convert fluctuating and static driver proportions from Earth Engine to percentiles
+# read data
 static_fluc_fired_drivers <-data.table::fread("data/out/drivers/fired-fluc-static-driver-proportions.csv")
 static_fluc_fi_drivers <- data.table::fread("data/out/drivers/fi-fluc-static-driver-proportions.csv")
 
+# modify any columns as necessary
+static_fluc_fi_drivers[, `:=`(date = as.Date(date))]
+static_fluc_fired_drivers[, `:=`(date = as.Date(date))]
+
+# drop unnecessary columns
+keep_cols <- c("did", "id", "date",
+               "elevation", "friction", "friction_walking_only", "rumple_index", "road_density_mpha",
+               "ndvi", "veg_structure_rumple", 
+               "peak_ridge_cliff", "valleys", "slope_warm", "slope_cool", "slope_neutral", "flat", 
+               "trees_tm01", "shrubs_tm01", "grass_forb_herb_tm01", "barren_tm01",
+               "landform_diversity", "landcover_diversity_tm01")
+
+static_fluc_fi_drivers <- static_fluc_fi_drivers[, .SD, .SDcols = keep_cols]
+static_fluc_fired_drivers <- static_fluc_fired_drivers[, .SD, .SDcols = keep_cols]
+
+# convert to percentiles
 convert_proportions_to_percentiles(fired_drivers = static_fluc_fired_drivers,
                                    fi_drivers = static_fluc_fi_drivers,
                                    out_fname = "data/out/drivers/fluc-static-driver-proportion-percentiles.csv")
 
-# Landfire disturbance data is a bit bigger and can't all fit in memory so we break it up by biome
+### LANDFIRE disturbance
 gc()
 
-biome_name_lookup <- tibble::tibble(biome_shortname = c("tcf", "mfws", "tgss", "dxs"),
-                                    biome_fullname = c("Temperate Conifer Forests", 
-                                                       "Mediterranean Forests, Woodlands & Scrub", 
-                                                       "Temperate Grasslands, Savannas & Shrublands", 
-                                                       "Deserts & Xeric Shrublands"))
-
-fired_daily_resolve <- 
-  read.csv("data/out/fired/03_joined-with-other-data/fired_daily_resolve.csv") %>% 
-  dplyr::left_join(biome_name_lookup, by = c("biome_name_daily" = "biome_fullname")) %>% 
-  dplyr::select(did, biome_shortname)
+# Read data
+lf_fi_drivers <- 
+  lapply(list.files("data/out/drivers/landfire-disturbance/fire-independent-locations/", full.names = TRUE), 
+         FUN = data.table::fread) |> 
+  data.table::rbindlist(fill = TRUE)
 
 lf_fired_drivers <- data.table::fread("data/out/drivers/landfire-disturbance/fired_daily_disturbance-drivers_v1.csv")
-lf_fired_drivers[, `:=`(fire_not_high_tm01_tm05 = fire_tm01_tm05 - fire_high_tm01_tm05,
-                       fire_not_high_tm06_tm10 = fire_tm06_tm10 - fire_high_tm06_tm10,
-                       insect_disease_not_high_tm01_tm05 = insect_disease_tm01_tm05 - insect_disease_high_tm01_tm05,
-                       insect_disease_not_high_tm06_tm10 = insect_disease_tm06_tm10 - insect_disease_high_tm06_tm10)]
 
-lf_fi_files <- list.files("data/out/drivers/landfire-disturbance/fire-independent-locations/",  full.names = TRUE)
-lf_fi_drivers <- lapply(lf_fi_files, FUN = data.table::fread) |> data.table::rbindlist(fill = TRUE)
+# Some NAs seem to still be a part of these data; not sure why since the following line was run after extracting the 
+# raw proportions. Run it again here
+data.table::setnafill(x = lf_fi_drivers, type = "const", fill = 0, cols = names(lf_fi_drivers)[!(names(lf_fi_drivers) %in% c("did", "id", "date", "samp_id"))])
+data.table::setnafill(x = lf_fired_drivers, type = "const", fill = 0, cols = names(lf_fired_drivers)[!(names(lf_fired_drivers) %in% c("did", "id", "date", "samp_id"))])
 
-lf_fi_drivers <- merge(x = lf_fi_drivers, y = fired_daily_resolve, by = "did")
-lf_fi_drivers_l <- split(x = lf_fi_drivers, by = "biome_shortname")
-# lf_fi_drivers_l <- lapply(lf_fi_drivers_l, FUN = function(x) set(x, j = "biome_shortname", value = NULL))
+# modify any columns as necessary
+lf_fi_drivers[, `:=`(date = as.Date(date),
+                     samp_id = NULL,
+                     fire_not_high_tm01_tm05 = fire_tm01_tm05 - fire_high_tm01_tm05,
+                     fire_not_high_tm06_tm10 = fire_tm06_tm10 - fire_high_tm06_tm10,
+                     insect_disease_not_high_tm01_tm05 = insect_disease_tm01_tm05 - insect_disease_high_tm01_tm05,
+                     insect_disease_not_high_tm06_tm10 = insect_disease_tm06_tm10 - insect_disease_high_tm06_tm10)]
 
-# Convert landfire disturbance proportions to percentiles
-# out <- vector(mode = "list", length = length(lf_fi_files))
+lf_fired_drivers[, `:=`(date = as.Date(date),
+                        samp_id = NULL,
+                        fire_not_high_tm01_tm05 = fire_tm01_tm05 - fire_high_tm01_tm05,
+                        fire_not_high_tm06_tm10 = fire_tm06_tm10 - fire_high_tm06_tm10,
+                        insect_disease_not_high_tm01_tm05 = insect_disease_tm01_tm05 - insect_disease_high_tm01_tm05,
+                        insect_disease_not_high_tm06_tm10 = insect_disease_tm06_tm10 - insect_disease_high_tm06_tm10)]
 
-out <- 
-  lapply(X = lf_fi_drivers_l, FUN = function(x) {
-    
-    data.table::set(x, j = "biome_shortname", value = NULL)
-    data.table::setnafill(x = x, type = "const", fill = 0, cols = names(x)[!(names(x) %in% c("did", "id", "date", "samp_id"))])
-    
-    x[, `:=`(fire_not_high_tm01_tm05 = fire_tm01_tm05 - fire_high_tm01_tm05,
-             fire_not_high_tm06_tm10 = fire_tm06_tm10 - fire_high_tm06_tm10,
-             insect_disease_not_high_tm01_tm05 = insect_disease_tm01_tm05 - insect_disease_high_tm01_tm05,
-             insect_disease_not_high_tm06_tm10 = insect_disease_tm06_tm10 - insect_disease_high_tm06_tm10)]
-    
-    return(convert_proportions_to_percentiles(fi_drivers = x,
-                                              fired_drivers = lf_fired_drivers, 
-                                              out_fname = NULL))
-  })
+# drop any unnecessary columns
+keep_cols <- c("did", "id", "date",
+               "fire_high_tm01_tm05", "fire_high_tm06_tm10",
+               "fire_not_high_tm01_tm05", "fire_not_high_tm06_tm10",
+               "clearcut_harvest_othermech_tm01_tm05", "clearcut_harvest_othermech_tm06_tm10",
+               "fuel_trt_tm01_tm05", "fuel_trt_tm06_tm10",
+               "insect_disease_high_tm01_tm05", "insect_disease_high_tm06_tm10",
+               "insect_disease_not_high_tm01_tm05", "insect_disease_not_high_tm06_tm10")
 
-out_all <- data.table::rbindlist(out, fill = TRUE)
+lf_fi_drivers <- lf_fi_drivers[, .SD, .SDcols = keep_cols]
+lf_fired_drivers <- lf_fired_drivers[, .SD, .SDcols = keep_cols]
 
-data.table::fwrite(x = out_all, file = "data/out/drivers/landfire-disturbance-driver-proportion-percentiles.csv")
+convert_proportions_to_percentiles(fi_drivers = lf_fi_drivers,
+                                   fired_drivers = lf_fired_drivers, 
+                                   out_fname = "data/out/drivers/landfire-disturbance-driver-proportion-percentiles.csv")

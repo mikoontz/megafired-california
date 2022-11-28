@@ -25,7 +25,7 @@ n_cores <- 12L
 
 relevant_files <- 
   read.csv(here::here("data", "out", "landfire-disturbance", "file-directory_landfire-disturbance_conus.csv")) %>% 
-  dplyr::mutate(ard_path_ca = gsub(x = ard_path, pattern = "conus", replacement = "ca"))
+  dplyr::mutate(out_path_ca = gsub(x = out_path, pattern = "conus", replacement = "ca"))
 
 # # Potential disturbance type groupings:
 # unique(rat$dist_type)
@@ -393,7 +393,7 @@ out_fired <-
       fired_year <- 
         fired %>% 
         dplyr::filter(lubridate::year(date) == fired_unique_years[i]) %>% 
-        sf::st_transform(crs = sf::st_crs(terra::rast(relevant_files$ard_path_ca[relevant_files_idx])))
+        sf::st_transform(crs = sf::st_crs(terra::rast(relevant_files$out_path_ca[relevant_files_idx])))
       
       relevant_files_year <- 
         relevant_files %>% 
@@ -405,7 +405,7 @@ out_fired <-
         dplyr::arrange(tm_year)
       
       landfire_year <-
-        terra::rast(relevant_files_year$ard_path_ca) %>% 
+        terra::rast(relevant_files_year$out_path_ca) %>% 
         setNames(nm = relevant_files_year$tm_name)
       
       out_group[[i]] <- 
@@ -480,7 +480,7 @@ for(k in seq_along(fi_files)[!file.exists(fi_out_names)]) {
         fi_year <- 
           fi %>% 
           dplyr::filter(lubridate::year(date) == fi_unique_years[i]) %>% 
-          sf::st_transform(crs = sf::st_crs(terra::rast(relevant_files$ard_path_ca[relevant_files_idx])))
+          sf::st_transform(crs = sf::st_crs(terra::rast(relevant_files$out_path_ca[relevant_files_idx])))
         
         relevant_files_year <- 
           relevant_files %>% 
@@ -492,7 +492,7 @@ for(k in seq_along(fi_files)[!file.exists(fi_out_names)]) {
           dplyr::arrange(tm_year)
         
         landfire_year <-
-          terra::rast(relevant_files_year$ard_path_ca) %>% 
+          terra::rast(relevant_files_year$out_path_ca) %>% 
           setNames(nm = relevant_files_year$tm_name)
         
         out_group[[i]] <- 

@@ -5,14 +5,15 @@ library(tidyr)
 library(data.table)
 library(tidyselect)
 
-
 weather_drivers <- 
   data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
-  dplyr::select(!tidyselect::contains("era5")) |>
-  dplyr::select(-samp_id,
-                -bi, -erc, -fm100, -fm1000, -pdsi, 
-                -wind_terrain_alignment_rtma, -min_wind_terrain_alignment_rtma, -max_wind_terrain_alignment_rtma,
-                -tidyselect::starts_with("spi"), -tidyselect::starts_with("eddi"))
+  dplyr::select(!tidyselect::contains("era5")) |> # not the ERA5 drivers; use the RTMA drivers in their place
+  dplyr::select(did, id, date,
+                wind_anisotropy_rtma, wind_terrain_anisotropy_rtma, min_wind_terrain_alignment_rtma_pct, max_wind_terrain_alignment_rtma_pct,
+                min_wind_speed_rtma_pct, max_wind_speed_rtma_pct, min_wind_filled_gust_rtma_pct, max_wind_filled_gust_rtma_pct,
+                min_rh_rtma_pct, max_rh_rtma_pct, min_temp_rtma_pct, max_temp_rtma_pct, min_vpd_rtma_pct, max_vpd_rtma_pct,
+                spei14d, spei30d, spei90d, spei180d, spei270d, spei1y, spei2y, spei5y, pdsi_z,
+                erc_pct, bi_pct, fm100_pct, fm1000_pct)
 
 other_fires_summary <- 
   data.table::fread("data/out/drivers/other-fires-summary.csv") |>
@@ -20,18 +21,12 @@ other_fires_summary <-
 
 fluc_static <- 
   data.table::fread("data/out/drivers/fluc-static-driver-proportion-percentiles.csv") |>
-  dplyr::select(!c(peak_ridge_warm, peak_ridge, peak_ridge_cool, mountain_divide, cliff, 
-                   upper_slope_warm, upper_slope, upper_slope_cool, upper_slope_flat, 
-                   lower_slope_warm, lower_slope, lower_slope_cool, lower_slope_flat,
-                   valley_original, valley_narrow,
-                   proj_area, 
-                   trees_original_tm01, shrubs_trees_mix_tm01, grass_forb_herb_trees_mix_tm01, barren_trees_mix_tm01,
-                   shrubs_original_tm01, grass_forb_herb_shrub_mix_tm01, barren_tm01, snow_or_ice_tm01)) |>
-  dplyr::select(!tidyselect::contains("tm00")) |>
-  dplyr::select(!tidyselect::contains("stable")) |>
-  dplyr::select(!tidyselect::contains("slow_loss")) |>
-  dplyr::select(!tidyselect::contains("fast_loss")) |>
-  dplyr::select(!tidyselect::contains("gain"))
+  dplyr::select(did, id, date,
+                elevation, friction_walking_only, rumple_index, road_density_mpha,
+                ndvi, veg_structure_rumple, 
+                peak_ridge_cliff, valleys, slope_warm, slope_cool, slope_neutral, flat, 
+                trees_tm01, shrubs_tm01, grass_forb_herb_tm01, barren_tm01,
+                landform_diversity, landcover_diversity_tm01)
 
 # 2020 Creek Fire
 # landfire[id == 135921, ]
@@ -81,16 +76,26 @@ biome_lookup <-
                                       "Deserts & Xeric Shrublands"),
                  biome_shortname = c("tcf", "mfws", "tgss", "dxs"))
 
+# We need to get X/Y coordinates for biggest polygon
+fired_biggest_poly <- 
+  data.table::fread("data/out/fired/03_joined-with-other-data/fired-biggest-poly-info.csv") |>
+  dplyr::select(did, id, date, samp_id, x_biggest_poly_3310, y_biggest_poly_3310)
+
 fires <-
   data.table::fread("data/out/fired/05_daily-with-behavior-metrics/fired_daily_ca_behavior-metrics.csv") |>
-  dplyr::select(did, id, date, daily_area_ha, biome_name_daily) |>
-  dplyr::mutate(area_log10 = log10(daily_area_ha)) |>
-  dplyr::group_by(biome_name_daily) %>% 
+  dplyr::mutate(area_log10 = log10(daily_area_ha),
+                sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha)) |>
+  dplyr::rename(cumu_area_tm01 = cum_area_ha_tminus1) |>
+  dplyr::group_by(biome_name_daily) |> 
   dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
                 ewe = ifelse(area_log10_pct >= pct_threshold, yes = 1, no = 0)) |> 
   dplyr::ungroup() |>
-  dplyr::left_join(biome_lookup)
+  dplyr::left_join(biome_lookup, by = "biome_name_daily") |>
+  dplyr::left_join(fired_biggest_poly, by = c("did", "id", "date", "samp_id")) |>
+  dplyr::select(did, id, date, biome_shortname, biome_name_daily, eco_name_daily, ewe,  x_biggest_poly_3310, y_biggest_poly_3310, 
+                daily_area_ha, area_log10, area_log10_pct, sqrt_aoi_tm1, event_day, cumu_area_tm01)
 
+fires
 # 95th percentile growth for temperate conifer forests is 1557 ha per day
 # 95th percentile growth for Mediterranean Forest, Woodland & Scrub is 2973 ha per day
 # 95th percentile growth for temperate grasslands, savannas & shrublands is 173 ha per day
@@ -101,53 +106,37 @@ fires %>%
   filter(daily_area_ha == min(daily_area_ha)) %>%
   select(biome_name_daily, daily_area_ha)
 
-out <-
-  merge(drivers, fires, by = c("did", "id", "date"))
+# Merge fire data with drivers data
+fires_drivers <- 
+  merge(drivers, fires, by = c("did", "id", "date")) |>
+  as.data.frame()
 
+### Final prep for individual biomes
+driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
+predictor.variable.names <- driver_descriptions$variable
 
-data.table::fwrite(x = fires_all, file = "data/ard/daily-drivers-of-california-megafires.csv")
-
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(insect_disease_high_tm01_tm05))
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(insect_disease_high_tm06_tm10))
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(insect_disease_tm01_tm05))
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(insect_disease_tm06_tm10))
-
-
-#fire
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(fire_high_tm01_tm05))
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(fire_high_tm06_tm10))
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(fire_tm01_tm05))
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(fire_tm06_tm10))
-
-# clearcut_harvest_othermech
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(clearcut_harvest_othermech_tm01_tm05))
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(clearcut_harvest_othermech_tm06_tm10))
-
-#
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(fuel_trt_tm01_tm05))
-out %>% 
-  group_by(biome_shortname, ewe) %>% 
-  summarize(mean(fuel_trt_tm06_tm10))
-
+lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
+  
+  out <- fires_drivers[fires_drivers$biome_shortname == biome_shortname, ]
+  
+  # no columnns with 0 variance (rounded to 4 decimal places)
+  zero_variance_columns <- colnames(out[, predictor.variable.names])[round(apply(out[, predictor.variable.names], MARGIN = 2, FUN = var, na.rm = TRUE), 4) == 0]
+  
+  predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
+  
+  out <- dplyr::select(.data = out, -tidyselect::all_of(zero_variance_columns))
+  
+  # Which variables have lots of NAs?
+  apply(out[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+  
+  # Drop all rows that have an NA in any column
+  na_dids <- out[!complete.cases(out), "did"]
+  
+  out <- out[complete.cases(out), ]
+  
+  out <- out[, c("did", "event_day", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
+  
+  data.table::fwrite(x = out, file = paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  
+  return(NULL)
+})

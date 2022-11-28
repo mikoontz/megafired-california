@@ -13,6 +13,9 @@ fired_daily <-
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   sf::st_set_agr(value = "constant")
 
+fired_daily_biggest_poly_centroids <-
+  data.table::fread("data/out/fired/03_joined-with-other-data/fired-biggest-poly-info.csv")
+
 # Some important notes on the wind variables derived from ERA5 and RTMA
 # wind_aspect_alignment_rad = wind direction (radians) - slope aspect (radians); wind blowing uphill = 0, wind blowing downhill = pi, wind blowing across slope is pi/2 or 3pi/2
 # wind terrain alignment = abs(cos(wind_aspect_alignment_rad)); wind blowing uphill and wind blowing downhill get max value of 1; wind blowing across slope gets value of 0

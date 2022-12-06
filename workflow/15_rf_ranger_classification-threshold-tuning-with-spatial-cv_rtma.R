@@ -18,7 +18,8 @@ dir.create("figs/rf/tuning", showWarnings = FALSE, recursive = TRUE)
 # No need to fit more models for this step, we merely adjust our classification threshold, convert the
 # pseudo-probability predictions from the models already fit to crisp 0 or 1 values, then calculate the 
 # model skill metrics.
-biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+# biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+biome_shortnames <- c("tcf", "mfws", "dxs")
 
 # Take the spatial CV results (observation for held out fold and predictions) and calculate various model skill metrics
 pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
@@ -74,7 +75,7 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
                        # roc_auc code from {mlr3measures} package
                        roc_auc = (mean(rank(p, ties.method = "average")[which(o == 1)]) - (as.numeric(length(which(o == 1))) + 1)/2) / as.numeric(length(which(o == 0))),
                        pr_auc = PRROC::pr.curve(scores.class0 = p, weights.class0 = o)[[2]]),
-                   by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, iter)]
+                   by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, iter)]
       
       # Then, we can derive model skill metrics based on the confusion matrix
       results <- 
@@ -96,7 +97,7 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
       # https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reshape.html
       results_long <-
         data.table::melt(results, 
-                         id.vars = c("id", "assessment_ewe_n", "assessment_ewe_0", "assessment_ewe_1", "mtry", "num.trees", "sample.fraction", "classification_thresh", "alpha", "minprop", "min.node.size", "class.wgts", "iter"),
+                         id.vars = c("id", "assessment_ewe_n", "assessment_ewe_0", "assessment_ewe_1", "mtry", "num.trees", "sample.fraction", "classification_thresh", "min.node.size", "class.wgts", "iter"),
                          measure.vars = metrics,
                          variable.name = ".metric",
                          value.name = ".estimate")
@@ -111,7 +112,7 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
                          lwr = mean(.estimate, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
                          upr = mean(.estimate, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
                          biome = biome_shortname),
-                     by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric)]
+                     by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric)]
       
       
       return(results_across_iter)
@@ -144,14 +145,14 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
   tune_gg_data <- 
     tuning_metrics %>%
     filter(.metric %in% c("informedness", "mcc")) %>% 
-    group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>% 
+    group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
     summarize(n = n(),
               n_not_missing = sum(!is.na(mean)),
               mean = weighted.mean(x = mean, w = assessment_ewe_n, na.rm = TRUE),
               lwr = weighted.mean(x = lwr, w = assessment_ewe_n, na.rm = TRUE)) %>% 
-    dplyr::select(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, .metric, mean, lwr, n, n_not_missing) %>% 
+    dplyr::select(mtry, num.trees, sample.fraction, classification_thresh, min.node.size, .metric, mean, lwr, n, n_not_missing) %>% 
     dplyr::filter((n_not_missing / n) >= 0.5) %>% 
-    tidyr::pivot_wider(id_cols = c(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size), names_from = ".metric", values_from = "mean") %>% 
+    tidyr::pivot_wider(id_cols = c(mtry, num.trees, sample.fraction, classification_thresh, min.node.size), names_from = ".metric", values_from = "mean") %>% 
     arrange(desc(informedness))
   
   informedness_mcc_gg <-
@@ -164,12 +165,12 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
   class_thresh_effect_data <-
     tuning_metrics %>% 
     dplyr::filter(!(.metric %in% c("tp", "fp", "fn", "tn", "rmse"))) %>% 
-    group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>% 
+    group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
     summarize(n = n(),
               n_not_missing = sum(!is.na(mean)),
               mean = weighted.mean(x = mean, w = assessment_ewe_n, na.rm = TRUE),
               lwr = weighted.mean(x = lwr, w = assessment_ewe_n, na.rm = TRUE)) %>% 
-    dplyr::select(mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, .metric, mean, lwr, n, n_not_missing) %>% 
+    dplyr::select(mtry, num.trees, sample.fraction, classification_thresh, min.node.size, .metric, mean, lwr, n, n_not_missing) %>% 
     dplyr::filter((n_not_missing / n) >= 0.5)
   
   class_thresh_effect_gg <-

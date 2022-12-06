@@ -8,10 +8,8 @@ library(tidyr)
 dir.create("data/out/rf/fitted", showWarnings = FALSE)
 dir.create("tables/rf", recursive = TRUE, showWarnings = FALSE)
 
-# Get the function to take the generic analysis ready data and prepare it for {ranger}
-source("workflow/10_generic-analysis-ready-data-to-ranger-ready-data_function.R")
-
-biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+# biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+biome_shortnames <- c("tcf", "mfws", "dxs")
 
 # Spatial fold assignments for each biome based on the folds assigned during tuning
 fold_n <- 

@@ -11,7 +11,8 @@ library(ggplot2)
 # library(mlr3measures)
 # library(MLmetrics)
 
-biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+# biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+biome_shortnames <- c("tcf", "mfws", "dxs")
 
 driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
 full_predictor_variable_names <- driver_descriptions$variable
@@ -46,13 +47,15 @@ spatial_cv_tune <- function(i, predictor.variable.names, folds, tune.df, num.thr
                                    data = analysis_data[, c("ewe", predictor.variable.names)],
                                    num.trees = num.trees,
                                    mtry = mtry,
+                                   classification = TRUE,
                                    probability = TRUE,
                                    sample.fraction = sample.fraction,
                                    replace = FALSE,
-                                   splitrule = "gini",
+                                   splitrule = "hellinger",
                                    min.node.size = min.node.size,
                                    class.weights = class.weights,
-                                   num.threads = num.threads)
+                                   num.threads = num.threads,
+                                   importance = "none")
     
     results[[k]] <- 
       tibble::tibble(
@@ -77,7 +80,7 @@ spatial_cv_tune <- function(i, predictor.variable.names, folds, tune.df, num.thr
 }
 
 
-for(counter in 1:4) {
+for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
   
   data <- read.csv(paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
@@ -130,12 +133,11 @@ for(counter in 1:4) {
                   by = 2)
   
   tune.df <- expand.grid(mtry = mtry_vec, 
-                         num.trees = 500, 
-                         sample.fraction = c(0.5, 0.6, 0.7, 0.8),
-                         min.node.size = c(1, 5, 10),
+                         num.trees = c(100, 250, 500, 1000), 
+                         sample.fraction = c(0.5, (1 - 1/exp(1)), 0.7, 0.8),
+                         min.node.size = c(1, 3, 5, 10, 25, 50),
                          class.wgts = TRUE,
-                         iter = 1:10
-  )
+                         iter = 1:10)
   
   # Here's what we're really after, since we already have a tuned model and spatially cross-validated performance/skill metrics
   
@@ -154,7 +156,7 @@ for(counter in 1:4) {
   # 
   # parallel::stopCluster(cl = cl)
   
-  out <- pblapply(X = (1:nrow(tune.df))[1], 
+  out <- pblapply(X = (1:nrow(tune.df)), 
                   FUN = spatial_cv_tune, 
                   predictor.variable.names = predictor.variable.names,
                   folds = folds,

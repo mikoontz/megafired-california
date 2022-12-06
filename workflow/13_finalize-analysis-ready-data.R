@@ -86,30 +86,31 @@ fires <-
   dplyr::mutate(area_log10 = log10(daily_area_ha),
                 sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha)) |>
   dplyr::rename(cumu_area_tm01 = cum_area_ha_tminus1) |>
-  dplyr::group_by(biome_name_daily) |> 
-  dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
-                ewe = ifelse(area_log10_pct >= pct_threshold, yes = 1, no = 0)) |> 
-  dplyr::ungroup() |>
   dplyr::left_join(biome_lookup, by = "biome_name_daily") |>
   dplyr::left_join(fired_biggest_poly, by = c("did", "id", "date", "samp_id")) |>
-  dplyr::select(did, id, date, biome_shortname, biome_name_daily, eco_name_daily, ewe,  x_biggest_poly_3310, y_biggest_poly_3310, 
-                daily_area_ha, area_log10, area_log10_pct, sqrt_aoi_tm1, event_day, cumu_area_tm01)
+  dplyr::select(did, id, date, biome_shortname, biome_name_daily, eco_name_daily,  x_biggest_poly_3310, y_biggest_poly_3310, 
+                daily_area_ha, area_log10, sqrt_aoi_tm1, event_day, cumu_area_tm01)
 
 fires
-# 95th percentile growth for temperate conifer forests is 1557 ha per day
-# 95th percentile growth for Mediterranean Forest, Woodland & Scrub is 2973 ha per day
-# 95th percentile growth for temperate grasslands, savannas & shrublands is 173 ha per day
-# 95th percentile growth for desert & xeric shrublands is 970 ha per day
-fires %>%
-  filter(ewe == 1) %>%
-  group_by(biome_name_daily) %>%
-  filter(daily_area_ha == min(daily_area_ha)) %>%
-  select(biome_name_daily, daily_area_ha)
 
 # Merge fire data with drivers data
 fires_drivers <- 
   merge(drivers, fires, by = c("did", "id", "date")) |>
+  # dplyr::group_by(biome_name_daily) |> 
+  dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
+                ewe = ifelse(area_log10_pct >= pct_threshold, yes = 1, no = 0)) |> 
+  # dplyr::ungroup() |>
   as.data.frame()
+
+# 95th percentile growth for temperate conifer forests is 2787 ha per day
+# 95th percentile growth for Mediterranean Forest, Woodland & Scrub is 3342 ha per day
+# 95th percentile growth for temperate grasslands, savannas & shrublands is 217 ha per day
+# 95th percentile growth for desert & xeric shrublands is 2377 ha per day
+fires_drivers %>%
+  filter(ewe == 1) %>%
+  group_by(biome_name_daily) %>%
+  filter(daily_area_ha == min(daily_area_ha)) %>%
+  select(biome_name_daily, daily_area_ha)
 
 ### Final prep for individual biomes
 driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
@@ -134,7 +135,7 @@ lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
   
   out <- out[complete.cases(out), ]
   
-  out <- out[, c("did", "event_day", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
+  out <- out[, c("did", "event_day", "daily_area_ha", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
   
   data.table::fwrite(x = out, file = paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
   

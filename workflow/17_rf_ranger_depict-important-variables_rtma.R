@@ -11,7 +11,9 @@ library(patchwork)
 
 dir.create("figs/rf/cpi", recursive = TRUE, showWarnings = FALSE)
 
-biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+# biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+biome_shortnames <- c("tcf", "mfws", "dxs")
+
 # Full names of the biomes for the plot titles
 biome_lookup <- c("Temperate Conifer Forests", "Mediterranean Forests, Woodlands & Scrub", "Temperate Grasslands, Savannas & Shrublands", "Deserts & Xeric Shrublands")
 names(biome_lookup) <- biome_shortnames
@@ -30,7 +32,6 @@ fold_n <-
   fold_lookup_tables %>% 
   dplyr::group_by(biome_name_daily, biome_shortname, eco_name_daily, spatial_fold) %>% 
   dplyr::tally()
-
 
 cpi <-
   lapply(biome_shortnames, FUN = function(biome_shortname) {
@@ -71,12 +72,12 @@ cpi_summary_across_folds <-
 
 cpi_tcf <- cpi_summary_across_iter[cpi_summary_across_iter$biome == "tcf", ]
 cpi_mfws <- cpi_summary_across_iter[cpi_summary_across_iter$biome == "mfws", ]
-cpi_tgss <- cpi_summary_across_iter[cpi_summary_across_iter$biome == "tgss", ]
+# cpi_tgss <- cpi_summary_across_iter[cpi_summary_across_iter$biome == "tgss", ]
 cpi_dxs <- cpi_summary_across_iter[cpi_summary_across_iter$biome == "dxs", ]
 
 cpi_summary_across_folds_tcf <- cpi_summary_across_folds[cpi_summary_across_folds$biome == "tcf", ]
 cpi_summary_across_folds_mfws <- cpi_summary_across_folds[cpi_summary_across_folds$biome == "mfws", ]
-cpi_summary_across_folds_tgss <- cpi_summary_across_folds[cpi_summary_across_folds$biome == "tgss", ]
+# cpi_summary_across_folds_tgss <- cpi_summary_across_folds[cpi_summary_across_folds$biome == "tgss", ]
 cpi_summary_across_folds_dxs <- cpi_summary_across_folds[cpi_summary_across_folds$biome == "dxs", ]
 
 color_palette <- c('#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB')
@@ -190,51 +191,51 @@ p
 ggsave(filename = "figs/rf/cpi/cpi_mfws.png", plot = p, height = 9, width = 14, units = "in")
 
 # Temperate Grasslands, Savanna, and Shrublands
-
-tgss_cpi_gg <-
-  ggplot() +
-  ggdist::geom_pointinterval(data = cpi_tgss, 
-                             mapping = aes(y = factor(Variable, levels = rev(cpi_summary_across_folds_tgss$Variable)), 
-                                           x = cpi, xmin = lwr, xmax = upr, color = spatial_fold), size = 2) +
-  scale_color_manual(values = color_palette) + 
-  theme_bw() +
-  theme(legend.position = "none") + 
-  facet_wrap(facets = "biome_fullname") +
-  labs(y = "Driver variable",
-       x = "Conditional predictive impact") +
-  geom_point(data = cpi_summary_across_folds_tgss, mapping = aes(x = cpi_median, y = factor(Variable, levels = rev(cpi_summary_across_folds_tgss$Variable))), pch = "X", size = 2.5)
-
-
-fold_assignments <- fold_lookup_tables[fold_lookup_tables$biome_shortname == "tgss", ]
-
-tgss_spatial_folds <-
-  sf::st_read("data/out/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
-  dplyr::filter(did %in% fold_assignments$did) %>% 
-  dplyr::left_join(fold_assignments, by = "did") %>% 
-  dplyr::group_by(spatial_fold) %>% 
-  dplyr::summarize() %>% 
-  sf::st_convex_hull()
-  
-tgss_tmap <-
-  tm_shape(ca) +
-  tm_polygons() +
-  tm_shape(tgss_spatial_folds) +
-  tm_fill("spatial_fold", title = "Spatial fold", palette = color_palette) +
-  tm_layout(legend.position = c(0.5, 0.8),  
-            legend.width = 0.7, frame = FALSE)
-
-tgss_tmap_grob <- tmap::tmap_grob(tgss_tmap)
-
-p <- tgss_cpi_gg + patchwork::inset_element(p = tgss_tmap_grob, 
-                                            left = 0.6,
-                                            bottom = 0.25,
-                                            right = 0.995,
-                                            top = 0.725,
-                                            align_to = "panel",
-                                            on_top = TRUE)
-p
-
-ggsave(filename = "figs/rf/cpi/cpi_tgss.png", plot = p, height = 9, width = 14, units = "in")
+# 
+# tgss_cpi_gg <-
+#   ggplot() +
+#   ggdist::geom_pointinterval(data = cpi_tgss, 
+#                              mapping = aes(y = factor(Variable, levels = rev(cpi_summary_across_folds_tgss$Variable)), 
+#                                            x = cpi, xmin = lwr, xmax = upr, color = spatial_fold), size = 2) +
+#   scale_color_manual(values = color_palette) + 
+#   theme_bw() +
+#   theme(legend.position = "none") + 
+#   facet_wrap(facets = "biome_fullname") +
+#   labs(y = "Driver variable",
+#        x = "Conditional predictive impact") +
+#   geom_point(data = cpi_summary_across_folds_tgss, mapping = aes(x = cpi_median, y = factor(Variable, levels = rev(cpi_summary_across_folds_tgss$Variable))), pch = "X", size = 2.5)
+# 
+# 
+# fold_assignments <- fold_lookup_tables[fold_lookup_tables$biome_shortname == "tgss", ]
+# 
+# tgss_spatial_folds <-
+#   sf::st_read("data/out/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
+#   dplyr::filter(did %in% fold_assignments$did) %>% 
+#   dplyr::left_join(fold_assignments, by = "did") %>% 
+#   dplyr::group_by(spatial_fold) %>% 
+#   dplyr::summarize() %>% 
+#   sf::st_convex_hull()
+#   
+# tgss_tmap <-
+#   tm_shape(ca) +
+#   tm_polygons() +
+#   tm_shape(tgss_spatial_folds) +
+#   tm_fill("spatial_fold", title = "Spatial fold", palette = color_palette) +
+#   tm_layout(legend.position = c(0.5, 0.8),  
+#             legend.width = 0.7, frame = FALSE)
+# 
+# tgss_tmap_grob <- tmap::tmap_grob(tgss_tmap)
+# 
+# p <- tgss_cpi_gg + patchwork::inset_element(p = tgss_tmap_grob, 
+#                                             left = 0.6,
+#                                             bottom = 0.25,
+#                                             right = 0.995,
+#                                             top = 0.725,
+#                                             align_to = "panel",
+#                                             on_top = TRUE)
+# p
+# 
+# ggsave(filename = "figs/rf/cpi/cpi_tgss.png", plot = p, height = 9, width = 14, units = "in")
 
 
 # Deserts and xeric shrublands

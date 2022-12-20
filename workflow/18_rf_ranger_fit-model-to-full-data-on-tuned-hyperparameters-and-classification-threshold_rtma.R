@@ -11,6 +11,9 @@ dir.create("tables/rf", recursive = TRUE, showWarnings = FALSE)
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 biome_shortnames <- c("tcf", "mfws", "dxs")
 
+driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
+full_predictor_variable_names <- driver_descriptions$variable
+
 # Spatial fold assignments for each biome based on the folds assigned during tuning
 fold_n <- 
   lapply(biome_shortnames, FUN = function(biome_shortname) {
@@ -29,16 +32,10 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
 
 tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
 
-# group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>% 
-#   summarize(n = n(),
-#             n_not_missing = sum(!is.na(mean)),
-#             mean = weighted.mean(x = mean, w = assessment_ewe_n, na.rm = TRUE),
-#             lwr = weighted.mean(x = lwr, w = assessment_ewe_n, na.rm = TRUE))
-
 tuned_hyperparameters <-
   tuning_metrics %>% 
   dplyr::filter(.metric == "informedness") %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>% 
+  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
   summarize(n = n(),
             n_not_missing = sum(!is.na(mean)),
             mean_informedness = weighted.mean(x = mean, w = assessment_ewe_n, na.rm = TRUE),
@@ -51,73 +48,48 @@ tuned_hyperparameters <-
 mcc_results <-
   tuning_metrics %>% 
   dplyr::filter(.metric == "mcc") %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>% 
+  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
   summarize(n = n(),
             n_not_missing = sum(!is.na(mean)),
             mean_mcc = weighted.mean(x = mean, w = assessment_ewe_n, na.rm = TRUE),
             lwr_mcc = weighted.mean(x = lwr, w = assessment_ewe_n, na.rm = TRUE)) %>%
   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
-  dplyr::select(biome, mtry, sample.fraction, classification_thresh, alpha, minprop, min.node.size, .metric, mean_mcc, lwr_mcc) %>% 
+  dplyr::select(biome, mtry, sample.fraction, classification_thresh, min.node.size, .metric, mean_mcc, lwr_mcc) %>% 
   tidyr::pivot_wider(names_from = ".metric", values_from = "mean_mcc")
 
 model_skill_results <- merge(tuned_hyperparameters, mcc_results)
 write.csv(x = model_skill_results, file = "tables/rf/model-skill-results.csv")
 
-# Get data
-analysis_ready_nonspatial_version <- "v2"
-analysis_ready_nonspatial_fname <- paste0("data/out/analysis-ready/FIRED-daily-scale-drivers_california_", analysis_ready_nonspatial_version, ".csv")
-
-# Read analysis-ready data
-fires_all <- data.table::fread(input = analysis_ready_nonspatial_fname)
-
-# Here is where we can exclude any fires we don't want in the analysis
-
-# Remove fires that never reached more than 121 hectares (300 acres)
-target_event_ids <-
-  sf::read_sf("data/out/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
-  dplyr::mutate(area_ha = as.numeric(sf::st_area(.)) / 10000) %>% 
-  dplyr::filter(area_ha >= 121.406) %>% 
-  dplyr::pull(id)
-
-fires_all <- fires_all[id %in% target_event_ids,]
-
-# Subset to just years where there are RTMA data (2011 and later)
-fires_all <-
-  fires_all %>%
-  dplyr::filter(date >= as.Date("2011-01-01"))
-
-# drop ERA5 columns in favor of RTMA columns for the weather variables
-fires_all <-
-  fires_all %>% 
-  dplyr::select(-contains("era5"))
-
-# Remove all event days that occur after the first EWE for that event
-# fires_all <-
-#   fires_all %>%
-#   dplyr::filter(cumu_ewe <= 1)
-
-# Just include eco regions that have experienced more than 10 EWE's
-# target_eco_names <- 
-#   fires_all %>% 
-#   group_by(eco_name_daily, ewe) %>% 
-#   tally() %>% 
-#   filter(ewe == 1, n > 10) %>% 
-#   pull(eco_name_daily)
-# 
-# fires_all <-
-#   fires_all %>% 
-#   dplyr::filter(eco_name_daily %in% target_eco_names)
-
-for (counter in 1:4) {
+for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
-  print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
   
   biome_tuned_hyperparameters <- tuned_hyperparameters[tuned_hyperparameters$biome == biome_shortname, ]
   
-  # prep_fires() function comes from previous script
-  ranger_ready <- prep_fires(fires_all = fires_all, biome_shortname = biome_shortname)  
-  data <- ranger_ready$data
-  predictor.variable.names <- ranger_ready$predictor.variable.names
+  data <- 
+    data.table::fread(paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname, ".csv")) |>
+    dplyr::mutate(ewe = factor(ewe, levels = c(1, 0))) |>
+    as.data.frame()
+  
+  predictor.variable.names <- 
+    names(data)[names(data) %in% full_predictor_variable_names]
+  
+  human_drivers <- 
+    names(data)[names(data) %in% driver_descriptions[driver_descriptions$type == "human", "variable"]]
+  
+  topography_drivers <- 
+    names(data)[names(data) %in% driver_descriptions[driver_descriptions$type == "topography", "variable"]]
+  
+  weather_drivers <- 
+    names(data)[names(data) %in% driver_descriptions[driver_descriptions$type == "weather", "variable"]]
+  
+  fuel_drivers <- 
+    names(data)[names(data) %in% driver_descriptions[driver_descriptions$type == "fuel", "variable"]]
+  
+  interacting_drivers <- 
+    names(data)[names(data) %in% driver_descriptions[driver_descriptions$type == "interacting", "variable"]]
+  
+  fire_drivers <- 
+    names(data)[names(data) %in% driver_descriptions[driver_descriptions$type == "fire", "variable"]]
   
   rf_formula <- as.formula(paste0("ewe ~ ", paste(predictor.variable.names, collapse = " + ")))
   
@@ -125,18 +97,18 @@ for (counter in 1:4) {
   class.wgts <- 1 / table(data$ewe)
   
   fitted_model <- ranger::ranger(formula = rf_formula,
-                                 data = data[, c("ewe", predictor.variable.names)],
-                                 mtry = biome_tuned_hyperparameters$mtry,
+                                 data = analysis_data[, c("ewe", predictor.variable.names)],
                                  num.trees = biome_tuned_hyperparameters$num.trees,
+                                 mtry = biome_tuned_hyperparameters$mtry,
+                                 classification = TRUE,
+                                 probability = TRUE,
                                  sample.fraction = biome_tuned_hyperparameters$sample.fraction,
                                  replace = FALSE,
-                                 splitrule = "maxstat",
-                                 alpha = biome_tuned_hyperparameters$alpha,
-                                 minprop = biome_tuned_hyperparameters$minprop,
+                                 splitrule = "hellinger",
                                  min.node.size = biome_tuned_hyperparameters$min.node.size,
-                                 case.weights = as.numeric(class.wgts[data$ewe + 1]),
-                                 seed = 1,
-                                 num.threads = parallel::detectCores() - 1)
+                                 class.weights = class.wgts,
+                                 num.threads = 11,
+                                 importance = "none")
   
   fitted_model$biome <- biome_shortname
   fitted_model$forest$data <- data[, c("ewe", predictor.variable.names)]

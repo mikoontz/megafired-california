@@ -7,7 +7,8 @@ library(ranger)
 dir.create("data/out/rf/predict", showWarnings = FALSE)
 dir.create("figs/rf/response-curves/", showWarnings = FALSE)
 
-biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+# biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
+biome_shortnames <- c("tcf", "mfws", "dxs")
 
 # Full names of the biomes for the plot titles
 biome_lookup <- c("Temperate Conifer Forests", "Mediterranean Forests, Woodlands & Scrub", "Temperate Grasslands, Savannas & Shrublands", "Deserts & Xeric Shrublands")
@@ -48,7 +49,7 @@ tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
 tuned_hyperparameters <-
   tuning_metrics %>% 
   dplyr::filter(.metric == "informedness") %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, alpha, minprop, min.node.size, class.wgts, .metric) %>% 
+  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
   summarize(n = n(),
             n_not_missing = sum(!is.na(mean)),
             mean_informedness = weighted.mean(x = mean, w = assessment_ewe_n, na.rm = TRUE),
@@ -140,7 +141,7 @@ fitted_models_l <- lapply(X = biome_shortnames, FUN = function(biome_shortname) 
 })
 
 # For each biome, create the response plot
-for (counter in 1:4) {
+for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
   
   key_vars <-
@@ -183,7 +184,7 @@ for (counter in 1:4) {
     }) |>
       do.call("rbind", args = _)
     
-    newdata$ewe <- predict(fitted_model, data = newdata)$predictions
+    newdata$ewe <- predict(fitted_model, data = newdata)$predictions[, 1]
     
     data.table::fwrite(x = newdata, file = paste0("data/out/rf/predict/rf_ranger_predictions_rtma_", biome_shortname, ".csv"))
   }

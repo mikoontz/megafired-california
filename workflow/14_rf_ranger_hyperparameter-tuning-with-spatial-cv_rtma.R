@@ -92,8 +92,6 @@ for(counter in seq_along(biome_shortnames)) {
   
   print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
   
-  # prep_fires() function comes from previous script
-
   # https://spatialsample.tidymodels.org/articles/spatialsample.html
   if (biome_shortname == "tgss") {
     folds <-

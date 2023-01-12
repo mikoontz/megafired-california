@@ -12,7 +12,7 @@ biome_shortnames <- c("tcf", "mfws", "dxs")
 
 # Full names of the biomes for the plot titles
 biome_lookup <- c("Temperate Conifer Forests", "Mediterranean Forests, Woodlands & Scrub", "Temperate Grasslands, Savannas & Shrublands", "Deserts & Xeric Shrublands")
-names(biome_lookup) <- biome_shortnames
+names(biome_lookup) <- c("tcf", "mfws", "tgss", "dxs")
 
 # Read in the CPI results based on the Matthew's Correlation Coefficient
 cpi_results_full <-
@@ -27,16 +27,6 @@ cpi_grouped_results_full <-
   }) %>% 
   data.table::rbindlist()
 
-# Get the count of observations in each spatial fold so we can weight the mean CPI value to more heavily rely on CPI calculated for
-# the folds with more fire
-fold_n <- 
-  lapply(biome_shortnames, FUN = function(biome_shortname) {
-    out <- 
-      read.csv(paste0("data/out/rf/tuning/spatial-fold-lookup-table_rtma_", biome_shortname, ".csv")) %>% 
-      dplyr::group_by(biome_shortname, eco_name_daily, spatial_fold) %>% 
-      tally()
-  }) %>% 
-  do.call("rbind", .)
 
 # Get the threshold for classification so we can add it to the final plots
 # Tuned hyperparameters
@@ -76,7 +66,6 @@ cpi_results <-
                    max = max(CPI, na.rm = TRUE),
                    lwr = mean(CPI, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI))),
                    upr = mean(CPI, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI)))) %>%
-  dplyr::left_join(fold_n, by = c(biome = "biome_shortname", "spatial_fold")) %>%
   dplyr::arrange(biome, Variable, spatial_fold) %>% 
   dplyr::group_by(Variable, biome) %>% 
   dplyr::summarize(n_pos = length(which(cpi > 0)),
@@ -85,20 +74,32 @@ cpi_results <-
                    cpi_mean = mean(x = cpi),
                    cpi_lwr = mean(x = lwr),
                    cpi_upr = mean(x = upr),
-                   cpi_wgt_mean = weighted.mean(x = cpi, w = n),
-                   cpi_wgt_lwr = weighted.mean(x = lwr, w = n),
-                   cpi_wgt_upr = weighted.mean(x = upr, w = n),
                    cpi_median = median(x = cpi),
                    n = n()) %>% 
-  dplyr::filter(cpi_median > 0) %>%
-  # dplyr::filter(cpi_wgt_mean > 0 & n_neg < 2 & (n_pos / n) >= 0.5) %>%
-  dplyr::arrange(biome, desc(cpi_median))
-  # dplyr::arrange(biome, desc(cpi_wgt_mean))
+  dplyr::filter(cpi_mean > 0) %>%
+  dplyr::filter((n_pos / n) >= 1/3 & (n_neg / n) <= 1/3) %>%
+  dplyr::arrange(biome, desc(cpi_mean))
+  # dplyr::filter(cpi_median > 0) %>%
+  # dplyr::arrange(biome, desc(cpi_median))
 
 cpi_results
 cpi_results %>% 
   group_by(biome) %>% 
   tally()
+
+cpi_results %>% 
+  filter(biome == "tcf") %>% 
+  print(n = 23)
+
+
+cpi_results %>% 
+  filter(biome == "mfws") %>% 
+  print(n = 23)
+
+
+cpi_results %>% 
+  filter(biome == "dxs") %>% 
+  print(n = 23)
 
 # Summarize CPI results for groups across iterations and variables
 cpi_grouped_results <-
@@ -111,7 +112,6 @@ cpi_grouped_results <-
                    max = max(CPI, na.rm = TRUE),
                    lwr = mean(CPI, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI))),
                    upr = mean(CPI, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI)))) %>%
-  dplyr::left_join(fold_n, by = c(biome = "biome_shortname", "spatial_fold")) %>%
   dplyr::arrange(biome, Group, spatial_fold) %>% 
   dplyr::group_by(Group, biome) %>% 
   dplyr::summarize(n_pos = length(which(cpi > 0)),
@@ -120,13 +120,10 @@ cpi_grouped_results <-
                    cpi_mean = mean(x = cpi),
                    cpi_lwr = mean(x = lwr),
                    cpi_upr = mean(x = upr),
-                   cpi_wgt_mean = weighted.mean(x = cpi, w = n),
-                   cpi_wgt_lwr = weighted.mean(x = lwr, w = n),
-                   cpi_wgt_upr = weighted.mean(x = upr, w = n),
                    cpi_median = median(x = cpi),
                    n = n()) %>% 
-  dplyr::filter(cpi_median > 0) %>% 
-  dplyr::arrange(biome, desc(cpi_median))
+  dplyr::filter(cpi_mean > 0) %>% 
+  dplyr::arrange(biome, desc(cpi_mean))
 
 cpi_grouped_results
 
@@ -134,13 +131,6 @@ cpi_grouped_results %>%
   group_by(biome) %>% 
   tally()
 
-### visualization
-# Get the models that were fit on the whole dataset for each biome
-fitted_models_l <- lapply(X = biome_shortnames, FUN = function(biome_shortname) {
-  return(readr::read_rds(file = paste0("data/out/rf/fitted/rf_ranger_fitted-model_rtma_", biome_shortname, ".rds")))
-})
-
-# For each biome, create the response plot
 for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
   
@@ -149,48 +139,11 @@ for(counter in seq_along(biome_shortnames)) {
     dplyr::filter(biome == biome_shortname) %>% 
     dplyr::pull(Variable)
   
-  if(!file.exists(paste0("data/out/rf/predict/rf_ranger_predictions_rtma", biome_shortname, ".csv"))) {
-    set.seed(1510)
-    
-    fitted_model <- fitted_models_l[[counter]]
-    data <- fitted_model$forest$data
-    
-    indep_vars <- fitted_model$forest$independent.variable.names
-    n_pred <- 100
-    n_rep <- 2000
-    idx <- sample(x = nrow(data), size = n_rep, replace = TRUE)
-    
-    newdata <- lapply(seq_along(key_vars), FUN = function(i) {
-      other_vars <- setdiff(indep_vars, key_vars[i])
-      if (is.factor(data[[key_vars[i]]])) {
-        newdata_x <- levels(data[[key_vars[i]]])
-      } else {
-        newdata_x <- seq(min(data[[key_vars[i]]]), max(data[[key_vars[i]]]), length.out = n_pred)
-      }
-      
-      this_var_newdata <-
-        lapply(seq_along(idx), FUN = function(j) {
-          this_idx_newdata <-
-            data.frame(target_var = key_vars[i], group = j, iter = 1:length(newdata_x), x = as.numeric(newdata_x)) %>%
-            cbind(data[idx[j], other_vars], row.names = "iter") %>%
-            dplyr::mutate(iter = 1:length(newdata_x))
-          
-          names(this_idx_newdata)[names(this_idx_newdata) == "x"] <- key_vars[i]
-          
-          this_idx_newdata <- this_idx_newdata[, c("target_var", "group", "iter", indep_vars)]
-          
-        }) %>%
-        do.call(what = "rbind", args = .)
-    }) |>
-      do.call("rbind", args = _)
-    
-    newdata$ewe <- predict(fitted_model, data = newdata)$predictions[, 1]
-    
-    data.table::fwrite(x = newdata, file = paste0("data/out/rf/predict/rf_ranger_predictions_rtma_", biome_shortname, ".csv"))
-  }
+  newdata <-
+    data.table::fread(input = paste0("data/out/rf/predict/rf_ranger_predictions_rtma_", biome_shortname, ".csv"))
   
   newdata <- 
-    data.table::fread(input = paste0("data/out/rf/predict/rf_ranger_predictions_rtma_", biome_shortname, ".csv")) %>% 
+    newdata[target_var %in% key_vars, ] %>%
     as.data.frame()
   
   newdata_agg <-
@@ -230,8 +183,8 @@ for(counter in seq_along(biome_shortnames)) {
   response_curves_spaghetti_gg <-
     ggplot() +
     geom_line(data = newdata_plotting, aes(x = x, y = ewe, group = group), alpha = 0.1) +
-    geom_line(data = newdata_agg, aes(x = x, y = ewe), color = "red", lwd = 1.25) +
-    geom_hline(yintercept = classification_thresh, color = "blue", lwd = 1.25) +
+    geom_line(data = newdata_agg, aes(x = x, y = ewe), color = "red", linewidth = 1.25) +
+    geom_hline(yintercept = classification_thresh, color = "blue", linewidth = 1.25) +
     # geom_ribbon(alpha = 0.25) +
     facet_wrap(facets = "target_var", scales = "free") +
     theme_bw() +
@@ -240,13 +193,13 @@ for(counter in seq_along(biome_shortnames)) {
   response_curves_highlight_gg <-
     ggplot(data = newdata_agg, aes(x = x, y = ewe)) +
     # geom_hline(yintercept = classification_thresh, color = "blue", lwd = 1.25) +
-    geom_line(lwd = 1.25) +
+    geom_line(linewidth = 1.25) +
     # geom_ribbon(aes(ymin = lwr_ttest, ymax = upr_ttest), alpha = 0.25) +
     facet_wrap(facets = "target_var", scales = "free") +
     theme_bw() +
     labs(title = paste0("Expectation of response curves for important variables in ", biome_fullname))
   
   
-  ggplot2::ggsave(plot = response_curves_spaghetti_gg, filename = paste0("figs/rf/response-curves/", biome_shortname, "_response-curves-important-variables_rtma_spaghetti.png"), width = 10)
-  ggplot2::ggsave(plot = response_curves_highlight_gg, filename = paste0("figs/rf/response-curves/", biome_shortname, "_response-curves-important-variables_rtma_highlight.png"), width = 10)
+  ggplot2::ggsave(plot = response_curves_spaghetti_gg, filename = paste0("figs/rf/response-curves/", biome_shortname, "_response-curves-important-variables_rtma_spaghetti.png"), width = 10, height = 10)
+  ggplot2::ggsave(plot = response_curves_highlight_gg, filename = paste0("figs/rf/response-curves/", biome_shortname, "_response-curves-important-variables_rtma_highlight.png"), width = 10, height = 10)
 }

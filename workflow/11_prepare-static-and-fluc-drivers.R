@@ -10,17 +10,28 @@ library(USAboundaries)
 
 static_version <- "v4"
 fluc_version <- "v5"
+roads_version <- "v1"
 
-prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
+prep_static_and_fluc_drivers <- function(static_paths, roads_paths, fluc_paths) {
   
   static_DT <- lapply(static_paths, FUN = data.table::fread) |> data.table::rbindlist()
   
   static_DT[, `:=`(.geo = NULL, `system:index` = NULL,
                    rumple_index = surf_area / proj_area,
-                   road_density_mpha = (road_length_m) / (proj_area / 10000),
+                   grip4_road_density_mpha = (road_length_m) / (proj_area / 10000),
                    surf_area = NULL, road_length_m = NULL)]
   
   static_DT <- static_DT[did != "-999", ]
+  
+  roads_DT <- lapply(roads_paths, FUN = data.table::fread) |> data.table::rbindlist()
+  roads_DT[, date := as.character(date)]
+  
+  static_DT <- merge(x = static_DT, y = roads_DT, 
+                     by = c("did", "id", "date", "samp_id"),
+                     all.x = TRUE)
+  
+  static_DT[, `:=`(caltrans_road_density_mpha = (road_length_m) / (proj_area / 10000),
+                   road_length_m = NULL)]
   
   fluc_DT <- lapply(fluc_paths, FUN = data.table::fread) |> data.table::rbindlist()
   
@@ -251,15 +262,21 @@ prep_static_and_fluc_drivers <- function(static_paths, fluc_paths) {
 
 
 fired_daily_drivers <- prep_static_and_fluc_drivers(static_paths = paste0("data/out/ee/FIRED-daily-static-drivers_california_", static_version, ".csv"),
+                                                    roads_paths = paste0("data/out/drivers/roads/fired_daily_road-drivers_", roads_version, ".csv"),
                                                     fluc_paths = paste0("data/out/ee/FIRED-daily-fluctuating-drivers_california_", fluc_version, ".csv"))
 
+data.table::setnafill(x = fired_daily_drivers, type = "const", fill = 0, cols = names(fired_daily_drivers)[!(names(fired_daily_drivers) %in% c("did", "id", "date", "samp_id"))])
 data.table::fwrite(x = fired_daily_drivers, file = "data/out/drivers/fired-fluc-static-driver-proportions.csv")
 
 fi_daily_drivers <- prep_static_and_fluc_drivers(static_paths = list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", 
                                                                            pattern = "static", 
                                                                            full.names = TRUE),
+                                                 roads_paths = list.files(path = "data/out/drivers/roads/fire-independent-locations/", 
+                                                                          pattern = ".csv", 
+                                                                          full.names = TRUE),
                                                  fluc_paths = list.files(path = "data/out/ee/fire-independent-drivers/randomly-located-fired-polys/", 
                                                                          pattern = "fluc", 
                                                                          full.names = TRUE))
 
+data.table::setnafill(x = fi_daily_drivers, type = "const", fill = 0, cols = names(fi_daily_drivers)[!(names(fi_daily_drivers) %in% c("did", "id", "date", "samp_id"))])
 data.table::fwrite(x = fi_daily_drivers, file = "data/out/drivers/fi-fluc-static-driver-proportions.csv")

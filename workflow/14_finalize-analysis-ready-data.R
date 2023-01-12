@@ -4,6 +4,8 @@ library(sf)
 library(tidyr)
 library(data.table)
 library(tidyselect)
+library(spatialsample)
+library(purrr)
 
 weather_drivers <- 
   data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
@@ -22,7 +24,7 @@ other_fires_summary <-
 fluc_static <- 
   data.table::fread("data/out/drivers/fluc-static-driver-proportion-percentiles.csv") |>
   dplyr::select(did, id, date,
-                elevation, friction_walking_only, rumple_index, road_density_mpha,
+                elevation, rumple_index, caltrans_road_density_mpha,
                 ndvi, veg_structure_rumple, 
                 peak_ridge_cliff, valleys, slope_warm, slope_cool, slope_neutral, flat, 
                 trees_tm01, shrubs_tm01, grass_forb_herb_tm01, barren_tm01,
@@ -112,32 +114,89 @@ fires_drivers %>%
   filter(daily_area_ha == min(daily_area_ha)) %>%
   select(biome_name_daily, daily_area_ha)
 
-### Final prep for individual biomes
+### Prep for individual biomes
 driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
 predictor.variable.names <- driver_descriptions$variable
+
+set.seed(2308)
 
 lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
   
   out <- fires_drivers[fires_drivers$biome_shortname == biome_shortname, ]
   
-  # no columnns with 0 variance (rounded to 4 decimal places)
-  zero_variance_columns <- colnames(out[, predictor.variable.names])[round(apply(out[, predictor.variable.names], MARGIN = 2, FUN = var, na.rm = TRUE), 4) == 0]
-  
-  predictor.variable.names <- predictor.variable.names[!(predictor.variable.names %in% zero_variance_columns)]
-  
-  out <- dplyr::select(.data = out, -tidyselect::all_of(zero_variance_columns))
-  
   # Which variables have lots of NAs?
   apply(out[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
   
   # Drop all rows that have an NA in any column
-  na_dids <- out[!complete.cases(out), "did"]
-  
   out <- out[complete.cases(out), ]
   
   out <- out[, c("did", "event_day", "daily_area_ha", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
+  
+  # set up spatial folds
+  # https://spatialsample.tidymodels.org/articles/spatialsample.html
+  out <-
+    out %>% 
+    sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), 
+                 crs = 3310, remove = FALSE) %>%
+    spatialsample::spatial_clustering_cv(v = 10) %>% 
+    purrr::pmap(.f = function(id, splits) {
+      spatial_fold <- id
+      assessment_data <- 
+        splits %>% 
+        rsample::assessment() %>% 
+        sf::st_drop_geometry()
+      
+      return(cbind(assessment_data, spatial_fold))
+    }) %>% 
+    data.table::rbindlist()
+  
+  # Remove spatial folds with fewer than 40 observations or 2 EWE's
+  n_in_fold <- 
+    out %>% 
+    dplyr::group_by(spatial_fold) %>% 
+    dplyr::summarize(n = n(),
+                     n_ewe = length(which(ewe == 1)))
+  
+  enough_n_folds <- 
+    n_in_fold %>% 
+    dplyr::filter(n_ewe >= 1) %>% 
+    dplyr::pull(spatial_fold)
+  
+  out <- out[spatial_fold %in% enough_n_folds, ]
+  
+  # no columnns with 0 variance (rounded to 4 decimal places) across whole dataset
+  zero_variance_columns <-
+    out %>%
+    tidyr::pivot_longer(cols = tidyselect::all_of(predictor.variable.names),
+                        names_to = "variable",
+                        values_to = "value") %>%
+    dplyr::group_by(variable) %>%
+    dplyr::summarize(zero_var = any(round(var(value, na.rm = TRUE), digits = 4) == 0)) %>%
+    dplyr::filter(zero_var) %>%
+    dplyr::pull(variable)
+  
+  # no columnns with 0 variance (rounded to 4 decimal places) in any folds
+  # particularly important if using sequential knockoffs (as you might be if
+  # you have factors as features)
+  
+  # zero_variance_columns <- 
+  #   out %>% 
+  #   tidyr::pivot_longer(cols = tidyselect::all_of(predictor.variable.names),
+  #                       names_to = "variable",
+  #                       values_to = "value") %>% 
+  #   dplyr::group_by(spatial_fold, variable) %>% 
+  #   dplyr::summarize(zero_var = round(var(value, na.rm = TRUE), digits = 4) == 0) %>% 
+  #   dplyr::group_by(variable) %>% 
+  #   dplyr::summarize(zero_var = any(zero_var)) %>% 
+  #   dplyr::filter(zero_var) %>% 
+  #   dplyr::pull(variable)
+  
+  out <- 
+    out %>% 
+    dplyr::select(!tidyselect::all_of(zero_variance_columns))
   
   data.table::fwrite(x = out, file = paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
   
   return(NULL)
 })
+  

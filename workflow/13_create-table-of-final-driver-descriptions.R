@@ -2,11 +2,10 @@
 
 human_drivers <- 
   data.frame(type = "human", 
-             variable = c("npl", "concurrent_fires", "friction_walking_only", "road_density_mpha"),
-             source = c("NIFC", "Derived for this paper using FIRED", "Weiss et al., (2020)", "Meijer et al., (2018) [GRIP4]"),
+             variable = c("npl", "concurrent_fires", "caltrans_road_density_mpha"),
+             source = c("NIFC", "Derived for this paper using FIRED", "CalTrans [CRS Functional Classification]"),
              calculation = c("National Preparedness Level on the day of the fire/day combination",
                              "Number of FIRED events also active on the day of the fire/day combination",
-                             "Percentile of mean friction (walking only) value within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
                              "Percentile of mean road density (meters per hectare) within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"))
 
 topography_drivers <- 

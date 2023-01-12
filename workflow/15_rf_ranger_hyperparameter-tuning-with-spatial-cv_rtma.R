@@ -79,53 +79,39 @@ spatial_cv_tune <- function(i, predictor.variable.names, folds, tune.df, num.thr
   return(results_out)
 }
 
-
 for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
   
   data <- read.csv(paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
-  data$npl <- factor(data$npl, levels = 1:5)
-  data$ewe <- factor(data$ewe, levels = 0:1)
+  data$ewe <- factor(data$ewe, levels = c(1, 0))
   
   data$concurrent_fires <- as.numeric(data$concurrent_fires)
   predictor.variable.names <- names(data)[names(data) %in% full_predictor_variable_names]
   
   print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
   
-  # https://spatialsample.tidymodels.org/articles/spatialsample.html
-  if (biome_shortname == "tgss") {
-    folds <-
-      data %>%
-      sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310) %>%
-      spatialsample::spatial_clustering_cv(v = 5)
-    
-  } else {
-    folds <-
-      data %>%
-      sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), crs = 3310) %>%
-      spatialsample::spatial_leave_location_out_cv(group = eco_name_daily)
-  }
+  # Set up analysis/assessment splits
+  fold_ids <- unique(data$spatial_fold)
   
-  # Save the assignments of the spatial folds so we can ensure they are the same later for the
-  # conditional predictive impact step
-  lookup_table <-
-    folds %>% 
-    purrr::pmap(.f = function(id, splits) {
-      return(data.frame(biome_name_daily = rsample::assessment(splits)$biome_name_daily,
-                        biome_shortname = biome_shortname,
-                        eco_name_daily = rsample::assessment(splits)$eco_name_daily, 
-                        did = rsample::assessment(splits)$did,
-                        spatial_fold = id))
-    }) %>% 
-    data.table::rbindlist()
+  splits <- 
+    lapply(fold_ids, FUN = function(spatial_fold) {
+      
+      analysis_data <- data[!(data$spatial_fold %in% spatial_fold), ]
+      assessment_data <- data[data$spatial_fold %in% spatial_fold, ]
+      
+      split <- rsample::make_splits(x = analysis_data, 
+                                    assessment = assessment_data)
+      
+      return(split)
+    }) 
   
-  data.table::fwrite(x = lookup_table, file = paste0("data/out/rf/tuning/spatial-fold-lookup-table_rtma_", biome_shortname, ".csv"))
+  folds <- rsample::manual_rset(splits = splits, ids = fold_ids)
   
-  # Now we'll tune our model by setting up a grid over 5 different variables we want to tune
-  # Tuned variables: mtry, sample.fraction, alpha, minprop, min.node.size
-  # Non-tuned variables: num.trees (always 500 because we're computationally constrained), 
+  # Now we'll tune our model by setting up a grid over 4 different variables we want to tune
+  # Tuned variables: mtry, sample.fraction, min.node.size, num.trees
+  # Non-tuned variables:  
   #   class.weights (always use them to upsample non-dominant class), replace (always sample without replacement),
-  #   splitrule (always use 'maxstat' split rule)
+  #   splitrule (always use 'hellinger' split rule)
   mtry_vec <- seq(from = floor(sqrt(length(predictor.variable.names))) - 3,
                   to = floor(length(predictor.variable.names) / 1.75),
                   by = 2)
@@ -136,23 +122,6 @@ for(counter in seq_along(biome_shortnames)) {
                          min.node.size = c(1, 3, 5, 10, 25, 50),
                          class.wgts = TRUE,
                          iter = 1:10)
-  
-  # Here's what we're really after, since we already have a tuned model and spatially cross-validated performance/skill metrics
-  
-  # Tried a few different ways of parallelizing; looks like leaning on the internal-to-{ranger} approach is best
-  
-  # cl <- parallel::makeCluster(parallel::detectCores() - 1)
-  # doParallel::registerDoParallel(cl)
-  # parallel::clusterExport(cl, c("spatial_cv_tune", "predictor.variable.names", "folds", "tune.df"))
-  # 
-  # out <- pblapply(X = (1:nrow(tune.df)), cl = cl,
-  #                 FUN = spatial_cv_tune,
-  #                 predictor.variable.names = predictor.variable.names,
-  #                 folds = folds,
-  #                 tune.df = tune.df,
-  #                 num.threads = 1)
-  # 
-  # parallel::stopCluster(cl = cl)
   
   out <- pblapply(X = (1:nrow(tune.df)), 
                   FUN = spatial_cv_tune, 

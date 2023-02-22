@@ -1,11 +1,30 @@
 # Final co-variate descriptions
 
+# Color palette
+col_pal <- tribble(~type, ~hexcode, ~col_desc,
+                   "fire", "#D81B60", "red",
+                   "weather", "#1E88E5", "blue",
+                   "interacting", "#FFC107", "yellow",
+                   "topography", "#004D40", "dark green",
+                   "human", "#19DABE", "minty green",
+                   "fuel", "#3D9221", "green") 
+
+write.csv(x = col_pal, file = here::here("data", "out", "driver-color-palette.csv"), 
+          row.names = FALSE)
+
 human_drivers <- 
   data.frame(type = "human", 
-             variable = c("npl", "concurrent_fires", "caltrans_road_density_mpha"),
-             source = c("NIFC", "Derived for this paper using FIRED", "CalTrans [CRS Functional Classification]"),
+             variable = c("npl", 
+                          # "concurrent_fires", 
+                          "short_concurrent_fires", 
+                          "caltrans_road_density_mpha"),
+             source = c("NIFC", 
+                        # "Derived for this paper using FIRED", 
+                        "Derived for this paper using FPA-FOD database from Short (2022)", 
+                        "CalTrans [CRS Functional Classification]"),
              calculation = c("National Preparedness Level on the day of the fire/day combination",
-                             "Number of FIRED events also active on the day of the fire/day combination",
+                             # "Number of FIRED events also active on the day of the fire/day combination",
+                             "Number of FPA-FOD events also active on the day of the fire/day combination",
                              "Percentile of mean road density (meters per hectare) within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"))
 
 topography_drivers <- 
@@ -76,18 +95,22 @@ weather_drivers <-
 fuel_drivers <- 
   data.frame(type = "fuel",
              variable = c("ndvi", "veg_structure_rumple", 
-                          "trees_tm01", "shrubs_tm01", "grass_forb_herb_tm01", "barren_tm01", "landcover_diversity_tm01",
+                          "trees_tm01", "shrubs_tm01", "grass_forb_herb_tm01", "barren_tm01", 
+                          "landcover_diversity_tm01",
                           "fire_high_tm01_tm05", "fire_high_tm06_tm10",
                           "fire_not_high_tm01_tm05", "fire_not_high_tm06_tm10",
-                          "clearcut_harvest_othermech_tm01_tm05", "clearcut_harvest_othermech_tm06_tm10",
-                          "fuel_trt_tm01_tm05", "fuel_trt_tm06_tm10",
-                          "insect_disease_high_tm01_tm05", "insect_disease_high_tm06_tm10",
-                          "insect_disease_not_high_tm01_tm05", "insect_disease_not_high_tm06_tm10"),
+                          # "clearcut_harvest_othermech_tm01_tm05", "clearcut_harvest_othermech_tm06_tm10",
+                          # "fuel_trt_tm01_tm05", "fuel_trt_tm06_tm10",
+                          "insect_disease_tm01_tm10"
+                          # "insect_disease_tm01_tm05", "insect_disease_tm06_tm10"
+                          # "insect_disease_high_tm01_tm05", "insect_disease_high_tm06_tm10",
+                          # "insect_disease_not_high_tm01_tm05", "insect_disease_not_high_tm06_tm10"
+             ),
              source = c("Spatial summary and percentiles derived for this paper using Landsat surface reflectance", 
-                        "Calculation and percentiles derived for this paper using Landsat surface reflectance",
+                        "Calculation and percentiles derived for this paper using Landsat surface reflectance-derived NDVI",
                         rep("Aggregated from US Forest Service Landscape Change Monitoring System (LCMS) Landcover and percentiles derived for this paper", times = 4),
                         "Calculation and percentiles derived for this paper using US Forest Service LCMS Landcover",
-                        rep("Aggregated from DOI/USGS LANDFIRE Annual Disturbance and percentiles derived for this paper", times = 12)),
+                        rep("Aggregated from DOI/USGS LANDFIRE Annual Disturbance and percentiles derived for this paper", times = 5)),
              calculation = c("First, a per-pixel normalized difference vegetation index (NDVI; using near infrared and red surface reflectance) is calculated as a temporal mean across previous growing season (between day of year 152 to day of year 258 in the year before the fire) after cloud masking and applying Landsat Collection 2 scale/offset values. Then, the percentile of spatial mean NDVI within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire).",
                              "Percentile of rumple index (calculated using algorithm of Jenness (2004)) of NDVI values (multiplied by 100 for convenience) within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
                              "Percentile of proportional cover of LCMS 'trees' landcover type one year prior to fire event within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
@@ -100,14 +123,18 @@ fuel_drivers <-
                              "Percentile of proportional cover of LANDFIRE high-severity fire occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
                              "Percentile of proportional cover of LANDFIRE fire disturbance that wasn't high-severity occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
                              "Percentile of proportional cover of LANDFIRE fire disturbance that wasn't high-severity occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
-                             "Percentile of proportional cover of LANDFIRE clearcut, harvest, or other mechanical disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
-                             "Percentile of proportional cover of LANDFIRE clearcut, harvest, or other mechanical disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
-                             "Percentile of proportional cover of LANDFIRE thinning or mastication disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
-                             "Percentile of proportional cover of LANDFIRE thinning or mastication disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
-                             "Percentile of proportional cover of LANDFIRE high-severity insect/disease disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
-                             "Percentile of proportional cover of LANDFIRE high-severity insect/disease disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
-                             "Percentile of proportional cover of LANDFIRE insect/disease disturbance that wasn't high-severity occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
-                             "Percentile of proportional cover of LANDFIRE insect/disease disturbance that wasn't high-severity occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"))
+                             # "Percentile of proportional cover of LANDFIRE clearcut, harvest, or other mechanical disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+                             # "Percentile of proportional cover of LANDFIRE clearcut, harvest, or other mechanical disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+                             # "Percentile of proportional cover of LANDFIRE thinning or mastication disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+                             # "Percentile of proportional cover of LANDFIRE thinning or mastication disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+                             "Percentile of proportional cover of LANDFIRE insect/disease disturbance occurring 1 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"
+                             # "Percentile of proportional cover of LANDFIRE insect/disease disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+                             # "Percentile of proportional cover of LANDFIRE insect/disease disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"
+                             # "Percentile of proportional cover of LANDFIRE high-severity insect/disease disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+                             # "Percentile of proportional cover of LANDFIRE high-severity insect/disease disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+                             # "Percentile of proportional cover of LANDFIRE insect/disease disturbance that wasn't high-severity occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+                             # "Percentile of proportional cover of LANDFIRE insect/disease disturbance that wasn't high-severity occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"
+             ))
 
 interacting_drivers <- 
   data.frame(type = "interacting",
@@ -125,11 +152,15 @@ fire_drivers <-
              calculation = "Square root of daily area of increase at fire's previous time step")
 
 out <- rbind(human_drivers,
-      topography_drivers,
-      weather_drivers,
-      fuel_drivers,
-      interacting_drivers,
-      fire_drivers)
+             topography_drivers,
+             weather_drivers,
+             fuel_drivers,
+             interacting_drivers,
+             fire_drivers)
+
+out <-
+  out %>% 
+  dplyr::left_join(col_pal)
 
 write.csv(x = out, file = "data/out/drivers/driver-descriptions.csv", row.names = FALSE)
 

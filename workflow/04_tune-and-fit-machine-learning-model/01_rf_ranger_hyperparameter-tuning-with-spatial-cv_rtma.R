@@ -8,8 +8,17 @@ library(data.table)
 library(ranger)
 library(PRROC)
 library(ggplot2)
+library(here)
 # library(mlr3measures)
 # library(MLmetrics)
+
+local_out_dir <- here::here("data", "out", "rf", "tuning", lubridate::today())
+dir.create(local_out_dir, recursive = TRUE, showWarnings = FALSE)
+
+latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
+                        decreasing = TRUE)[1]
+
+latest_ard_dir <- here::here("data", "ard", latest_ard_date)
 
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 biome_shortnames <- c("tcf", "mfws", "dxs")
@@ -82,10 +91,10 @@ spatial_cv_tune <- function(i, predictor.variable.names, folds, tune.df, num.thr
 for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
   
-  data <- read.csv(paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  data <- read.csv(paste0(latest_ard_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
   data$ewe <- factor(data$ewe, levels = c(1, 0))
   
-  data$concurrent_fires <- as.numeric(data$concurrent_fires)
+  data$short_concurrent_fires <- as.numeric(data$short_concurrent_fires)
   predictor.variable.names <- names(data)[names(data) %in% full_predictor_variable_names]
   
   print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
@@ -117,7 +126,7 @@ for(counter in seq_along(biome_shortnames)) {
                   by = 2)
   
   tune.df <- expand.grid(mtry = mtry_vec, 
-                         num.trees = c(100, 250, 500, 1000), 
+                         num.trees = c(1000), 
                          sample.fraction = c(0.5, (1 - 1/exp(1)), 0.7, 0.8),
                          min.node.size = c(1, 3, 5, 10, 25, 50),
                          class.wgts = TRUE,
@@ -132,6 +141,6 @@ for(counter in seq_along(biome_shortnames)) {
   
   out_all <- data.table::rbindlist(out)
   
-  data.table::fwrite(x = out_all, file = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, ".csv"))
+  data.table::fwrite(x = out_all, file = paste0(local_out_dir, "/rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, ".csv"))
 }
 

@@ -1,69 +1,111 @@
-// Some other drivers to consider
-// var  rtma = ee.ImageCollection("NOAA/NWS/RTMA");
-// var landfire = ee.ImageCollection("LANDFIRE/Vegetation/EVT/v1_4_0"),
-// npp = ee.ImageCollection("UMT/NTSG/v2/LANDSAT/NPP");
-
-var era5 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY"),
-    fired_events = ee.FeatureCollection("users/mkoontz/megafired-california/fired_events_ca_ewe_rank"),
-    landforms_10m_ned = ee.Image("CSP/ERGo/1_0/US/landforms"),
-    friction = ee.Image("Oxford/MAP/friction_surface_2019"),
-    lcms = ee.ImageCollection("USFS/GTAC/LCMS/v2020-5"),
-    gridmet_drought = ee.ImageCollection("GRIDMET/DROUGHT"),
-    gridmet = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET"),
-    tiger = ee.FeatureCollection("TIGER/2018/States"),
-    grip4_north_america = ee.FeatureCollection("projects/sat-io/open-datasets/GRIP4/North-America"),
-    dem10_3dep = ee.Image("USGS/3DEP/10m"),
-    veg_struct_rumple = ee.ImageCollection("users/mkoontz/veg-structure-rumple-california"),
-    prefire_ndvi_composites = ee.ImageCollection("users/mkoontz/ndvi-summer-california-composite"),
-    sa_pa_10m_3dep = ee.Image("users/mkoontz/megafired-california/terrain-rumple-index_10m-3dep"),
-    sa_pa_ndvi = ee.ImageCollection("users/mkoontz/veg-structure-rumple-california"),
-    fired_daily_v1 = ee.FeatureCollection("users/mkoontz/megafired-california/fired_daily_ca_ewe_rank"),
-    fired_daily_biggest_poly = ee.FeatureCollection("users/mkoontz/megafired-california/fired_daily_ca_epsg3310_2003-2020_biggest-poly"),
-    fire_independent_polygons_tcf = ee.FeatureCollection("users/mkoontz/megafired-california/fire-independent-polygons_tcf_ca_v2"),
-    fire_independent_polygons_tgss = ee.FeatureCollection("users/mkoontz/megafired-california/fire-independent-polygons_tgss_ca_v2"),
-    fire_independent_polygons_mfws = ee.FeatureCollection("users/mkoontz/megafired-california/fire-independent-polygons_mfws_ca_v2"),
-    fire_independent_polygons_dxs = ee.FeatureCollection("users/mkoontz/megafired-california/fire-independent-polygons_dxs_ca_v2"),
-    rtma = ee.ImageCollection("NOAA/NWS/RTMA"),
-    fired_daily = ee.FeatureCollection("users/mkoontz/megafired-california/fired_daily_ca_epsg3310_2003-2020"),
-    fi_fired_dxs_01 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_01"),
-    fi_fired_dxs_02 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_02"),
-    fi_fired_dxs_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_03"),
-    fi_fired_dxs_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_04"),
-    fi_fired_dxs_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_05"),
-    fi_fired_mfws_01 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_01"),
-    fi_fired_mfws_02 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_02"),
-    fi_fired_mfws_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_03"),
-    fi_fired_mfws_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_04"),
-    fi_fired_mfws_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_05"),
-    fi_fired_tcf_01 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_01"),
-    fi_fired_tcf_02 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_02"),
-    fi_fired_tcf_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_03"),
-    fi_fired_tcf_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_04"),
-    fi_fired_tcf_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_05"),
-    fi_fired_tgss_01 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_01"),
-    fi_fired_tgss_02 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_02"),
-    fi_fired_tgss_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_03"),
-    fi_fired_tgss_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_04"),
-    fi_fired_tgss_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_05");
-    
-// var fired_daily_subgeo = ee.FeatureCollection("users/mkoontz/megafired-california/fired_daily_ca_epsg3310_2003-2020_subgeo");
-// var fired_daily_random_tcf_v3_0001_0200 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v3_0001-0200"),
-    // fired_daily_random_tcf_v3_0201_0400 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v3_0201-0400"),
-    // fired_daily_random_tcf_v3_0401_0600 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v3_0401-0600"),
-    // fired_daily_random_tcf_v3_0601_0800 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v3_0601-0800"),
-    // fired_daily_random_tcf_v3_0801_1000 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v3_0801-1000");
-// var fire_independent_polygons_tcf = ee.FeatureCollection("users/mkoontz/megafired-california/fire-independent-polygons_tcf_ca_v2"),
-//     fire_independent_polygons_tgss = ee.FeatureCollection("users/mkoontz/megafired-california/fire-independent-polygons_tgss_ca_v2"),
-//     fire_independent_polygons_mfws = ee.FeatureCollection("users/mkoontz/megafired-california/fire-independent-polygons_mfws_ca_v2"),
-//     fire_independent_polygons_dxs = ee.FeatureCollection("users/mkoontz/megafired-california/fire-independent-polygons_dxs_ca_v2");
-
-
 // Purpose: Get fuel, weather, and topography data for each event in California FIRED database
+// General vector files delineating study area (California and RESOLVE biomes)
+var tiger = ee.FeatureCollection("TIGER/2018/States");
+var resolve = ee.FeatureCollection("RESOLVE/ECOREGIONS/2017");
 
+// Weather/climate variables
+var era5 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
+var rtma = ee.ImageCollection("NOAA/NWS/RTMA");
+var gridmet_drought = ee.ImageCollection("GRIDMET/DROUGHT");
+var gridmet = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET");
+
+// Topography variables
+var dem10_3dep = ee.Image("USGS/3DEP/10m");
+var landforms_10m_ned = ee.Image("CSP/ERGo/1_0/US/landforms");
+var sa_pa_10m_3dep = ee.Image("users/mkoontz/megafired-california/terrain-rumple-index_10m-3dep");
+
+// Some of the fuel variables
+var lcms = ee.ImageCollection("USFS/GTAC/LCMS/v2020-5");
+var veg_struct_rumple = ee.ImageCollection("users/mkoontz/veg-structure-rumple-california");
+var prefire_ndvi_composites = ee.ImageCollection("users/mkoontz/ndvi-summer-california-composite");
+var sa_pa_ndvi = ee.ImageCollection("users/mkoontz/veg-structure-rumple-california");
+
+// Roads variables
+var grip4_north_america = ee.FeatureCollection("projects/sat-io/open-datasets/GRIP4/North-America");
+var tiger_roads = ee.FeatureCollection("TIGER/2016/Roads");
+
+// FIRED events
+var fired_events = ee.FeatureCollection("users/mkoontz/megafired-california/fired_events_ca_ewe_rank");
+// var fired_daily_v1 = ee.FeatureCollection("users/mkoontz/megafired-california/fired_daily_ca_ewe_rank");
+var fired_daily_biggest_poly = ee.FeatureCollection("users/mkoontz/megafired-california/fired_daily_ca_epsg3310_2003-2020_biggest-poly");
+var fired_daily = ee.FeatureCollection("users/mkoontz/megafired-california/fired_daily_ca_epsg3310_2003-2020");
+
+// FIRED events redistributed to fire-independent locations
+var fi_fired_dxs_01 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_01");
+var fi_fired_dxs_02 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_02");
+var fi_fired_dxs_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_03");
+var fi_fired_dxs_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_04");
+var fi_fired_dxs_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_dxs_v4_05");
+var fi_fired_mfws_01 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_01");
+var fi_fired_mfws_02 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_02");
+var fi_fired_mfws_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_03");
+var fi_fired_mfws_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_04");
+var fi_fired_mfws_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_mfws_v4_05");
+var fi_fired_tcf_01 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_01");
+var fi_fired_tcf_02 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_02");
+var fi_fired_tcf_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_03");
+var fi_fired_tcf_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_04");
+var fi_fired_tcf_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tcf_v4_05");
+var fi_fired_tgss_01 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_01");
+var fi_fired_tgss_02 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_02");
+var fi_fired_tgss_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_03");
+var fi_fired_tgss_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_04");
+var fi_fired_tgss_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_05");
+
+// not used, in the end
+var friction = ee.Image("Oxford/MAP/friction_surface_2019");
+    
 // Projection we'll work in (California Albers) for consistency in reducer outputs
 var proj = ee.Projection("EPSG:3310");
 var ca = ee.Feature(tiger.filterMetadata('NAME', 'equals', 'California').first());
 var export_geo = ca.geometry().buffer(50000);
+
+var years = ee.List.sequence(2011, 2020).map(function(i) {return ee.String(ee.Number(i).toInt())});
+
+var tcf = 
+ee.Feature(
+  resolve
+.filterBounds(ca.geometry())
+.filterMetadata('BIOME_NAME', 'equals', 'Temperate Conifer Forests')
+.map(function(ftr) {
+  return ftr.intersection(ca.geometry());
+}).union().first().set({id: 'tcf', biome_fullname: 'Temperate Conifer Forests', biome_shortname: 'tcf'}));
+Map.addLayer(tcf, {color: 'DarkCyan'}, 'Temperate Conifer Forests biome');
+
+var mfws = 
+ee.Feature(
+  resolve
+.filterBounds(ca.geometry())
+.filterMetadata('BIOME_NAME', 'equals', 'Mediterranean Forests, Woodlands & Scrub')
+.map(function(ftr) {
+  return ftr.intersection(ca.geometry());
+}).union().first().set({id: 'mfws', biome_fullname: 'Mediterranean Forests, Woodlands & Scrub', biome_shortname: 'mfws'}));
+
+var tgss = 
+ee.Feature(resolve
+.filterBounds(ca.geometry())
+.filterMetadata('BIOME_NAME', 'equals', 'Temperate Grasslands, Savannas & Shrublands')
+.map(function(ftr) {
+  return ftr.intersection(ca.geometry());
+}).union().first().set({id: 'tgss', biome_fullname: 'Temperate Grasslands, Savannas & Shrublands', biome_shortname: 'tgss'}));
+
+var dxs = 
+ee.Feature(
+resolve
+.filterBounds(ca.geometry())
+.filterMetadata('BIOME_NAME', 'equals', 'Deserts & Xeric Shrublands')
+.map(function(ftr) {
+  return ftr.intersection(ca.geometry());
+}).union().first().set({id: 'dxs', biome_fullname: 'Deserts & Xeric Shrublands', biome_shortname: 'dxs'}));
+
+var ca_biomes = ee.FeatureCollection(years.map(function(yr) {
+  var out = ee.FeatureCollection(
+    [tcf.set({date: ee.String(yr).cat('-01-01')}), mfws.set({date: ee.String(yr).cat('-01-01')}), 
+     tgss.set({date: ee.String(yr).cat('-01-01')}), dxs.set({date: ee.String(yr).cat('-01-01')})]);
+  return out;
+  })).flatten();
+  
+var ca_biomes_static = ca_biomes.filterMetadata('date', 'equals', '2020-01-01');
 
 var era5_export_scale = 11132;
 var dem10_export_scale = 10.2;
@@ -665,6 +707,7 @@ var extract_daily_static_drivers = function(ftr) {
     bestEffort: true
   });
   
+  // var road_lengths_within_fire_m = tiger_roads
   var road_lengths_within_fire_m = grip4_north_america
     .filterBounds(ftr.geometry())
     .map(function(road_ftr) {
@@ -733,6 +776,36 @@ var extract_daily_static_drivers = function(ftr) {
 
   return(ee.Feature(null, out));
 };
+
+// Extract road data
+// Easier to extract this separately from other static drivers; 
+// Could conceivably change in the future (road data each year, perhaps?
+// Different, better road data source like specific USFS roads or timber
+// company roads?)
+var extract_daily_roads_drivers = function(ftr) {
+
+var road_lengths_within_fire_m = tiger_roads
+    .filterBounds(ftr.geometry())
+    .map(function(road_ftr) {
+      var roads_within_fire = road_ftr
+      .intersection(ftr.geometry(), 100); // max error of 100 m
+      var out_dict = ee.Dictionary().set('length', roads_within_fire.length());
+      var out = ee.Feature(null, out_dict);
+      return(out);
+    });
+    
+  var total_road_length_m = road_lengths_within_fire_m.aggregate_sum('length');
+  var total_road_lengths_dict = ee.Dictionary().set('road_length_m', total_road_length_m);
+  
+  var out = ftr
+  .set(total_road_lengths_dict)
+  .toDictionary();
+    
+  return(ee.Feature(null, out));
+
+};
+    
+    
 
 // Extract another set of daily-scale drivers
 var extract_daily_gridmet_drivers = function(ftr) {
@@ -912,8 +985,10 @@ var fired_daily_biggest_poly_for_rtma =
 var fired_rtma_drivers = rtma_nodata_fc.merge(fired_daily_biggest_poly_for_rtma.filterDate('2011-01-01', '2020-12-31').map(extract_rtma_megafire_drivers).flatten());
 Export.table.toDrive({collection: fired_rtma_drivers, folder: 'ee', description: 'FIRED-rtma-drivers_california_biggest-poly'});
 print(extract_rtma_megafire_drivers(fired_daily_biggest_poly_for_rtma.filterDate('2011-01-01', '2020-12-31').first()));
+
 // Make sure to add a row of "missing" data so that all variables are represented in the final product!
 // https://groups.google.com/g/google-earth-engine-developers/c/05xRvuLzyzI/m/3SEUAjxfCgAJ?pli=1
+// Extra row of "missing" data for static drivers
 var static_driver_bands = 
     ee.List(['surf_area', 'proj_area', 'road_length_m', 'friction', 'friction_walking_only', 'elevation', 'id', 'did', 'date', 'samp_id'])
     .cat(csp_ergo_landforms_names_to);
@@ -922,8 +997,15 @@ var static_drivers_missing = ee.List.repeat(-999, static_driver_bands.size());
 var static_drivers_nodata = ee.Dictionary.fromLists(static_driver_bands, static_drivers_missing);
 var static_drivers_nodata_fc = ee.FeatureCollection(ee.Feature(null, static_drivers_nodata));
 
-// Export daily drivers that we consider annually fluctuating
-// (e.g., LCMS landcover, LCMS change, NDVI, NDVI rumple index)
+// Extra row of "missing" data for roads drivers
+var roads_driver_bands = 
+    ee.List(['road_length_m', 'id', 'did', 'date', 'samp_id']);
+
+var roads_drivers_missing = ee.List.repeat(-999, roads_driver_bands.size());
+var roads_drivers_nodata = ee.Dictionary.fromLists(roads_driver_bands, roads_drivers_missing);
+var roads_drivers_nodata_fc = ee.FeatureCollection(ee.Feature(null, roads_drivers_nodata));
+
+// Extra row of "missing" data for flucutating drivers
 var fluctuating_drivers_bands = 
     ee.List(['ndvi_surf_area', 'ndvi_proj_area', 'ndvi', 'id', 'did', 'date', 'samp_id'])
     .cat(lcms_landcover_names_to.map(function(str) {return(ee.String(str).cat('_tm00'));}))
@@ -940,80 +1022,44 @@ var fluctuating_drivers_missing = ee.List.repeat(-999, fluctuating_drivers_bands
 var fluctuating_drivers_nodata = ee.Dictionary.fromLists(fluctuating_drivers_bands, fluctuating_drivers_missing);
 var fluctuating_drivers_nodata_fc = ee.FeatureCollection(ee.Feature(null, fluctuating_drivers_nodata));
 
-// ############### EXPORT COVARIATE DATA FOR EACH DAILY AREA OF INCREASE
+// ############### EXPORT COVARIATE DATA FOR EACH DAILY AREA OF INCREASE ############
 var fluc_drivers_version = 'v5';
-var static_drivers_version = 'v4';
+var static_drivers_version = 'v4'; // v5 uses TIGER census roads data rather than GRIP4 
+var roads_drivers_version = 'v1';
 
 // Export daily drivers that we consider 'static' (e.g., 
 // landform,  elevation, terrain rumple index, road lengths, friction)
 var fired_daily_static_drivers = static_drivers_nodata_fc.merge(fired_daily_working.map(extract_daily_static_drivers));
 Export.table.toDrive({collection: fired_daily_static_drivers, folder: 'ee', description: 'FIRED-daily-static-drivers_california_' + static_drivers_version});
 
+var fired_daily_roads_drivers = roads_drivers_nodata_fc.merge(fired_daily_working.map(extract_daily_roads_drivers));
+Export.table.toDrive({collection: fired_daily_roads_drivers, folder: 'ee', description: 'FIRED-daily-roads-drivers_california_' + roads_drivers_version});
+
+print(fired_daily_roads_drivers.limit(50));
+
 var fired_daily_fluctuating_drivers = fluctuating_drivers_nodata_fc.merge(fired_daily_working.map(extract_daily_fluctuating_drivers));
 Export.table.toDrive({collection: fired_daily_fluctuating_drivers, folder: 'ee', description: 'FIRED-daily-fluctuating-drivers_california_' + fluc_drivers_version});
 
+// ############### EXPORT COVARIATE DATA FOR EACH OF THE 4 BIOMES ##################
+
+// Export daily drivers that we consider 'static' (e.g., 
+// landform,  elevation, terrain rumple index, road lengths, friction)
+print(ca_biomes);
+print(ca_biomes_static);
+
+var resolve_static_drivers = static_drivers_nodata_fc.merge(ca_biomes_static.map(extract_daily_static_drivers));
+Export.table.toDrive({collection: resolve_static_drivers, folder: 'ee', description: 'resolve-biomes-static-drivers_california_' + static_drivers_version});
+
+var resolve_roads_drivers = roads_drivers_nodata_fc.merge(ca_biomes_static.map(extract_daily_roads_drivers));
+Export.table.toDrive({collection: resolve_roads_drivers, folder: 'ee', description: 'resolve-biomes-daily-roads-drivers_california_' + roads_drivers_version});
+
+var resolve_fluctuating_drivers = fluctuating_drivers_nodata_fc.merge(ca_biomes.map(extract_daily_fluctuating_drivers));
+Export.table.toDrive({collection: resolve_fluctuating_drivers, folder: 'ee', description: 'resolve-biomes-fluctuating-drivers_california_' + fluc_drivers_version});
+
+
+
 // ############### Fire independent polygons
-// Attempt 1 to get driver values at random locations within the biome, (i.e., independent of fire)
-// var fired_daily_fire_independent_static_drivers_tcf_0001_0200 = static_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0001_0200.map(extract_daily_static_drivers));
-// var fired_daily_fire_independent_static_drivers_tcf_0201_0400 = static_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0201_0400.map(extract_daily_static_drivers));
-// var fired_daily_fire_independent_static_drivers_tcf_0401_0600 = static_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0401_0600.map(extract_daily_static_drivers));
-// var fired_daily_fire_independent_static_drivers_tcf_0601_0800 = static_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0601_0800.map(extract_daily_static_drivers));
-// var fired_daily_fire_independent_static_drivers_tcf_0801_1000 = static_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0801_1000.map(extract_daily_static_drivers));
-
-// Export.table.toDrive({collection: fired_daily_fire_independent_static_drivers_tcf_0001_0200, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0001-0200-static-drivers_california'});
-// Export.table.toDrive({collection: fired_daily_fire_independent_static_drivers_tcf_0201_0400, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0201-0400-static-drivers_california'});
-// Export.table.toDrive({collection: fired_daily_fire_independent_static_drivers_tcf_0401_0600, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0401-0600-static-drivers_california'});
-// Export.table.toDrive({collection: fired_daily_fire_independent_static_drivers_tcf_0601_0800, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0601-0800-static-drivers_california'});
-// Export.table.toDrive({collection: fired_daily_fire_independent_static_drivers_tcf_0801_1000, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0801-1000-static-drivers_california'});
-
-// var fired_daily_fire_independent_fluctuating_drivers_tcf_0001_0200 = fluctuating_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0001_0200.map(extract_daily_fluctuating_drivers));
-// var fired_daily_fire_independent_fluctuating_drivers_tcf_0201_0400 = fluctuating_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0201_0400.map(extract_daily_fluctuating_drivers));
-// var fired_daily_fire_independent_fluctuating_drivers_tcf_0401_0600 = fluctuating_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0401_0600.map(extract_daily_fluctuating_drivers));
-// var fired_daily_fire_independent_fluctuating_drivers_tcf_0601_0800 = fluctuating_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0601_0800.map(extract_daily_fluctuating_drivers));
-// var fired_daily_fire_independent_fluctuating_drivers_tcf_0801_1000 = fluctuating_drivers_nodata_fc.merge(fired_daily_random_tcf_v3_0801_1000.map(extract_daily_fluctuating_drivers));
-
-// Export.table.toDrive({collection: fired_daily_fire_independent_fluctuating_drivers_tcf_0001_0200, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0001-0200-fluctuating-drivers_california'});
-// Export.table.toDrive({collection: fired_daily_fire_independent_fluctuating_drivers_tcf_0201_0400, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0201-0400-fluctuating-drivers_california'});
-// Export.table.toDrive({collection: fired_daily_fire_independent_fluctuating_drivers_tcf_0401_0600, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0401-0600-fluctuating-drivers_california'});
-// Export.table.toDrive({collection: fired_daily_fire_independent_fluctuating_drivers_tcf_0601_0800, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0601-0800-fluctuating-drivers_california'});
-// Export.table.toDrive({collection: fired_daily_fire_independent_fluctuating_drivers_tcf_0801_1000, folder: 'ee', description: 'FIRED-daily-fire-independent-tcf-0801-1000-fluctuating-drivers_california'});
-
-// Attempt 2 to get drivers independent of fire (simpler and fewer polygons)
-// Dates get imported in local time with Earth Engine so we filter to 8AM on January 1, 2020 to get just the 2020 polygons
-// var fire_independent_polygons_tcf_2020 = fire_independent_polygons_tcf.filter(ee.Filter.eq('date', 1577865600000));
-// var fire_independent_polygons_tgss_2020 = fire_independent_polygons_tgss.filter(ee.Filter.eq('date', 1577865600000));
-// var fire_independent_polygons_mfws_2020 = fire_independent_polygons_mfws.filter(ee.Filter.eq('date', 1577865600000));
-// var fire_independent_polygons_dxs_2020 = fire_independent_polygons_dxs.filter(ee.Filter.eq('date', 1577865600000));
-
-// // For static drivers, the year doesn't matter so we can just subset to the fire-independent polygons from
-// // a single year. We'll use 2020, but we could have used any year, as the set of polygons for each year are the same
-// var fire_independent_static_drivers_tcf = static_drivers_nodata_fc.merge(fire_independent_polygons_tcf_2020.map(extract_daily_static_drivers));
-// Export.table.toDrive({collection: fire_independent_static_drivers_tcf, folder: 'ee', description: 'fire-independent-tcf-static-drivers_california'});
-
-// var fire_independent_static_drivers_tgss = static_drivers_nodata_fc.merge(fire_independent_polygons_tgss_2020.map(extract_daily_static_drivers));
-// Export.table.toDrive({collection: fire_independent_static_drivers_tgss, folder: 'ee', description: 'fire-independent-tgss-static-drivers_california'});
-
-// var fire_independent_static_drivers_mfws = static_drivers_nodata_fc.merge(fire_independent_polygons_mfws_2020.map(extract_daily_static_drivers));
-// Export.table.toDrive({collection: fire_independent_static_drivers_mfws, folder: 'ee', description: 'fire-independent-mfws-static-drivers_california'});
-
-// var fire_independent_static_drivers_dxs = static_drivers_nodata_fc.merge(fire_independent_polygons_dxs_2020.map(extract_daily_static_drivers));
-// Export.table.toDrive({collection: fire_independent_static_drivers_dxs, folder: 'ee', description: 'fire-independent-dxs-static-drivers_california'});
-
-// // For the drivers that fluctuate year to year, it's important that we use the year information and therefore we need all 1000 sample points and 10 polygon sizes at each of the 18 years
-// var fire_independent_fluctuating_drivers_tcf = fluctuating_drivers_nodata_fc.merge(fire_independent_polygons_tcf.map(extract_daily_fluctuating_drivers));
-// Export.table.toDrive({collection: fire_independent_fluctuating_drivers_tcf, folder: 'ee', description: 'fire-independent-tcf-fluctuating-drivers_california'});
-
-// var fire_independent_fluctuating_drivers_tgss = fluctuating_drivers_nodata_fc.merge(fire_independent_polygons_tgss.map(extract_daily_fluctuating_drivers));
-// Export.table.toDrive({collection: fire_independent_fluctuating_drivers_tgss, folder: 'ee', description: 'fire-independent-tgss-fluctuating-drivers_california'});
-
-// var fire_independent_fluctuating_drivers_mfws = fluctuating_drivers_nodata_fc.merge(fire_independent_polygons_mfws.map(extract_daily_fluctuating_drivers));
-// Export.table.toDrive({collection: fire_independent_fluctuating_drivers_mfws, folder: 'ee', description: 'fire-independent-mfws-fluctuating-drivers_california'});
-
-// var fire_independent_fluctuating_drivers_dxs = fluctuating_drivers_nodata_fc.merge(fire_independent_polygons_dxs.map(extract_daily_fluctuating_drivers));
-// Export.table.toDrive({collection: fire_independent_fluctuating_drivers_dxs, folder: 'ee', description: 'fire-independent-dxs-fluctuating-drivers_california'});
-
 // Version 4 to get drivers independent of fire (looks a lot like attempt 1 but with 500 random locations instead of 1000)
-
 // Version 5 uses last year's LCMS data instead of this year's LCMS data and only adjusts the fluctuating drivers
 // (that is, the v4 static drivers is still most up-to-date as of 2022-08-03)
 
@@ -1022,17 +1068,28 @@ var fi_fired_tcf_static_02 = static_drivers_nodata_fc.merge(fi_fired_tcf_02.map(
 var fi_fired_tcf_static_03 = static_drivers_nodata_fc.merge(fi_fired_tcf_03.map(extract_daily_static_drivers));
 var fi_fired_tcf_static_04 = static_drivers_nodata_fc.merge(fi_fired_tcf_04.map(extract_daily_static_drivers));
 var fi_fired_tcf_static_05 = static_drivers_nodata_fc.merge(fi_fired_tcf_05.map(extract_daily_static_drivers));
-var fi_fired_tcf_fluc_01 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_01.map(extract_daily_fluctuating_drivers));
-var fi_fired_tcf_fluc_02 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_02.map(extract_daily_fluctuating_drivers));
-var fi_fired_tcf_fluc_03 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_03.map(extract_daily_fluctuating_drivers));
-var fi_fired_tcf_fluc_04 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_04.map(extract_daily_fluctuating_drivers));
-var fi_fired_tcf_fluc_05 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_05.map(extract_daily_fluctuating_drivers));
-
 Export.table.toDrive({collection: fi_fired_tcf_static_01, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tcf_01'});
 Export.table.toDrive({collection: fi_fired_tcf_static_02, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tcf_02'});
 Export.table.toDrive({collection: fi_fired_tcf_static_03, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tcf_03'});
 Export.table.toDrive({collection: fi_fired_tcf_static_04, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tcf_04'});
 Export.table.toDrive({collection: fi_fired_tcf_static_05, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tcf_05'});
+
+var fi_fired_tcf_roads_01 = roads_drivers_nodata_fc.merge(fi_fired_tcf_01.map(extract_daily_roads_drivers));
+var fi_fired_tcf_roads_02 = roads_drivers_nodata_fc.merge(fi_fired_tcf_02.map(extract_daily_roads_drivers));
+var fi_fired_tcf_roads_03 = roads_drivers_nodata_fc.merge(fi_fired_tcf_03.map(extract_daily_roads_drivers));
+var fi_fired_tcf_roads_04 = roads_drivers_nodata_fc.merge(fi_fired_tcf_04.map(extract_daily_roads_drivers));
+var fi_fired_tcf_roads_05 = roads_drivers_nodata_fc.merge(fi_fired_tcf_05.map(extract_daily_roads_drivers));
+Export.table.toDrive({collection: fi_fired_tcf_roads_01, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tcf_01'});
+Export.table.toDrive({collection: fi_fired_tcf_roads_02, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tcf_02'});
+Export.table.toDrive({collection: fi_fired_tcf_roads_03, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tcf_03'});
+Export.table.toDrive({collection: fi_fired_tcf_roads_04, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tcf_04'});
+Export.table.toDrive({collection: fi_fired_tcf_roads_05, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tcf_05'});
+
+var fi_fired_tcf_fluc_01 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_01.map(extract_daily_fluctuating_drivers));
+var fi_fired_tcf_fluc_02 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_02.map(extract_daily_fluctuating_drivers));
+var fi_fired_tcf_fluc_03 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_03.map(extract_daily_fluctuating_drivers));
+var fi_fired_tcf_fluc_04 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_04.map(extract_daily_fluctuating_drivers));
+var fi_fired_tcf_fluc_05 = fluctuating_drivers_nodata_fc.merge(fi_fired_tcf_05.map(extract_daily_fluctuating_drivers));
 Export.table.toDrive({collection: fi_fired_tcf_fluc_01, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_tcf_01'});
 Export.table.toDrive({collection: fi_fired_tcf_fluc_02, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_tcf_02'});
 Export.table.toDrive({collection: fi_fired_tcf_fluc_03, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_tcf_03'});
@@ -1044,17 +1101,28 @@ var fi_fired_mfws_static_02 = static_drivers_nodata_fc.merge(fi_fired_mfws_02.ma
 var fi_fired_mfws_static_03 = static_drivers_nodata_fc.merge(fi_fired_mfws_03.map(extract_daily_static_drivers));
 var fi_fired_mfws_static_04 = static_drivers_nodata_fc.merge(fi_fired_mfws_04.map(extract_daily_static_drivers));
 var fi_fired_mfws_static_05 = static_drivers_nodata_fc.merge(fi_fired_mfws_05.map(extract_daily_static_drivers));
-var fi_fired_mfws_fluc_01 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_01.map(extract_daily_fluctuating_drivers));
-var fi_fired_mfws_fluc_02 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_02.map(extract_daily_fluctuating_drivers));
-var fi_fired_mfws_fluc_03 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_03.map(extract_daily_fluctuating_drivers));
-var fi_fired_mfws_fluc_04 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_04.map(extract_daily_fluctuating_drivers));
-var fi_fired_mfws_fluc_05 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_05.map(extract_daily_fluctuating_drivers));
-
 Export.table.toDrive({collection: fi_fired_mfws_static_01, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_mfws_01'});
 Export.table.toDrive({collection: fi_fired_mfws_static_02, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_mfws_02'});
 Export.table.toDrive({collection: fi_fired_mfws_static_03, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_mfws_03'});
 Export.table.toDrive({collection: fi_fired_mfws_static_04, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_mfws_04'});
 Export.table.toDrive({collection: fi_fired_mfws_static_05, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_mfws_05'});
+
+var fi_fired_mfws_roads_01 = roads_drivers_nodata_fc.merge(fi_fired_mfws_01.map(extract_daily_roads_drivers));
+var fi_fired_mfws_roads_02 = roads_drivers_nodata_fc.merge(fi_fired_mfws_02.map(extract_daily_roads_drivers));
+var fi_fired_mfws_roads_03 = roads_drivers_nodata_fc.merge(fi_fired_mfws_03.map(extract_daily_roads_drivers));
+var fi_fired_mfws_roads_04 = roads_drivers_nodata_fc.merge(fi_fired_mfws_04.map(extract_daily_roads_drivers));
+var fi_fired_mfws_roads_05 = roads_drivers_nodata_fc.merge(fi_fired_mfws_05.map(extract_daily_roads_drivers));
+Export.table.toDrive({collection: fi_fired_mfws_roads_01, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_mfws_01'});
+Export.table.toDrive({collection: fi_fired_mfws_roads_02, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_mfws_02'});
+Export.table.toDrive({collection: fi_fired_mfws_roads_03, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_mfws_03'});
+Export.table.toDrive({collection: fi_fired_mfws_roads_04, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_mfws_04'});
+Export.table.toDrive({collection: fi_fired_mfws_roads_05, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_mfws_05'});
+
+var fi_fired_mfws_fluc_01 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_01.map(extract_daily_fluctuating_drivers));
+var fi_fired_mfws_fluc_02 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_02.map(extract_daily_fluctuating_drivers));
+var fi_fired_mfws_fluc_03 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_03.map(extract_daily_fluctuating_drivers));
+var fi_fired_mfws_fluc_04 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_04.map(extract_daily_fluctuating_drivers));
+var fi_fired_mfws_fluc_05 = fluctuating_drivers_nodata_fc.merge(fi_fired_mfws_05.map(extract_daily_fluctuating_drivers));
 Export.table.toDrive({collection: fi_fired_mfws_fluc_01, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_mfws_01'});
 Export.table.toDrive({collection: fi_fired_mfws_fluc_02, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_mfws_02'});
 Export.table.toDrive({collection: fi_fired_mfws_fluc_03, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_mfws_03'});
@@ -1066,17 +1134,28 @@ var fi_fired_tgss_static_02 = static_drivers_nodata_fc.merge(fi_fired_tgss_02.ma
 var fi_fired_tgss_static_03 = static_drivers_nodata_fc.merge(fi_fired_tgss_03.map(extract_daily_static_drivers));
 var fi_fired_tgss_static_04 = static_drivers_nodata_fc.merge(fi_fired_tgss_04.map(extract_daily_static_drivers));
 var fi_fired_tgss_static_05 = static_drivers_nodata_fc.merge(fi_fired_tgss_05.map(extract_daily_static_drivers));
-var fi_fired_tgss_fluc_01 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_01.map(extract_daily_fluctuating_drivers));
-var fi_fired_tgss_fluc_02 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_02.map(extract_daily_fluctuating_drivers));
-var fi_fired_tgss_fluc_03 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_03.map(extract_daily_fluctuating_drivers));
-var fi_fired_tgss_fluc_04 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_04.map(extract_daily_fluctuating_drivers));
-var fi_fired_tgss_fluc_05 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_05.map(extract_daily_fluctuating_drivers));
-
 Export.table.toDrive({collection: fi_fired_tgss_static_01, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tgss_01'});
 Export.table.toDrive({collection: fi_fired_tgss_static_02, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tgss_02'});
 Export.table.toDrive({collection: fi_fired_tgss_static_03, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tgss_03'});
 Export.table.toDrive({collection: fi_fired_tgss_static_04, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tgss_04'});
 Export.table.toDrive({collection: fi_fired_tgss_static_05, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_tgss_05'});
+
+var fi_fired_tgss_roads_01 = roads_drivers_nodata_fc.merge(fi_fired_tgss_01.map(extract_daily_roads_drivers));
+var fi_fired_tgss_roads_02 = roads_drivers_nodata_fc.merge(fi_fired_tgss_02.map(extract_daily_roads_drivers));
+var fi_fired_tgss_roads_03 = roads_drivers_nodata_fc.merge(fi_fired_tgss_03.map(extract_daily_roads_drivers));
+var fi_fired_tgss_roads_04 = roads_drivers_nodata_fc.merge(fi_fired_tgss_04.map(extract_daily_roads_drivers));
+var fi_fired_tgss_roads_05 = roads_drivers_nodata_fc.merge(fi_fired_tgss_05.map(extract_daily_roads_drivers));
+Export.table.toDrive({collection: fi_fired_tgss_roads_01, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tgss_01'});
+Export.table.toDrive({collection: fi_fired_tgss_roads_02, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tgss_02'});
+Export.table.toDrive({collection: fi_fired_tgss_roads_03, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tgss_03'});
+Export.table.toDrive({collection: fi_fired_tgss_roads_04, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tgss_04'});
+Export.table.toDrive({collection: fi_fired_tgss_roads_05, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_tgss_05'});
+
+var fi_fired_tgss_fluc_01 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_01.map(extract_daily_fluctuating_drivers));
+var fi_fired_tgss_fluc_02 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_02.map(extract_daily_fluctuating_drivers));
+var fi_fired_tgss_fluc_03 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_03.map(extract_daily_fluctuating_drivers));
+var fi_fired_tgss_fluc_04 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_04.map(extract_daily_fluctuating_drivers));
+var fi_fired_tgss_fluc_05 = fluctuating_drivers_nodata_fc.merge(fi_fired_tgss_05.map(extract_daily_fluctuating_drivers));
 Export.table.toDrive({collection: fi_fired_tgss_fluc_01, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_tgss_01'});
 Export.table.toDrive({collection: fi_fired_tgss_fluc_02, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_tgss_02'});
 Export.table.toDrive({collection: fi_fired_tgss_fluc_03, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_tgss_03'});
@@ -1088,17 +1167,28 @@ var fi_fired_dxs_static_02 = static_drivers_nodata_fc.merge(fi_fired_dxs_02.map(
 var fi_fired_dxs_static_03 = static_drivers_nodata_fc.merge(fi_fired_dxs_03.map(extract_daily_static_drivers));
 var fi_fired_dxs_static_04 = static_drivers_nodata_fc.merge(fi_fired_dxs_04.map(extract_daily_static_drivers));
 var fi_fired_dxs_static_05 = static_drivers_nodata_fc.merge(fi_fired_dxs_05.map(extract_daily_static_drivers));
-var fi_fired_dxs_fluc_01 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_01.map(extract_daily_fluctuating_drivers));
-var fi_fired_dxs_fluc_02 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_02.map(extract_daily_fluctuating_drivers));
-var fi_fired_dxs_fluc_03 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_03.map(extract_daily_fluctuating_drivers));
-var fi_fired_dxs_fluc_04 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_04.map(extract_daily_fluctuating_drivers));
-var fi_fired_dxs_fluc_05 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_05.map(extract_daily_fluctuating_drivers));
-
 Export.table.toDrive({collection: fi_fired_dxs_static_01, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_dxs_01'});
 Export.table.toDrive({collection: fi_fired_dxs_static_02, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_dxs_02'});
 Export.table.toDrive({collection: fi_fired_dxs_static_03, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_dxs_03'});
 Export.table.toDrive({collection: fi_fired_dxs_static_04, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_dxs_04'});
 Export.table.toDrive({collection: fi_fired_dxs_static_05, folder: 'ee', description: 'fire-independent-fired_static_' + static_drivers_version + '_dxs_05'});
+
+var fi_fired_dxs_roads_01 = roads_drivers_nodata_fc.merge(fi_fired_dxs_01.map(extract_daily_roads_drivers));
+var fi_fired_dxs_roads_02 = roads_drivers_nodata_fc.merge(fi_fired_dxs_02.map(extract_daily_roads_drivers));
+var fi_fired_dxs_roads_03 = roads_drivers_nodata_fc.merge(fi_fired_dxs_03.map(extract_daily_roads_drivers));
+var fi_fired_dxs_roads_04 = roads_drivers_nodata_fc.merge(fi_fired_dxs_04.map(extract_daily_roads_drivers));
+var fi_fired_dxs_roads_05 = roads_drivers_nodata_fc.merge(fi_fired_dxs_05.map(extract_daily_roads_drivers));
+Export.table.toDrive({collection: fi_fired_dxs_roads_01, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_dxs_01'});
+Export.table.toDrive({collection: fi_fired_dxs_roads_02, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_dxs_02'});
+Export.table.toDrive({collection: fi_fired_dxs_roads_03, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_dxs_03'});
+Export.table.toDrive({collection: fi_fired_dxs_roads_04, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_dxs_04'});
+Export.table.toDrive({collection: fi_fired_dxs_roads_05, folder: 'ee', description: 'fire-independent-fired_roads_' + roads_drivers_version + '_dxs_05'});
+
+var fi_fired_dxs_fluc_01 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_01.map(extract_daily_fluctuating_drivers));
+var fi_fired_dxs_fluc_02 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_02.map(extract_daily_fluctuating_drivers));
+var fi_fired_dxs_fluc_03 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_03.map(extract_daily_fluctuating_drivers));
+var fi_fired_dxs_fluc_04 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_04.map(extract_daily_fluctuating_drivers));
+var fi_fired_dxs_fluc_05 = fluctuating_drivers_nodata_fc.merge(fi_fired_dxs_05.map(extract_daily_fluctuating_drivers));
 Export.table.toDrive({collection: fi_fired_dxs_fluc_01, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_dxs_01'});
 Export.table.toDrive({collection: fi_fired_dxs_fluc_02, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_dxs_02'});
 Export.table.toDrive({collection: fi_fired_dxs_fluc_03, folder: 'ee', description: 'fire-independent-fired_fluc_' + fluc_drivers_version + '_dxs_03'});

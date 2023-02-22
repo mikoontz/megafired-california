@@ -1,8 +1,8 @@
-var era5 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY"),
-    states = ee.FeatureCollection("TIGER/2018/States"),
-    gridmet = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET"),
-    rtma = ee.ImageCollection("NOAA/NWS/RTMA"),
-    dem10_3dep = ee.Image("USGS/3DEP/10m");
+var era5 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
+var states = ee.FeatureCollection("TIGER/2018/States");
+var gridmet = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET");
+var rtma = ee.ImageCollection("NOAA/NWS/RTMA");
+var dem10_3dep = ee.Image("USGS/3DEP/10m");
     
 var add_vpd = function(img) {
 

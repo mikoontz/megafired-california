@@ -6,6 +6,18 @@ library(data.table)
 library(tidyselect)
 library(spatialsample)
 library(purrr)
+library(lubridate)
+library(here)
+
+local_out_dir <- here::here("data", "ard", lubridate::today())
+gdrive_out_dir <- file.path("D:", "google-drive_cu-boulder", "My Drive", "_projects", "moore-foundation", "manuscripts", "megafired-california", "data", "ard", lubridate::today())
+
+dir.create(local_out_dir, 
+           recursive = TRUE,
+           showWarnings = FALSE)
+dir.create(gdrive_out_dir, 
+           recursive = TRUE,
+           showWarnings = FALSE)
 
 weather_drivers <- 
   data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
@@ -19,7 +31,7 @@ weather_drivers <-
 
 other_fires_summary <- 
   data.table::fread("data/out/drivers/other-fires-summary.csv") |>
-  dplyr::select(-npl_at_ignition, -cumu_count, -cumu_area_ha)
+  dplyr::select(-concurrent_fires, -cumu_count, -cumu_area_ha)
 
 fluc_static <- 
   data.table::fread("data/out/drivers/fluc-static-driver-proportion-percentiles.csv") |>
@@ -42,15 +54,24 @@ fluc_static <-
 #                insect_disease_high_tm01_tm10, 
 #                insect_disease_tm01_tm10)
 
+# Late December, 2022 version which includes less prominent disturbance types (a bad
+# idea we think!)
+# landfire <- 
+#   data.table::fread("data/out/drivers/landfire-disturbance-driver-proportion-percentiles.csv") |>
+#   dplyr::select(did, id, date,
+#                 fire_high_tm01_tm05, fire_high_tm06_tm10,
+#                 fire_not_high_tm01_tm05, fire_not_high_tm06_tm10,
+#                 clearcut_harvest_othermech_tm01_tm05, clearcut_harvest_othermech_tm06_tm10,
+#                 fuel_trt_tm01_tm05, fuel_trt_tm06_tm10,
+#                 insect_disease_high_tm01_tm05, insect_disease_high_tm06_tm10,
+#                 insect_disease_not_high_tm01_tm05, insect_disease_not_high_tm06_tm10)
+
 landfire <- 
   data.table::fread("data/out/drivers/landfire-disturbance-driver-proportion-percentiles.csv") |>
   dplyr::select(did, id, date,
                 fire_high_tm01_tm05, fire_high_tm06_tm10,
                 fire_not_high_tm01_tm05, fire_not_high_tm06_tm10,
-                clearcut_harvest_othermech_tm01_tm05, clearcut_harvest_othermech_tm06_tm10,
-                fuel_trt_tm01_tm05, fuel_trt_tm06_tm10,
-                insect_disease_high_tm01_tm05, insect_disease_high_tm06_tm10,
-                insect_disease_not_high_tm01_tm05, insect_disease_not_high_tm06_tm10)
+                insect_disease_tm01_tm10)
 
 # Remove fires that never reached more than 121 hectares (300 acres)
 target_event_ids <-
@@ -195,8 +216,10 @@ lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
     out %>% 
     dplyr::select(!tidyselect::all_of(zero_variance_columns))
   
-  data.table::fwrite(x = out, file = paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  data.table::fwrite(x = out, file = paste0(local_out_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  
+  file.copy(from = paste0(local_out_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"),
+            to = paste0(gdrive_out_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
   
   return(NULL)
 })
-  

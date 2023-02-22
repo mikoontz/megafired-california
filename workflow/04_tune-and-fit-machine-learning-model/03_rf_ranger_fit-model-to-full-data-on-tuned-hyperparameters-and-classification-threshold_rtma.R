@@ -4,16 +4,29 @@ library(data.table)
 library(readr)
 library(parallel)
 library(tidyr)
+library(here)
 
-dir.create("data/out/rf/fitted", showWarnings = FALSE)
-dir.create("tables/rf", recursive = TRUE, showWarnings = FALSE)
+latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
+                        decreasing = TRUE)[1]
+
+latest_ard_dir <- here::here("data", "ard", latest_ard_date)
+rf_tuning_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
+
+rf_fitted_dir <- here::here("data", "out", "rf", "fitted", latest_ard_date)
+dir.create(rf_fitted_dir, showWarnings = FALSE, recursive = TRUE)
+
+rf_tables_dir <- here::here("tables", "rf", latest_ard_date)
+dir.create(rf_tables_dir, showWarnings = FALSE, recursive = TRUE)
+
+rf_predict_dir <- here::here("data", "out", "rf", "predict", latest_ard_date)
+dir.create(rf_predict_dir, showWarnings = FALSE, recursive = TRUE)
 
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 biome_shortnames <- c("tcf", "mfws", "dxs")
 
 # Tuned hyperparameters
 tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = paste0("data/out/rf/tuning/rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv"))
+  data.table::fread(input = here::here(rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv")))
 })
 
 tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
@@ -31,7 +44,10 @@ tuned_hyperparameters <-
   dplyr::arrange(desc(mean_informedness)) %>% 
   slice(1)
 
-driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
+driver_descriptions <-
+  read.csv(here::here("data", "out", "drivers", "driver-descriptions.csv")) %>%
+  dplyr::as_tibble()
+
 full_predictor_variable_names <- driver_descriptions$variable
 
 mcc_results <-
@@ -47,7 +63,7 @@ mcc_results <-
   tidyr::pivot_wider(names_from = ".metric", values_from = "mean_mcc")
 
 model_skill_results <- merge(tuned_hyperparameters, mcc_results)
-write.csv(x = model_skill_results, file = "tables/rf/model-skill-results.csv")
+write.csv(x = model_skill_results, file = here::here(rf_tables_dir, "model-skill-results.csv"))
 
 for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
@@ -55,7 +71,7 @@ for(counter in seq_along(biome_shortnames)) {
   biome_tuned_hyperparameters <- tuned_hyperparameters[tuned_hyperparameters$biome == biome_shortname, ]
   
   data <- 
-    data.table::fread(paste0("data/ard/daily-drivers-of-california-megafires_", biome_shortname, ".csv")) |>
+    data.table::fread(here::here(latest_ard_dir, paste0("daily-drivers-of-california-megafires_", biome_shortname, ".csv"))) |>
     dplyr::mutate(ewe = factor(ewe, levels = c(1, 0))) |>
     as.data.frame()
   
@@ -86,7 +102,7 @@ for(counter in seq_along(biome_shortnames)) {
   class.wgts <- 1 / table(data$ewe)
   
   fitted_model <- ranger::ranger(formula = rf_formula,
-                                 data = analysis_data[, c("ewe", predictor.variable.names)],
+                                 data = data[, c("ewe", predictor.variable.names)],
                                  num.trees = biome_tuned_hyperparameters$num.trees,
                                  mtry = biome_tuned_hyperparameters$mtry,
                                  classification = TRUE,
@@ -102,12 +118,12 @@ for(counter in seq_along(biome_shortnames)) {
   fitted_model$biome <- biome_shortname
   fitted_model$forest$data <- data[, c("ewe", predictor.variable.names)]
   
-  readr::write_rds(x = fitted_model, file = paste0("data/out/rf/fitted/rf_ranger_fitted-model_rtma_", biome_shortname, ".rds"))
+  readr::write_rds(x = fitted_model, file = here::here(rf_fitted_dir, paste0("rf_ranger_fitted-model_rtma_", biome_shortname, ".rds")))
 }
 
 # Get the models that were fit on the whole dataset for each biome
 fitted_models_l <- lapply(X = biome_shortnames, FUN = function(biome_shortname) {
-  return(readr::read_rds(file = paste0("data/out/rf/fitted/rf_ranger_fitted-model_rtma_", biome_shortname, ".rds")))
+  return(readr::read_rds(file = here::here(rf_fitted_dir, paste0("rf_ranger_fitted-model_rtma_", biome_shortname, ".rds"))))
 })
 
 # For each biome, create a newdata dataframe with the conditional effect
@@ -127,12 +143,12 @@ for(counter in seq_along(biome_shortnames)) {
   indep_vars <- fitted_model$forest$independent.variable.names
   n_pred <- 50
   
-  if(!file.exists(paste0("data/out/rf/predict/rf_ranger_predictions_rtma", biome_shortname, ".csv"))) {
+  if(!file.exists(here::here(rf_predict_dir, paste0("rf_ranger_predictions_rtma", biome_shortname, ".csv")))) {
     set.seed(1510)
     
-    # n_rep <- 2000
-    # idx <- sample(x = nrow(data), size = n_rep, replace = TRUE)
-    idx <- seq_len(nrow(data))
+    n_rep <- 1000
+    idx <- sample(x = nrow(data), size = n_rep, replace = TRUE)
+    # idx <- seq_len(nrow(data))
     
     newdata <- lapply(seq_along(indep_vars), FUN = function(i) {
       other_vars <- indep_vars[-i]
@@ -160,5 +176,6 @@ for(counter in seq_along(biome_shortnames)) {
     
     newdata$ewe <- predict(fitted_model, data = newdata)$predictions[, 1]
     
-    data.table::fwrite(x = newdata, file = paste0("data/out/rf/predict/rf_ranger_predictions_rtma_", biome_shortname, ".csv"))
+    data.table::fwrite(x = newdata, file = here::here(rf_predict_dir, paste0("rf_ranger_predictions_rtma_", biome_shortname, ".csv")))
   }
+}

@@ -86,6 +86,10 @@ rat <-
   read.csv(here::here("data", "out", "landfire-disturbance", "raster-attribute-table_landfire-disturbance_conus.csv")) %>% 
   dplyr::left_join(new_dist_sev_table, by = c("dist_type", "severity"))
 
+paste(sort(unique(rat$value[rat$new_dist_type == "fuel_trt" & rat$severity == "No Severity"])), collapse = ", ")
+paste(sort(unique(rat$value[rat$new_dist_type == "fuel_trt" & rat$severity == "Unburned/Low"])), collapse = ", ")
+paste(sort(unique(rat$value[rat$new_dist_type == "fuel_trt" & rat$severity == "Low"])), collapse = ", ")
+
 years <- (min(relevant_files$year) + 10):2020
 
 new_dist_sev_table_simple <-
@@ -95,7 +99,6 @@ new_dist_sev_table_simple <-
   dplyr::ungroup() %>% 
   dplyr::select(new_val, new_cat, new_dist_type, new_sev_type, new_sev_name) %>% 
   data.table::as.data.table()
-
 
 extract_disturbance_fracs <-
   function(new_val, area) {

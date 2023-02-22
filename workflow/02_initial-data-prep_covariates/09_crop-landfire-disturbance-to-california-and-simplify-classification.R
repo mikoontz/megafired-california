@@ -67,6 +67,8 @@ rat <-
   read.csv(here::here("data", "out", "landfire-disturbance", "raster-attribute-table_landfire-disturbance_conus.csv")) %>% 
   dplyr::left_join(new_dist_sev_table, by = c("dist_type", "severity"))
 
+unique(rat$value[which(rat$year %in% 2015:2019 & rat$new_val == 41)])
+
 ca <- 
   USAboundaries::us_states(resolution = "high", states = "California") %>% 
   sf::st_transform(sf::st_crs(terra::rast(relevant_files$out_path[1]))) %>% 

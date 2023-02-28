@@ -31,17 +31,34 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
 
 tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
 
+
+# Tune with informedness
+# tuned_hyperparameters <-
+#   tuning_metrics %>% 
+#   dplyr::filter(.metric == "informedness") %>% 
+#   group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
+#   summarize(n = n(),
+#             n_not_missing = sum(!is.na(mean)),
+#             mean_informedness = mean(x = mean, na.rm = TRUE),
+#             lwr_informedness = mean(x = lwr, na.rm = TRUE)) %>%
+#   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
+#   dplyr::group_by(biome) %>% 
+#   dplyr::arrange(desc(mean_informedness)) %>% 
+#   slice(1)
+
+# Tune with MCC
 tuned_hyperparameters <-
   tuning_metrics %>% 
-  dplyr::filter(.metric == "informedness") %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
+  dplyr::filter(.metric == "mcc") %>% 
+  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>%
+  # Mean MCC across iterations for each spatial fold
   summarize(n = n(),
             n_not_missing = sum(!is.na(mean)),
-            mean_informedness = mean(x = mean, na.rm = TRUE),
-            lwr_informedness = mean(x = lwr, na.rm = TRUE)) %>%
+            mean_mcc = mean(x = mean, na.rm = TRUE),
+            lwr_mcc = mean(x = lwr, na.rm = TRUE)) %>%
   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
   dplyr::group_by(biome) %>% 
-  dplyr::arrange(desc(mean_informedness)) %>% 
+  dplyr::arrange(desc(mean_mcc)) %>% 
   slice(1)
 
 driver_descriptions <-
@@ -50,19 +67,20 @@ driver_descriptions <-
 
 full_predictor_variable_names <- driver_descriptions$variable
 
-mcc_results <-
-  tuning_metrics %>% 
-  dplyr::filter(.metric == "mcc") %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
-  summarize(n = n(),
-            n_not_missing = sum(!is.na(mean)),
-            mean_mcc = mean(x = mean, na.rm = TRUE),
-            lwr_mcc = mean(x = lwr, na.rm = TRUE)) %>%
-  dplyr::filter((n_not_missing / n >= 0.5)) %>% 
-  dplyr::select(biome, mtry, sample.fraction, classification_thresh, min.node.size, .metric, mean_mcc, lwr_mcc) %>% 
-  tidyr::pivot_wider(names_from = ".metric", values_from = "mean_mcc")
+# mcc_results <-
+#   tuning_metrics %>% 
+#   dplyr::filter(.metric == "mcc") %>% 
+#   group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
+#   summarize(n = n(),
+#             n_not_missing = sum(!is.na(mean)),
+#             mean_mcc = mean(x = mean, na.rm = TRUE),
+#             lwr_mcc = mean(x = lwr, na.rm = TRUE)) %>%
+#   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
+#   dplyr::select(biome, mtry, sample.fraction, classification_thresh, min.node.size, .metric, mean_mcc, lwr_mcc) %>% 
+#   tidyr::pivot_wider(names_from = ".metric", values_from = "mean_mcc")
 
-model_skill_results <- merge(tuned_hyperparameters, mcc_results)
+# model_skill_results <- merge(tuned_hyperparameters, mcc_results)
+model_skill_results <- tuned_hyperparameters
 write.csv(x = model_skill_results, file = here::here(rf_tables_dir, "model-skill-results.csv"))
 
 for(counter in seq_along(biome_shortnames)) {

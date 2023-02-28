@@ -166,3 +166,4 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
   
 })
 
+# Took about 40 minutes total on a 12-core machine with 64GB of RAM

@@ -42,16 +42,31 @@ tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
 
 tuned_hyperparameters <-
   tuning_metrics %>% 
-  dplyr::filter(.metric == "informedness") %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
+  dplyr::filter(.metric == "mcc") %>% 
+  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>%
+  # Mean MCC across iterations for each spatial fold
   summarize(n = n(),
             n_not_missing = sum(!is.na(mean)),
-            mean_informedness = mean(x = mean, na.rm = TRUE),
-            lwr_informedness = mean(x = lwr, na.rm = TRUE)) %>%
+            mean_mcc = mean(x = mean, na.rm = TRUE),
+            lwr_mcc = mean(x = lwr, na.rm = TRUE)) %>%
   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
   dplyr::group_by(biome) %>% 
-  dplyr::arrange(desc(mean_informedness)) %>% 
+  dplyr::arrange(desc(mean_mcc)) %>% 
   slice(1)
+
+# Tuned with informedness
+# tuned_hyperparameters <-
+#   tuning_metrics %>% 
+#   dplyr::filter(.metric == "informedness") %>% 
+#   group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
+#   summarize(n = n(),
+#             n_not_missing = sum(!is.na(mean)),
+#             mean_informedness = mean(x = mean, na.rm = TRUE),
+#             lwr_informedness = mean(x = lwr, na.rm = TRUE)) %>%
+#   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
+#   dplyr::group_by(biome) %>% 
+#   dplyr::arrange(desc(mean_informedness)) %>% 
+#   slice(1)
 
 driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
 full_predictor_variable_names <- driver_descriptions$variable
@@ -373,7 +388,7 @@ for (biome_idx in seq_along(biome_shortnames)) {
   
   (start_time <- Sys.time())
   print(paste0("Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", start_time, "..."))
-  
+
   if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv")))) {
     out_grouped <-
       foreach(idx = (1:nrow(folds_repeat)),
@@ -381,21 +396,21 @@ for (biome_idx in seq_along(biome_shortnames)) {
               .packages = c("dplyr", "cpi", "mlr3", "mlr3learners", "rsample", "sf"),
               .errorhandling = "remove") %dopar%
       cpi_mcc_grouped(idx)
-    
-    
+
+
     data.table::fwrite(x = out_grouped, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv")))
-    
+
     (end_time <- Sys.time())
   }
-  
+
   print(paste0("Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", end_time, ". "))
   print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-  
+
   ###
-  
+
   parallel::stopCluster(cl = cl)
-  
-  
+
+
 }
 
 # out %>% 

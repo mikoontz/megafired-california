@@ -11,7 +11,7 @@ ard_dir <- here::here("data", "ard", latest_ard_date)
 rf_tuning_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
 rf_predict_dir <- here::here("data", "out", "rf", "predict", latest_ard_date)
 rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
-  
+
 rf_response_curves_dir <- here::here("figs", "rf", "response-curves", latest_ard_date)
 dir.create(rf_response_curves_dir, showWarnings = FALSE, recursive = TRUE)
 
@@ -39,11 +39,11 @@ cpi_results_full <-
   }) %>% 
   data.table::rbindlist()
 
-# cpi_grouped_results_full <-
-#   lapply(biome_shortnames, FUN = function(biome_shortname) {
-#     return(data.table::fread(input = paste0(file = "data/out/rf/conditional-predictive-impact/rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv")))
-#   }) %>% 
-#   data.table::rbindlist()
+cpi_grouped_results_full <-
+  lapply(biome_shortnames, FUN = function(biome_shortname) {
+    return(data.table::fread(input = here::here(rf_cpi_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv"))))
+  }) %>%
+  data.table::rbindlist()
 
 
 # Get the threshold for classification so we can add it to the final plots
@@ -56,17 +56,31 @@ tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
 
 tuned_hyperparameters <-
   tuning_metrics %>% 
-  dplyr::filter(.metric == "informedness") %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
+  dplyr::filter(.metric == "mcc") %>% 
+  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>%
+  # Mean MCC across iterations for each spatial fold
   summarize(n = n(),
             n_not_missing = sum(!is.na(mean)),
-            mean_informedness = weighted.mean(x = mean, w = assessment_ewe_n, na.rm = TRUE),
-            lwr_informedness = weighted.mean(x = lwr, w = assessment_ewe_n, na.rm = TRUE)) %>%
+            mean_mcc = mean(x = mean, na.rm = TRUE),
+            lwr_mcc = mean(x = lwr, na.rm = TRUE)) %>%
   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
   dplyr::group_by(biome) %>% 
-  dplyr::arrange(desc(lwr_informedness)) %>% 
-  slice(1) %>% 
-  dplyr::ungroup()
+  dplyr::arrange(desc(mean_mcc)) %>% 
+  slice(1)
+
+# Tuned with informedness
+# tuned_hyperparameters <-
+#   tuning_metrics %>% 
+#   dplyr::filter(.metric == "informedness") %>% 
+#   group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
+#   summarize(n = n(),
+#             n_not_missing = sum(!is.na(mean)),
+#             mean_informedness = mean(x = mean, na.rm = TRUE),
+#             lwr_informedness = mean(x = lwr, na.rm = TRUE)) %>%
+#   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
+#   dplyr::group_by(biome) %>% 
+#   dplyr::arrange(desc(mean_informedness)) %>% 
+#   slice(1)
 
 tuned_hyperparameters <-
   tuned_hyperparameters %>% 
@@ -100,7 +114,30 @@ cpi_results <-
   dplyr::filter(cpi_median > 0) %>%
   dplyr::arrange(biome, desc(cpi_median))
 
-cpi_results
+cpi_grouped_results <-
+  cpi_grouped_results_full %>% 
+  dplyr::group_by(Group, spatial_fold = id, biome) %>% 
+  dplyr::summarize(cpi = mean(CPI, na.rm = TRUE),
+                   sd = sd(CPI, na.rm = TRUE),
+                   count = sum(!is.na(CPI)),
+                   min = min(CPI, na.rm = TRUE),
+                   max = max(CPI, na.rm = TRUE),
+                   lwr = mean(CPI, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI))),
+                   upr = mean(CPI, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI)))) %>%
+  dplyr::arrange(biome, Group, spatial_fold) %>% 
+  dplyr::group_by(Group, biome) %>% 
+  dplyr::summarize(n_pos = length(which(cpi > 0)),
+                   n_neg = length(which(cpi < 0)),
+                   n_0 = length(which(cpi == 0)),
+                   cpi_mean = mean(x = cpi),
+                   cpi_lwr = mean(x = lwr),
+                   cpi_upr = mean(x = upr),
+                   cpi_median = median(x = cpi),
+                   n = n()) %>% 
+  dplyr::arrange(biome, desc(cpi_median))
+
+cpi_grouped_results
+
 cpi_results %>% 
   group_by(biome) %>% 
   tally()

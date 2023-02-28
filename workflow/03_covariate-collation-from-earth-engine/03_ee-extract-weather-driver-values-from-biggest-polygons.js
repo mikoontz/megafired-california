@@ -2,6 +2,7 @@
 // General vector files delineating study area (California and RESOLVE biomes)
 var tiger = ee.FeatureCollection("TIGER/2018/States");
 var resolve = ee.FeatureCollection("RESOLVE/ECOREGIONS/2017");
+var water = hansen.select(['datamask']).eq(1);
 
 // Weather/climate variables
 var era5 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY");
@@ -10,18 +11,28 @@ var gridmet_drought = ee.ImageCollection("GRIDMET/DROUGHT");
 var gridmet = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET");
 
 // Topography variables
-var dem10_3dep = ee.Image("USGS/3DEP/10m");
-var landforms_10m_ned = ee.Image("CSP/ERGo/1_0/US/landforms");
-var sa_pa_10m_3dep = ee.Image("users/mkoontz/megafired-california/terrain-rumple-index_10m-3dep");
+var dem10_3dep = ee.Image("USGS/3DEP/10m").updateMask(water);
+var landforms_10m_ned = ee.Image("CSP/ERGo/1_0/US/landforms").updateMask(water);
+var sa_pa_10m_3dep = ee.Image("users/mkoontz/megafired-california/terrain-rumple-index_10m-3dep").updateMask(water);
 
 // Some of the fuel variables
-var lcms = ee.ImageCollection("USFS/GTAC/LCMS/v2020-5");
-var veg_struct_rumple = ee.ImageCollection("users/mkoontz/veg-structure-rumple-california");
-var prefire_ndvi_composites = ee.ImageCollection("users/mkoontz/ndvi-summer-california-composite");
-var sa_pa_ndvi = ee.ImageCollection("users/mkoontz/veg-structure-rumple-california");
+var lcms = 
+ee.ImageCollection("USFS/GTAC/LCMS/v2020-5")
+.map(function(img) {return img.updateMask(water)});
+
+var veg_struct_rumple = 
+ee.ImageCollection("users/mkoontz/veg-structure-rumple-california")
+.map(function(img) {return img.updateMask(water)});
+
+var prefire_ndvi_composites = 
+ee.ImageCollection("users/mkoontz/ndvi-summer-california-composite")
+.map(function(img) {return img.updateMask(water)});
+
+var sa_pa_ndvi = 
+ee.ImageCollection("users/mkoontz/veg-structure-rumple-california")
+.map(function(img) {return img.updateMask(water)});
 
 // Roads variables
-var grip4_north_america = ee.FeatureCollection("projects/sat-io/open-datasets/GRIP4/North-America");
 var tiger_roads = ee.FeatureCollection("TIGER/2016/Roads");
 
 // FIRED events
@@ -52,9 +63,6 @@ var fi_fired_tgss_03 = ee.FeatureCollection("users/mkoontz/fired_daily_random-lo
 var fi_fired_tgss_04 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_04");
 var fi_fired_tgss_05 = ee.FeatureCollection("users/mkoontz/fired_daily_random-locations_tgss_v4_05");
 
-// not used, in the end
-var friction = ee.Image("Oxford/MAP/friction_surface_2019");
-    
 // Projection we'll work in (California Albers) for consistency in reducer outputs
 var proj = ee.Projection("EPSG:3310");
 var ca = ee.Feature(tiger.filterMetadata('NAME', 'equals', 'California').first());
@@ -503,13 +511,6 @@ var extract_daily_fluctuating_drivers = function(ftr) {
   
   var ig_year = ee.String(ee.Date(ftr.get('date')).get('year'));
   
-  var this_fired_event_landcover_tm0 = lcms
-  .select(['Land_Cover'], ['landcover_tm00'])
-  .filterBounds(ftr.geometry())
-  .filterMetadata('year', 'equals', ee.Date(ftr.get('date')).get('year'))
-  .filterMetadata('study_area', 'equals', 'CONUS')
-  .first();
-
   var this_fired_event_landcover_tm1 = lcms
   .select(['Land_Cover'], ['landcover_tm01'])
   .filterBounds(ftr.geometry())
@@ -517,122 +518,20 @@ var extract_daily_fluctuating_drivers = function(ftr) {
   .filterMetadata('study_area', 'equals', 'CONUS')
   .first();
   
-  // var this_fired_event_landuse = lcms
-  // .select(['Land_Use'], ['landuse_tm0'])
-  // .filterBounds(ftr.geometry())
-  // .filterMetadata('year', 'equals', ee.Date(ftr.get('date')).get('year'))
-  // .filterMetadata('study_area', 'equals', 'CONUS')
-  // .first();
-  
-  var this_fired_event_landchange_tm0 = lcms
-  .select(['Change'], ['change_tm00'])
-  .filterBounds(ftr.geometry())
-  .filterMetadata('year', 'equals', ee.Date(ftr.get('date')).get('year'))
-  .filterMetadata('study_area', 'equals', 'CONUS')
-  .first();
-
-var this_fired_event_landchange_tm1 = lcms
-  .select(['Change'], ['change_tm01'])
-  .filterBounds(ftr.geometry())
-  .filterMetadata('year', 'equals', ee.Date(ftr.get('date')).advance(-1, 'year').get('year'))
-  .filterMetadata('study_area', 'equals', 'CONUS')
-  .first();
-  
-  var this_fired_event_landchange_tm2 = lcms
-  .select(['Change'], ['change_tm02'])
-  .filterBounds(ftr.geometry())
-  .filterMetadata('year', 'equals', ee.Date(ftr.get('date')).advance(-2, 'year').get('year'))
-  .filterMetadata('study_area', 'equals', 'CONUS')
-  .first();
-  
-  var this_fired_event_landchange_tm3 = lcms
-  .select(['Change'], ['change_tm03'])
-  .filterBounds(ftr.geometry())
-  .filterMetadata('year', 'equals', ee.Date(ftr.get('date')).advance(-3, 'year').get('year'))
-  .filterMetadata('study_area', 'equals', 'CONUS')
-  .first();
-  
-  var this_fired_event_landchange_tm4 = lcms
-  .select(['Change'], ['change_tm04'])
-  .filterBounds(ftr.geometry())
-  .filterMetadata('year', 'equals', ee.Date(ftr.get('date')).advance(-4, 'year').get('year'))
-  .filterMetadata('study_area', 'equals', 'CONUS')
-  .first();
-  
-  var this_fired_event_landchange_tm5 = lcms
-  .select(['Change'], ['change_tm05'])
-  .filterBounds(ftr.geometry())
-  .filterMetadata('year', 'equals', ee.Date(ftr.get('date')).advance(-5, 'year').get('year'))
-  .filterMetadata('study_area', 'equals', 'CONUS')
-  .first();
-  
-  var this_fired_event_lcms = 
-  this_fired_event_landcover_tm0
-  .addBands(this_fired_event_landcover_tm0)
-  .addBands(this_fired_event_landcover_tm1)
-  // .addBands(this_fired_event_landuse)
-  .addBands(this_fired_event_landchange_tm0)
-  .addBands(this_fired_event_landchange_tm1)
-  .addBands(this_fired_event_landchange_tm2)
-  .addBands(this_fired_event_landchange_tm3)
-  .addBands(this_fired_event_landchange_tm4)
-  .addBands(this_fired_event_landchange_tm5);
-  
-  var lcms_dict = this_fired_event_lcms
+  var lcms_dict = this_fired_event_landcover_tm1
     .reduceRegion({
       reducer: ee.Reducer.frequencyHistogram(),
       geometry: ftr.geometry(),
       crs: proj,
       scale: lcms_export_scale,
-      maxPixels: 1e8,
-      bestEffort: true
+      maxPixels: 1e8
     });
-
-  var lcms_landcover_tm0_dict = 
-    ee.Dictionary(lcms_dict.get('landcover_tm00'))
-    .combine(lcms_landcover_dict_blank, false)
-    .rename(lcms_landcover_names_from, lcms_landcover_names_to.map(function(str) {return(ee.String(str).cat('_tm00'));}));
 
  var lcms_landcover_tm1_dict = 
     ee.Dictionary(lcms_dict.get('landcover_tm01'))
     .combine(lcms_landcover_dict_blank, false)
     .rename(lcms_landcover_names_from, lcms_landcover_names_to.map(function(str) {return(ee.String(str).cat('_tm01'));}));
 
-  // var lcms_landuse_tm0_dict = 
-  // ee.Dictionary(lcms_dict.get('landuse_tm0'))
-  //   .combine(lcms_landuse_dict_blank, false)
-  //   .rename(lcms_landuse_names_from, lcms_landuse_names_to.map(function(str) {return(ee.String(str).cat('_tm00'));}));
-  
-  var lcms_change_tm0_dict = 
-  ee.Dictionary(lcms_dict.get('change_tm00'))
-    .combine(lcms_change_dict_blank, false)
-    .rename(lcms_change_names_from, lcms_change_names_to.map(function(str) {return(ee.String(str).cat('_tm00'));}));
-
- var lcms_change_tm1_dict = 
-  ee.Dictionary(lcms_dict.get('change_tm01'))
-    .combine(lcms_change_dict_blank, false)
-    .rename(lcms_change_names_from, lcms_change_names_to.map(function(str) {return(ee.String(str).cat('_tm01'));}));
-
-var lcms_change_tm2_dict = 
-  ee.Dictionary(lcms_dict.get('change_tm02'))
-    .combine(lcms_change_dict_blank, false)
-    .rename(lcms_change_names_from, lcms_change_names_to.map(function(str) {return(ee.String(str).cat('_tm02'));}));
-
-var lcms_change_tm3_dict = 
-  ee.Dictionary(lcms_dict.get('change_tm03'))
-    .combine(lcms_change_dict_blank, false)
-    .rename(lcms_change_names_from, lcms_change_names_to.map(function(str) {return(ee.String(str).cat('_tm03'));}));
-
-var lcms_change_tm4_dict = 
-  ee.Dictionary(lcms_dict.get('change_tm04'))
-    .combine(lcms_change_dict_blank, false)
-    .rename(lcms_change_names_from, lcms_change_names_to.map(function(str) {return(ee.String(str).cat('_tm04'));}));
-
-var lcms_change_tm5_dict = 
-  ee.Dictionary(lcms_dict.get('change_tm05'))
-    .combine(lcms_change_dict_blank, false)
-    .rename(lcms_change_names_from, lcms_change_names_to.map(function(str) {return(ee.String(str).cat('_tm05'));}));
-    
   // Mean composite NDVI (masked for clouds, shadows, water, snow) for 60 days prior to fire start
   // var prefire_ndvi_composite = merge_landsat_60_days_prefire(ftr).select(['ndvi']);
   var prefire_ndvi_composite = ee.Image(prefire_ndvi_composites.filter(ee.Filter.eq('ig_year', ig_year)).first());
@@ -644,8 +543,7 @@ var lcms_change_tm5_dict =
     geometry: ftr.geometry(),
     crs: proj,
     scale: landsat_export_scale,
-    maxPixels: 1e8,
-    bestEffort: true
+    maxPixels: 1e8
   });
 
   var prefire_ndvi_rumple_index = ee.Image(sa_pa_ndvi.filter(ee.Filter.eq('ig_year', ig_year)).first());
@@ -657,22 +555,13 @@ var lcms_change_tm5_dict =
       geometry: ftr.geometry(),
       crs: proj,
       scale: landsat_export_scale,
-      maxPixels: 1e8,
-      bestEffort: true
+      maxPixels: 1e8
     });
 
   var out = ftr
   .set(prefire_ndvi_spatial_summary)
   .set(prefire_ndvi_rumple_spatial_sum)
-  .set(lcms_landcover_tm0_dict)
   .set(lcms_landcover_tm1_dict)
-  // .set(lcms_landuse_tm0_dict)
-  .set(lcms_change_tm0_dict)
-  .set(lcms_change_tm1_dict)
-  .set(lcms_change_tm2_dict)
-  .set(lcms_change_tm3_dict)
-  .set(lcms_change_tm4_dict)
-  .set(lcms_change_tm5_dict)
   .toDictionary();
 
   return(ee.Feature(null, out));
@@ -691,64 +580,16 @@ var extract_daily_static_drivers = function(ftr) {
     geometry: ftr.geometry(),
     crs: proj,
     scale: 10.2,
-    maxPixels: 1e8,
-    bestEffort: true
+    maxPixels: 1e8
   });
 
-// friction
-  
-  var this_fired_friction = friction
-  .reduceRegion({
-    reducer: ee.Reducer.mean(),
-    geometry: ftr.geometry(),
-    crs: proj,
-    scale: friction_export_scale,
-    maxPixels: 1e8,
-    bestEffort: true
-  });
-  
-  // var road_lengths_within_fire_m = tiger_roads
-  var road_lengths_within_fire_m = grip4_north_america
-    .filterBounds(ftr.geometry())
-    .map(function(road_ftr) {
-      var roads_within_fire = road_ftr
-      .intersection(ftr.geometry(), 100); // max error of 100 m
-      var out_dict = ee.Dictionary().set('length', roads_within_fire.length());
-      var out = ee.Feature(null, out_dict);
-      return(out);
-    });
-
-  var total_road_length_m = road_lengths_within_fire_m.aggregate_sum('length');
-  var total_road_lengths_dict = ee.Dictionary().set('road_length_m', total_road_length_m);
-  
-  // var this_fired_elev = dem30_srtm
-  // .reduceRegion({
-  //   reducer: ee.Reducer.mean(),
-  //   geometry: ftr.geometry(),
-  //   crs: proj,
-  //   scale: dem30_export_scale,
-  //   maxPixels: 1e8,
-  //   bestEffort: true
-  // });
-  
-  // var landforms_dict = landforms_30m_srtm
-  //   .reduceRegion({
-  //     reducer: ee.Reducer.frequencyHistogram(),
-  //     geometry: ftr.geometry(),
-  //     crs: proj,
-  //     scale: dem30_export_scale,
-  //     maxPixels: 1e8,
-  //     bestEffort: true
-  //   });
-    
   var this_fired_elev = dem10_3dep
   .reduceRegion({
     reducer: ee.Reducer.mean(),
     geometry: ftr.geometry(),
     crs: proj,
-    scale: 10.2,
-    maxPixels: 1e8,
-    bestEffort: true
+    scale: 100,
+    maxPixels: 1e8
   });
   
   var landforms_dict = landforms_10m_ned
@@ -757,8 +598,7 @@ var extract_daily_static_drivers = function(ftr) {
       geometry: ftr.geometry(),
       crs: proj,
       scale: 10,
-      maxPixels: 1e8,
-      bestEffort: true
+      maxPixels: 1e8
     });
   
   var csp_ergo_landforms_dict = 
@@ -769,7 +609,6 @@ var extract_daily_static_drivers = function(ftr) {
   var out = ftr
   .set(sa_pa)
   .set(this_fired_elev)
-  .set(this_fired_friction)
   .set(total_road_lengths_dict)
   .set(csp_ergo_landforms_dict)
   .toDictionary();
@@ -805,8 +644,6 @@ var road_lengths_within_fire_m = tiger_roads
 
 };
     
-    
-
 // Extract another set of daily-scale drivers
 var extract_daily_gridmet_drivers = function(ftr) {
   
@@ -1046,7 +883,7 @@ Export.table.toDrive({collection: fired_daily_fluctuating_drivers, folder: 'ee',
 // landform,  elevation, terrain rumple index, road lengths, friction)
 print(ca_biomes);
 print(ca_biomes_static);
-
+Map.addLayer(ca_biomes_static, {}, 'ca_biomes_static')
 var resolve_static_drivers = static_drivers_nodata_fc.merge(ca_biomes_static.map(extract_daily_static_drivers));
 Export.table.toDrive({collection: resolve_static_drivers, folder: 'ee', description: 'resolve-biomes-static-drivers_california_' + static_drivers_version});
 

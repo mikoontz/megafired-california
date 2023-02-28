@@ -19,20 +19,6 @@ dir.create(gdrive_out_dir,
            recursive = TRUE,
            showWarnings = FALSE)
 
-weather_drivers <- 
-  data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
-  dplyr::select(!tidyselect::contains("era5")) |> # not the ERA5 drivers; use the RTMA drivers in their place
-  dplyr::select(did, id, date,
-                wind_anisotropy_rtma, wind_terrain_anisotropy_rtma, min_wind_terrain_alignment_rtma_pct, max_wind_terrain_alignment_rtma_pct,
-                min_wind_speed_rtma_pct, max_wind_speed_rtma_pct, min_wind_filled_gust_rtma_pct, max_wind_filled_gust_rtma_pct,
-                min_rh_rtma_pct, max_rh_rtma_pct, min_temp_rtma_pct, max_temp_rtma_pct, min_vpd_rtma_pct, max_vpd_rtma_pct,
-                spei14d, spei30d, spei90d, spei180d, spei270d, spei1y, spei2y, spei5y, pdsi_z,
-                erc_pct, bi_pct, fm100_pct, fm1000_pct)
-
-other_fires_summary <- 
-  data.table::fread("data/out/drivers/other-fires-summary.csv") |>
-  dplyr::select(-concurrent_fires, -cumu_count, -cumu_area_ha)
-
 fluc_static <- 
   data.table::fread("data/out/drivers/fluc-static-driver-proportion-percentiles.csv") |>
   dplyr::select(did, id, date,
@@ -73,6 +59,22 @@ landfire <-
                 fire_not_high_tm01_tm05, fire_not_high_tm06_tm10,
                 insect_disease_tm01_tm10)
 
+weather_drivers <- 
+  data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
+  dplyr::select(!tidyselect::contains("era5")) |> # not the ERA5 drivers; use the RTMA drivers in their place
+  dplyr::select(did, id, date,
+                wind_anisotropy_rtma, wind_terrain_anisotropy_rtma, min_wind_terrain_alignment_rtma_pct, max_wind_terrain_alignment_rtma_pct,
+                min_wind_speed_rtma_pct, max_wind_speed_rtma_pct, min_wind_filled_gust_rtma_pct, max_wind_filled_gust_rtma_pct,
+                min_rh_rtma_pct, max_rh_rtma_pct, min_temp_rtma_pct, max_temp_rtma_pct, min_vpd_rtma_pct, max_vpd_rtma_pct,
+                spei14d, spei30d, spei90d, spei180d, spei270d, spei1y, spei2y, spei5y, pdsi_z,
+                erc_pct, bi_pct, fm100_pct, fm1000_pct) %>% 
+  dplyr::filter(did %in% fluc_static$did)
+
+other_fires_summary <- 
+  data.table::fread("data/out/drivers/other-fires-summary.csv") |>
+  dplyr::select(-concurrent_fires, -cumu_count, -cumu_area_ha) %>% 
+  dplyr::filter(did %in% fluc_static$did)
+
 # Remove fires that never reached more than 121 hectares (300 acres)
 target_event_ids <-
   sf::read_sf("data/out/fired/02_time-filter-crs-transform/fired_events_ca_epsg3310_2003-2020.gpkg") %>% 
@@ -109,8 +111,10 @@ fires <-
   dplyr::mutate(area_log10 = log10(daily_area_ha),
                 sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha)) |>
   dplyr::rename(cumu_area_tm01 = cum_area_ha_tminus1) |>
-  dplyr::left_join(biome_lookup, by = "biome_name_daily") |>
-  dplyr::left_join(fired_biggest_poly, by = c("did", "id", "date", "samp_id")) |>
+  dplyr::left_join(biome_lookup, by = "biome_name_daily")
+
+fires <-
+  merge(x = fires, y = fired_biggest_poly, by = c("did", "id", "date", "samp_id")) |>
   dplyr::select(did, id, date, biome_shortname, biome_name_daily, eco_name_daily,  x_biggest_poly_3310, y_biggest_poly_3310, 
                 daily_area_ha, area_log10, sqrt_aoi_tm1, event_day, cumu_area_tm01)
 

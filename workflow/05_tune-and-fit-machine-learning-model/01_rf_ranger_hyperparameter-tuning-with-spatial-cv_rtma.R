@@ -144,3 +144,4 @@ for(counter in seq_along(biome_shortnames)) {
   data.table::fwrite(x = out_all, file = paste0(local_out_dir, "/rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, ".csv"))
 }
 
+# Took about 6 hours total on a 12-core machine with 64GB of RAM

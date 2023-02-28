@@ -65,7 +65,7 @@ static_fluc_fired_drivers[, `:=`(date = as.Date(date))]
 
 # drop unnecessary columns
 keep_cols <- c("did", "id", "date",
-               "elevation", "friction", "friction_walking_only", "rumple_index",
+               "elevation", "rumple_index",
                "caltrans_road_density_mpha",
                "ndvi", "veg_structure_rumple", 
                "peak_ridge_cliff", "valleys", "slope_warm", "slope_cool", "slope_neutral", "flat", 
@@ -138,8 +138,14 @@ keep_cols <- c("did", "id", "date",
 #                "insect_disease_high_tm01_tm05", "insect_disease_high_tm06_tm10",
 #                "insect_disease_not_high_tm01_tm05", "insect_disease_not_high_tm06_tm10")
 
+# We also subset to just the dids that are in the static_fluc drivers variables because
+# those have been properly subset to remove nonwater area mismatches between
+# the FIRED perimeters and the fire-independent perimeters
 lf_fi_drivers <- lf_fi_drivers[, .SD, .SDcols = keep_cols]
+lf_fi_drivers <- lf_fi_drivers[did %in% static_fluc_fired_drivers$did, ]
+
 lf_fired_drivers <- lf_fired_drivers[, .SD, .SDcols = keep_cols]
+lf_fired_drivers <- lf_fired_drivers[did %in% static_fluc_fired_drivers$did, ]
 
 convert_proportions_to_percentiles(fi_drivers = lf_fi_drivers,
                                    fired_drivers = lf_fired_drivers, 

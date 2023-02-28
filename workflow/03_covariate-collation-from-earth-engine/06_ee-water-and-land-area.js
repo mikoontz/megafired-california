@@ -140,13 +140,6 @@ var fi_fired_dxs_01_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_dxs_01_nonwater_areas,
-  description: 'fi_fired_dxs_01_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 2nd set
 var fi_fired_dxs_02_nonwater_areas = water.reduceRegions({
   collection: fi_fired_dxs_02,
@@ -155,12 +148,6 @@ var fi_fired_dxs_02_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_dxs_02_nonwater_areas,
-  description: 'fi_fired_dxs_02_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
 
 // 3rd set
 var fi_fired_dxs_03_nonwater_areas = water.reduceRegions({
@@ -170,13 +157,6 @@ var fi_fired_dxs_03_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_dxs_03_nonwater_areas,
-  description: 'fi_fired_dxs_03_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 4th set
 var fi_fired_dxs_04_nonwater_areas = water.reduceRegions({
   collection: fi_fired_dxs_04,
@@ -185,13 +165,6 @@ var fi_fired_dxs_04_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_dxs_04_nonwater_areas,
-  description: 'fi_fired_dxs_04_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 5th set
 var fi_fired_dxs_05_nonwater_areas = water.reduceRegions({
   collection: fi_fired_dxs_05,
@@ -199,13 +172,6 @@ var fi_fired_dxs_05_nonwater_areas = water.reduceRegions({
   scale: 30,
   crs: 'EPSG:3310'
 });
-
-Export.table.toDrive({
-  collection: fi_fired_dxs_05_nonwater_areas,
-  description: 'fi_fired_dxs_05_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
 
 // mfws
 // 1st set
@@ -216,13 +182,6 @@ var fi_fired_mfws_01_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_mfws_01_nonwater_areas,
-  description: 'fi_fired_mfws_01_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 2nd set
 var fi_fired_mfws_02_nonwater_areas = water.reduceRegions({
   collection: fi_fired_mfws_02,
@@ -230,13 +189,6 @@ var fi_fired_mfws_02_nonwater_areas = water.reduceRegions({
   scale: 30,
   crs: 'EPSG:3310'
 });
-
-Export.table.toDrive({
-  collection: fi_fired_mfws_02_nonwater_areas,
-  description: 'fi_fired_mfws_02_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
 
 // 3rd set
 var fi_fired_mfws_03_nonwater_areas = water.reduceRegions({
@@ -246,13 +198,6 @@ var fi_fired_mfws_03_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_mfws_03_nonwater_areas,
-  description: 'fi_fired_mfws_03_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 4th set
 var fi_fired_mfws_04_nonwater_areas = water.reduceRegions({
   collection: fi_fired_mfws_04,
@@ -261,13 +206,6 @@ var fi_fired_mfws_04_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_mfws_04_nonwater_areas,
-  description: 'fi_fired_mfws_04_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 5th set
 var fi_fired_mfws_05_nonwater_areas = water.reduceRegions({
   collection: fi_fired_mfws_05,
@@ -275,13 +213,6 @@ var fi_fired_mfws_05_nonwater_areas = water.reduceRegions({
   scale: 30,
   crs: 'EPSG:3310'
 });
-
-Export.table.toDrive({
-  collection: fi_fired_mfws_05_nonwater_areas,
-  description: 'fi_fired_mfws_05_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
 
 // tgss
 // 1st set
@@ -292,13 +223,6 @@ var fi_fired_tgss_01_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_tgss_01_nonwater_areas,
-  description: 'fi_fired_tgss_01_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 2nd set
 var fi_fired_tgss_02_nonwater_areas = water.reduceRegions({
   collection: fi_fired_tgss_02,
@@ -306,13 +230,6 @@ var fi_fired_tgss_02_nonwater_areas = water.reduceRegions({
   scale: 30,
   crs: 'EPSG:3310'
 });
-
-Export.table.toDrive({
-  collection: fi_fired_tgss_02_nonwater_areas,
-  description: 'fi_fired_tgss_02_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
 
 // 3rd set
 var fi_fired_tgss_03_nonwater_areas = water.reduceRegions({
@@ -322,13 +239,6 @@ var fi_fired_tgss_03_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_tgss_03_nonwater_areas,
-  description: 'fi_fired_tgss_03_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 4th set
 var fi_fired_tgss_04_nonwater_areas = water.reduceRegions({
   collection: fi_fired_tgss_04,
@@ -337,13 +247,6 @@ var fi_fired_tgss_04_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_tgss_04_nonwater_areas,
-  description: 'fi_fired_tgss_04_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 5th set
 var fi_fired_tgss_05_nonwater_areas = water.reduceRegions({
   collection: fi_fired_tgss_05,
@@ -351,13 +254,6 @@ var fi_fired_tgss_05_nonwater_areas = water.reduceRegions({
   scale: 30,
   crs: 'EPSG:3310'
 });
-
-Export.table.toDrive({
-  collection: fi_fired_tgss_05_nonwater_areas,
-  description: 'fi_fired_tgss_05_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
 
 // tcf
 // 1st set
@@ -368,13 +264,6 @@ var fi_fired_tcf_01_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_tcf_01_nonwater_areas,
-  description: 'fi_fired_tcf_01_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 2nd set
 var fi_fired_tcf_02_nonwater_areas = water.reduceRegions({
   collection: fi_fired_tcf_02,
@@ -382,13 +271,6 @@ var fi_fired_tcf_02_nonwater_areas = water.reduceRegions({
   scale: 30,
   crs: 'EPSG:3310'
 });
-
-Export.table.toDrive({
-  collection: fi_fired_tcf_02_nonwater_areas,
-  description: 'fi_fired_tcf_02_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
 
 // 3rd set
 var fi_fired_tcf_03_nonwater_areas = water.reduceRegions({
@@ -398,13 +280,6 @@ var fi_fired_tcf_03_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
-Export.table.toDrive({
-  collection: fi_fired_tcf_03_nonwater_areas,
-  description: 'fi_fired_tcf_03_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
-
 // 4th set
 var fi_fired_tcf_04_nonwater_areas = water.reduceRegions({
   collection: fi_fired_tcf_04,
@@ -412,13 +287,6 @@ var fi_fired_tcf_04_nonwater_areas = water.reduceRegions({
   scale: 30,
   crs: 'EPSG:3310'
 });
-
-Export.table.toDrive({
-  collection: fi_fired_tcf_04_nonwater_areas,
-  description: 'fi_fired_tcf_04_non-water-area-30m-pixel-count',
-  folder: 'ee',
-  fileFormat: 'csv'
-}); 
 
 // 5th set
 var fi_fired_tcf_05_nonwater_areas = water.reduceRegions({
@@ -428,9 +296,201 @@ var fi_fired_tcf_05_nonwater_areas = water.reduceRegions({
   crs: 'EPSG:3310'
 });
 
+// combine, strip geometries
+var fi_fired_dxs_nonwater_areas = 
+fi_fired_dxs_01_nonwater_areas
+.merge(fi_fired_dxs_02_nonwater_areas)
+.merge(fi_fired_dxs_03_nonwater_areas)
+.merge(fi_fired_dxs_04_nonwater_areas)
+.merge(fi_fired_dxs_05_nonwater_areas)
+.map(function(ftr) {
+  return ee.Feature(null, ftr.toDictionary());
+});
+
+var fi_fired_mfws_nonwater_areas = 
+fi_fired_mfws_01_nonwater_areas
+.merge(fi_fired_mfws_02_nonwater_areas)
+.merge(fi_fired_mfws_03_nonwater_areas)
+.merge(fi_fired_mfws_04_nonwater_areas)
+.merge(fi_fired_mfws_05_nonwater_areas)
+.map(function(ftr) {
+  return ee.Feature(null, ftr.toDictionary());
+});
+
+var fi_fired_tgss_nonwater_areas = 
+fi_fired_tgss_01_nonwater_areas
+.merge(fi_fired_tgss_02_nonwater_areas)
+.merge(fi_fired_tgss_03_nonwater_areas)
+.merge(fi_fired_tgss_04_nonwater_areas)
+.merge(fi_fired_tgss_05_nonwater_areas)
+.map(function(ftr) {
+  return ee.Feature(null, ftr.toDictionary());
+});
+
+var fi_fired_tcf_nonwater_areas = 
+fi_fired_tcf_01_nonwater_areas
+.merge(fi_fired_tcf_02_nonwater_areas)
+.merge(fi_fired_tcf_03_nonwater_areas)
+.merge(fi_fired_tcf_04_nonwater_areas)
+.merge(fi_fired_tcf_05_nonwater_areas)
+.map(function(ftr) {
+  return ee.Feature(null, ftr.toDictionary());
+});
+
+// export merged data
 Export.table.toDrive({
-  collection: fi_fired_tcf_05_nonwater_areas,
-  description: 'fi_fired_tcf_05_non-water-area-30m-pixel-count',
+  collection: fi_fired_dxs_nonwater_areas,
+  description: 'fi_fired_dxs_non-water-area-30m-pixel-count',
   folder: 'ee',
   fileFormat: 'csv'
 }); 
+
+Export.table.toDrive({
+  collection: fi_fired_mfws_nonwater_areas,
+  description: 'fi_fired_mfws_non-water-area-30m-pixel-count',
+  folder: 'ee',
+  fileFormat: 'csv'
+}); 
+
+Export.table.toDrive({
+  collection: fi_fired_tgss_nonwater_areas,
+  description: 'fi_fired_tgss_non-water-area-30m-pixel-count',
+  folder: 'ee',
+  fileFormat: 'csv'
+}); 
+
+Export.table.toDrive({
+  collection: fi_fired_tcf_nonwater_areas,
+  description: 'fi_fired_tcf_non-water-area-30m-pixel-count',
+  folder: 'ee',
+  fileFormat: 'csv'
+}); 
+
+
+// Export.table.toDrive({
+//   collection: fi_fired_dxs_01_nonwater_areas,
+//   description: 'fi_fired_dxs_01_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_dxs_02_nonwater_areas,
+//   description: 'fi_fired_dxs_02_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_dxs_03_nonwater_areas,
+//   description: 'fi_fired_dxs_03_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_dxs_04_nonwater_areas,
+//   description: 'fi_fired_dxs_04_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_dxs_05_nonwater_areas,
+//   description: 'fi_fired_dxs_05_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_mfws_01_nonwater_areas,
+//   description: 'fi_fired_mfws_01_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_mfws_02_nonwater_areas,
+//   description: 'fi_fired_mfws_02_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_mfws_03_nonwater_areas,
+//   description: 'fi_fired_mfws_03_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_mfws_04_nonwater_areas,
+//   description: 'fi_fired_mfws_04_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_mfws_05_nonwater_areas,
+//   description: 'fi_fired_mfws_05_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tgss_nonwater_areas,
+//   description: 'fi_fired_tgss_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+
+// Export.table.toDrive({
+//   collection: fi_fired_tgss_01_nonwater_areas,
+//   description: 'fi_fired_tgss_01_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tgss_02_nonwater_areas,
+//   description: 'fi_fired_tgss_02_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tgss_03_nonwater_areas,
+//   description: 'fi_fired_tgss_03_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tgss_04_nonwater_areas,
+//   description: 'fi_fired_tgss_04_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tgss_05_nonwater_areas,
+//   description: 'fi_fired_tgss_05_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tcf_01_nonwater_areas,
+//   description: 'fi_fired_tcf_01_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tcf_02_nonwater_areas,
+//   description: 'fi_fired_tcf_02_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tcf_03_nonwater_areas,
+//   description: 'fi_fired_tcf_03_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tcf_04_nonwater_areas,
+//   description: 'fi_fired_tcf_04_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 
+// Export.table.toDrive({
+//   collection: fi_fired_tcf_05_nonwater_areas,
+//   description: 'fi_fired_tcf_05_non-water-area-30m-pixel-count',
+//   folder: 'ee',
+//   fileFormat: 'csv'
+// }); 

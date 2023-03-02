@@ -9,7 +9,10 @@ convert_proportions_to_percentiles <- function(fired_drivers, fi_drivers, out_fn
   
   # data.table nesting (equivalent to tidyr::nest)
   # https://stackoverflow.com/questions/25430986/create-nested-data-tables-by-collapsing-rows-into-new-data-tables
-  fi_drivers_long <- fi_drivers_long[, list(data = list(.SD)), by = c("did", "id", "date", "variable")]  
+  fi_drivers_long <- fi_drivers_long[, list(data = list(.SD), 
+                                            expected_value = mean(value, na.rm = TRUE),
+                                            expected_value_median = median(value, na.rm = TRUE)), 
+                                     by = c("did", "id", "date", "variable")]  
   
   # Just pivot the fired drivers from wide to long using data.table::melt(); no need
   # to also nest (because it's only one value-- the one that will be compared against the
@@ -21,7 +24,11 @@ convert_proportions_to_percentiles <- function(fired_drivers, fi_drivers, out_fn
                         y = fired_drivers_long, 
                         on = c("did", "date", "id", "driver"))
   
-  # convert raw proportional cover values to percentils based on comparing measured value within the
+  # We will calculate the difference between raw measured value and expected value
+  fires_and_fi[, `:=`(diff = value - expected_value,
+                      diff_median = value - expected_value_median)]
+
+    # convert raw proportional cover values to percentiles based on comparing measured value within the
   # fire footprint to the measured value if you were to re-locate that fire footprint to 500 other 
   # locations within the biome
   # https://stackoverflow.com/questions/49939936/how-to-do-operations-on-list-columns-in-an-r-data-table-to-output-another-list-c
@@ -34,20 +41,22 @@ convert_proportions_to_percentiles <- function(fired_drivers, fi_drivers, out_fn
   #                              })]
   
   # But really we care about the percentile rank
-  fires_and_fi[, adj := mapply(data, value, 
+  fires_and_fi[, adj := mapply(data, value,
                                FUN = function(fi_value, fire_value) {
                                  vec <- c(fire_value, fi_value$value)
                                  return((data.table::frank(vec) / length(vec))[1])
                                })]
   
-  # drop the data column representing the proportions at the ~500 fire-independent locations
-  fires_and_fi[, `:=`(data = NULL,
-                      value = NULL)]
+  names(fires_and_fi)[names(fires_and_fi) == "value"] <- "measured_value"
   
-  fires_and_fi <- data.table::dcast(data = fires_and_fi, formula = did + id + date ~ variable, value.var = "adj")
+  # drop the data column representing the proportions at the ~500 fire-independent locations
+  fires_and_fi[, data := NULL]
+  
+  fires_and_fi_wide <- data.table::dcast(data = fires_and_fi, formula = did + id + date ~ variable, value.var = "adj")
   
   if (!is.null(out_fname)) {
-    data.table::fwrite(x = fires_and_fi, file = out_fname)
+    data.table::fwrite(x = fires_and_fi_wide, file = out_fname)
+    data.table::fwrite(x = fires_and_fi, file = gsub(x = out_fname, pattern = ".csv", replacement = "_long.csv"))
     return(NULL)
   } else {
     return(fires_and_fi)

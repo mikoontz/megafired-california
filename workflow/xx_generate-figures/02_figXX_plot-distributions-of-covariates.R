@@ -101,7 +101,7 @@ figs_0_to_1 <-
       ard_biome %>% 
       tibble::as_tibble() %>% 
       dplyr::select("did", "biome_name_daily", tidyselect::all_of(full_predictor_variable_names)) %>% 
-      dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought))) %>% 
+      dplyr::select(!tidyselect::all_of(c(scale_nonnormalized, scale_drought))) %>% 
       dplyr::rename(biome_fullname = biome_name_daily)
     
     drop_cols <- names(plot_data_0_to_1)[which(sapply(plot_data_0_to_1, FUN = function(x) {return(all(is.na(x)))}))]
@@ -114,7 +114,7 @@ figs_0_to_1 <-
     #   ard_biome$data %>%
     #   dplyr::select("did", "biome_name_daily", ard_biome$predictor.variable.names) %>%
     #   dplyr::mutate(dplyr::across(tidyselect::all_of(scale_0_to_100), ~ .x / 100)) %>%
-    #   dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought))) %>%
+    #   dplyr::select(!tidyselect::all_of(c(scale_nonnormalized, scale_drought))) %>%
     #   dplyr::rename(biome_fullname = biome_name_daily) %>%
     #   dplyr::pull(barren_grass_forb_herb_mix_tm01)
     # thresh <- ecdf(spot_check_01)(0.5)
@@ -124,7 +124,7 @@ figs_0_to_1 <-
     #   dplyr::select("did", "biome_name_daily", "ewe", ard_biome$predictor.variable.names) %>% 
     #   dplyr::mutate(id = stringr::str_sub(did, start = 1, end = -12)) %>% 
     #   dplyr::mutate(dplyr::across(tidyselect::all_of(scale_0_to_100), ~ .x / 100)) %>% 
-    #   dplyr::select(!tidyselect::all_of(c(scale_not_normalized, scale_drought))) %>% 
+    #   dplyr::select(!tidyselect::all_of(c(scale_nonnormalized, scale_drought))) %>% 
     #   dplyr::rename(biome_fullname = biome_name_daily) %>% 
     #   dplyr::mutate(barren_grass_forb_herb_mix_tm01_cover = ifelse(barren_grass_forb_herb_mix_tm01 >= 0.5, yes = "high", no = "low"))
     # 
@@ -360,6 +360,16 @@ out_gg_2 <-
 # wind anisotropy is bound by [0, 1] because standard deviation has to be greater than 0, and the internal cos(X) function is bound by [-1, 1]
 # wind terrain alignment anisotropy is bound by [0, 0.5] because standard deviation is greater than 0, and max standard deviation of variable bounded by [0, 1] is 0.5
 # Above, we multiplied terrain alignment anisotropy by 2 to make it bound by [0,1] like these other variables
+
+figs_0_to_1[[1]]
+figs_0_to_1[[2]]
+figs_0_to_1[[3]]
+figs_0_to_1[[4]]
+
+figs_drought[[1]]
+figs_drought[[2]]
+figs_drought[[3]]
+figs_drought[[4]]
 
 out_gg_1
 out_gg_2

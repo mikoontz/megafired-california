@@ -184,6 +184,10 @@ data.table::setcolorder(x = daily_DT, neworder = c("biome_shortname", "biome_ful
 resolve_drivers <- merge(x = daily_DT, y = lf_dist_by_resolve, by = c("biome_shortname", "biome_fullname", "year"))
 resolve_drivers <- data.table::melt(data = resolve_drivers, id.vars = c("biome_shortname", "biome_fullname", "year"), value.name = "expected_value")
 
+resolve_drivers_summary <- 
+  resolve_drivers %>% 
+  dplyr::group_by(biome_shortname, biome_fullname, variable) %>% 
+  dplyr::summarize(expected_value = mean(expected_value))
 ### End getting roads/fluc/static drivers into proportion verison
 
 static_fluc_fired_drivers <-data.table::fread("data/out/drivers/fired-fluc-static-driver-proportions.csv")
@@ -228,12 +232,31 @@ lf_fired_drivers[, year := lubridate::year(date)]
 fired_drivers <- merge(x = static_fluc_fired_drivers, y = lf_fired_drivers,
                        by = c("did", "id", "date", "year"))
 
+
 # Get the analysis ready data to tell us which did's are relevant
 ard <- 
   lapply(X = list.files(here::here(latest_ard_dir), 
                         full.names = TRUE),
          FUN = data.table::fread) |> 
   data.table::rbindlist(fill = TRUE)
+
+ard_long <- data.table::melt(ard, id.vars = c("did", "event_day", "daily_area_ha", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", "spatial_fold"))
+ard_summary <-
+  ard_long %>% 
+  dplyr::group_by(biome_shortname, variable, ewe) %>% 
+  dplyr::summarize(value = mean(value))
+
+
+fired_drivers_summary <-
+  fired_drivers %>% 
+  dplyr::group_by(biome_shortname, variable, ewe) %>% 
+  dplyr::summarize(value = mean(value))
+
+
+fired_drivers_summary %>% filter(biome_shortname == "tcf", variable == "flat")
+resolve_drivers_summary %>% filter(biome_shortname == "tcf", variable == "flat")
+ard_summary %>% filter(biome_shortname == "tcf", variable == "flat")
+
 
 fired_drivers <- 
   fired_drivers[did %in% ard$did, ] %>% 
@@ -303,6 +326,17 @@ cpi_summary_across_folds <-
   dplyr::ungroup() %>% 
   dplyr::mutate(key_var = ifelse(cpi_median > 0, 1, 0)) %>% 
   as.data.table()
+
+cpi_summary_across_folds %>% 
+  dplyr::filter(key_var == 1, biome_shortname == "tcf") %>% 
+  arrange(biome_shortname, desc(cpi_median)) %>% 
+  dplyr::select(variable, biome_shortname, cpi_median)
+
+cpi_summary_across_folds %>% 
+  dplyr::filter(key_var == 1, biome_shortname == "mfws") %>% 
+  arrange(biome_shortname, desc(cpi_median)) %>% 
+  dplyr::select(variable, biome_shortname, cpi_median)
+
 
 out <- 
   merge(x = fired_v_expected, 

@@ -150,6 +150,23 @@ ggplot(test, aes(x = diff_median, y = ewe)) +
   facet_wrap(facets = "variable", scales = "free_x") +
   theme_bw()
 
+ggplot(test, aes(x = diff_median, y = as.factor(ewe))) +
+  geom_violin() +
+  # geom_smooth(method = "gam", formula = as.formula('y ~ s(x, bs = "cs", k = 4)')) +
+  facet_wrap(facets = "variable", scales = "free_x") +
+  theme_bw()
+
+test <- 
+  tcf %>% 
+  filter(variable == "insect_disease_tm01_tm10" | variable == "sqrt_aoi_tm1") %>% 
+  mutate(ewe = as.numeric(ewe) - 1) %>% 
+  dplyr::select(-source, -calculation) %>% 
+  tidyr::pivot_wider(id_cols = c("did", "ewe", "biome_shortname"), names_from = "variable", values_from = "diff")
+
+ggplot(test, aes(x = insect_disease_tm01_tm10, y = as.factor(ewe), color = sqrt_aoi_tm1)) +
+  geom_point() +
+  viridis::scale_color_viridis()
+
 # all driver summaries together
 driver_summaries <-
   rbind(static_fluc_summary, lf_summary, weather, nonnormalized) %>% 

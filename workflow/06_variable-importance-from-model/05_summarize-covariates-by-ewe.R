@@ -10,7 +10,7 @@ latest_ard_dir <- here::here("data", "ard", latest_ard_date)
 latest_rf_cpi_date <- sort(list.files(path = here::here("data", "out", "rf", "conditional-predictive-impact")), 
                            decreasing = TRUE)[1]
 
-latest_rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
+rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
 
 latest_rf_ttest_dir <- here::here("figs", "rf", "ewe-vs-nonewe-driver-comparison", latest_ard_date)
 dir.create(latest_rf_ttest_dir, showWarnings = FALSE, recursive = TRUE)
@@ -85,7 +85,7 @@ nonnormalized[variable == "sqrt_aoi_tm1", `:=`(measured_value = sqrt((measured_v
                                                diff = sqrt((diff^2*1e4)/pi)/1e3,
                                                diff_median = sqrt((diff_median^2*1e4)/pi)/1e3)] 
 
-ard_summary <-
+ard_summary_by_did <-
   ard %>% 
   dplyr::select(tidyselect::all_of(c("did", "ewe", "biome_shortname", driver_descriptions$variable))) %>% 
   data.table::melt(id.vars = c("did", "ewe", "biome_shortname"), value.name = "measured_value") %>% 
@@ -96,7 +96,24 @@ ard_summary <-
                 diff_median = measured_value - expected_value_median) %>% 
   dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj) %>% 
   dplyr::left_join(y = ewes) %>% 
-  dplyr::left_join(y = driver_descriptions) %>% 
+  dplyr::left_join(y = driver_descriptions)
+
+tcf <-
+  ard_summary_by_did %>% 
+  filter(biome_shortname == "tcf")
+
+tcf_insects <-
+  tcf %>% 
+  filter(variable == "insect_disease_tm01_tm10") %>% 
+  group_by(ewe) %>% 
+  summarize(mean(expected_value_median))
+
+tcf_insects$expected_value_median
+
+
+
+ard_summary <-
+  ard_summary_by_did %>% 
   group_by(display_name, variable, ewe) %>% 
   summarize(measured_value = mean(adj, na.rm = TRUE))
 

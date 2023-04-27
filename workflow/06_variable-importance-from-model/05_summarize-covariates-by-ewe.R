@@ -81,108 +81,86 @@ nonnormalized <-
   dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj)
 
 
-nonnormalized[variable == "sqrt_aoi_tm1", `:=`(measured_value = sqrt((measured_value^2*1e4)/pi)/1e3,
-                                               diff = sqrt((diff^2*1e4)/pi)/1e3,
-                                               diff_median = sqrt((diff_median^2*1e4)/pi)/1e3)] 
+nonnormalized[variable == "sqrt_aoi_tm1", `:=`(measured_value = sqrt((measured_value^2*1e4)/pi)/1e3*pi,
+                                               diff = sqrt((diff^2*1e4)/pi)/1e3*pi,
+                                               diff_median = sqrt((diff_median^2*1e4)/pi)/1e3*pi)] 
 
-ard_summary_by_did <-
-  ard %>% 
-  dplyr::select(tidyselect::all_of(c("did", "ewe", "biome_shortname", driver_descriptions$variable))) %>% 
-  data.table::melt(id.vars = c("did", "ewe", "biome_shortname"), value.name = "measured_value") %>% 
-  dplyr::mutate(expected_value = 0.5,
-                expected_value_median = 0,
-                adj = measured_value,
-                diff = measured_value - expected_value,
-                diff_median = measured_value - expected_value_median) %>% 
-  dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj) %>% 
-  dplyr::left_join(y = ewes) %>% 
-  dplyr::left_join(y = driver_descriptions)
-
-tcf <-
-  ard_summary_by_did %>% 
-  filter(biome_shortname == "tcf")
-
-tcf_insects <-
-  tcf %>% 
-  filter(variable == "insect_disease_tm01_tm10") %>% 
-  group_by(ewe) %>% 
-  summarize(mean(expected_value_median))
-
-tcf_insects$expected_value_median
-
-
-
-ard_summary <-
-  ard_summary_by_did %>% 
-  group_by(display_name, variable, ewe) %>% 
-  summarize(measured_value = mean(adj, na.rm = TRUE))
-
-ard_summary %>% 
-  filter(variable == "insect_disease_tm01_tm10")
-
-ard_tcf <-
-  ard %>% 
-  dplyr::filter(did %in% unique(tcf$did)) %>% 
-  dplyr::select(tidyselect::all_of(c("did", "ewe", "biome_shortname", driver_descriptions$variable))) %>% 
-  data.table::melt(id.vars = c("did", "ewe", "biome_shortname"), value.name = "measured_value") %>% 
-  dplyr::filter(variable %in% key_vars[["tcf"]]$variable) %>% 
-  dplyr::mutate(variable = factor(variable, levels = levels(key_vars[["tcf"]]$variable))) %>% 
-  dplyr::arrange(variable, ewe)
-
-ggplot(ard_tcf, aes(x = measured_value, y = ewe)) +
-  geom_point() +
-  geom_smooth(method = "glm", method.args = list(family = binomial())) +
-  facet_wrap(facets = "variable", scales = "free_x") +
-  theme_bw()
-
-ggplot(ard_tcf[ard_tcf$variable == "insect_disease_tm01_tm10", ], aes(x = measured_value, y = ewe)) +
-  geom_point() +
-  geom_smooth(method = "glm", method.args = list(family = binomial())) +
-  facet_wrap(facets = "variable", scales = "free_x") +
-  theme_bw()
-
-ggplot(ard_tcf[ard_tcf$variable == "insect_disease_tm01_tm10", ], aes(x = measured_value, y = ewe)) +
-  geom_point() +
-  geom_smooth() +
-  facet_wrap(facets = "variable", scales = "free_x") +
-  theme_bw()
-
-ggplot(ard_tcf[ard_tcf$variable == "insect_disease_tm01_tm10", ], aes(x = measured_value, y = ewe)) +
-  geom_point() +
-  geom_smooth(method = "glm", method.args = list(family = binomial())) +
-  # geom_smooth(method = "gam", formula = as.formula('y ~ s(x, bs = "cs", k = 4)')) +
-  facet_wrap(facets = "variable", scales = "free_x") +
-  theme_bw() +
-  labs(x = "Actual measured proportion")
-
-test <- 
-  tcf %>% 
-  filter(variable == "insect_disease_tm01_tm10") %>% 
-  mutate(ewe = as.numeric(ewe) - 1)
-
-ggplot(test, aes(x = diff_median, y = ewe)) +
-  geom_point() +
-  geom_smooth(method = "glm", method.args = list(family = binomial())) +
-  # geom_smooth(method = "gam", formula = as.formula('y ~ s(x, bs = "cs", k = 4)')) +
-  facet_wrap(facets = "variable", scales = "free_x") +
-  theme_bw()
-
-ggplot(test, aes(x = diff_median, y = as.factor(ewe))) +
-  geom_violin() +
-  # geom_smooth(method = "gam", formula = as.formula('y ~ s(x, bs = "cs", k = 4)')) +
-  facet_wrap(facets = "variable", scales = "free_x") +
-  theme_bw()
-
-test <- 
-  tcf %>% 
-  filter(variable == "insect_disease_tm01_tm10" | variable == "sqrt_aoi_tm1") %>% 
-  mutate(ewe = as.numeric(ewe) - 1) %>% 
-  dplyr::select(-source, -calculation) %>% 
-  tidyr::pivot_wider(id_cols = c("did", "ewe", "biome_shortname"), names_from = "variable", values_from = "diff")
-
-ggplot(test, aes(x = insect_disease_tm01_tm10, y = as.factor(ewe), color = sqrt_aoi_tm1)) +
-  geom_point() +
-  viridis::scale_color_viridis()
+# ard_summary_by_did <-
+#   ard %>% 
+#   dplyr::select(tidyselect::all_of(c("did", "ewe", "biome_shortname", driver_descriptions$variable))) %>% 
+#   data.table::melt(id.vars = c("did", "ewe", "biome_shortname"), value.name = "measured_value") %>% 
+#   dplyr::mutate(expected_value = 0.5,
+#                 expected_value_median = 0,
+#                 adj = measured_value,
+#                 diff = measured_value - expected_value,
+#                 diff_median = measured_value - expected_value_median) %>% 
+#   dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj) %>% 
+#   dplyr::left_join(y = ewes) %>% 
+#   dplyr::left_join(y = driver_descriptions)
+# 
+# ard_summary <-
+#   ard_summary_by_did %>% 
+#   group_by(display_name, variable, ewe) %>% 
+#   summarize(measured_value = mean(adj, na.rm = TRUE))
+# 
+# ard_tcf <-
+#   ard %>% 
+#   dplyr::filter(did %in% unique(tcf$did)) %>% 
+#   dplyr::select(tidyselect::all_of(c("did", "ewe", "biome_shortname", driver_descriptions$variable))) %>% 
+#   data.table::melt(id.vars = c("did", "ewe", "biome_shortname"), value.name = "measured_value") %>% 
+#   dplyr::filter(variable %in% key_vars[["tcf"]]$variable) %>% 
+#   dplyr::mutate(variable = factor(variable, levels = levels(key_vars[["tcf"]]$variable))) %>% 
+#   dplyr::arrange(variable, ewe)
+# 
+# ggplot(ard_tcf, aes(x = measured_value, y = ewe)) +
+#   geom_point() +
+#   geom_smooth(method = "glm", method.args = list(family = binomial())) +
+#   facet_wrap(facets = "variable", scales = "free_x") +
+#   theme_bw()
+# 
+# ggplot(ard_tcf[ard_tcf$variable == "insect_disease_tm01_tm10", ], aes(x = measured_value, y = ewe)) +
+#   geom_point() +
+#   geom_smooth(method = "glm", method.args = list(family = binomial())) +
+#   facet_wrap(facets = "variable", scales = "free_x") +
+#   theme_bw()
+# 
+# ggplot(ard_tcf[ard_tcf$variable == "insect_disease_tm01_tm10", ], aes(x = measured_value, y = ewe)) +
+#   geom_point() +
+#   geom_smooth() +
+#   facet_wrap(facets = "variable", scales = "free_x") +
+#   theme_bw()
+# 
+# ggplot(ard_tcf[ard_tcf$variable == "insect_disease_tm01_tm10", ], aes(x = measured_value, y = ewe)) +
+#   geom_point() +
+#   geom_smooth(method = "glm", method.args = list(family = binomial())) +
+#   # geom_smooth(method = "gam", formula = as.formula('y ~ s(x, bs = "cs", k = 4)')) +
+#   facet_wrap(facets = "variable", scales = "free_x") +
+#   theme_bw() +
+#   labs(x = "Actual measured proportion")
+# 
+# ggplot(test, aes(x = diff_median, y = ewe)) +
+#   geom_point() +
+#   geom_smooth(method = "glm", method.args = list(family = binomial())) +
+#   # geom_smooth(method = "gam", formula = as.formula('y ~ s(x, bs = "cs", k = 4)')) +
+#   facet_wrap(facets = "variable", scales = "free_x") +
+#   theme_bw()
+# 
+# ggplot(test, aes(x = diff_median, y = as.factor(ewe))) +
+#   geom_violin() +
+#   # geom_smooth(method = "gam", formula = as.formula('y ~ s(x, bs = "cs", k = 4)')) +
+#   facet_wrap(facets = "variable", scales = "free_x") +
+#   theme_bw()
+# 
+# test <- 
+#   tcf %>% 
+#   filter(variable == "insect_disease_tm01_tm10" | variable == "sqrt_aoi_tm1") %>% 
+#   mutate(ewe = as.numeric(ewe) - 1) %>% 
+#   dplyr::select(-source, -calculation) %>% 
+#   tidyr::pivot_wider(id_cols = c("did", "ewe", "biome_shortname"), names_from = "variable", values_from = "diff")
+# 
+# ggplot(test, aes(x = insect_disease_tm01_tm10, y = as.factor(ewe), color = sqrt_aoi_tm1)) +
+#   geom_point() +
+#   viridis::scale_color_viridis()
 
 # all driver summaries together
 driver_summaries <-

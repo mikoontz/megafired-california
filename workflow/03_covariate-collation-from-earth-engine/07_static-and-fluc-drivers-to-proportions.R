@@ -289,14 +289,16 @@ fi_daily_drivers <- fi_daily_drivers[did %in% valid_did$did, ]
 data.table::fwrite(x = fi_daily_drivers, file = "data/out/drivers/fi-fluc-static-driver-proportions.csv")
 
 
-### Convert the static, fluc, and roads pixel counts to proportions of the resolve 
-# Convert FIRED pixel counts to area
-resolve_daily_drivers <- prep_static_and_fluc_drivers(static_paths = paste0("data/out/ee/resolve-biomes-static-drivers_california_", static_version, ".csv"),
-                                                    roads_paths = paste0("data/out/ee/resolve-biomes-daily-roads-drivers_california_", roads_version, ".csv"),
-                                                    fluc_paths = paste0("data/out/ee/resolve-biomes-fluctuating-drivers_california_", fluc_version, ".csv"),
-                                                    nonwater_area_paths = here::here("data", "out", "ee", "resolve-biome-non-water-area-30m-pixel-count.csv"))
-
-resolve_daily_drivers <- resolve_daily_drivers[resolve_daily_drivers$nonwater_area_ha != 0, ]
-resolve_daily_drivers <- resolve_daily_drivers[did %in% valid_did$did, ]
-
-data.table::fwrite(x = resolve_daily_drivers, file = "data/out/drivers/resolve-fluc-static-driver-proportions.csv")
+# ### Convert the static, fluc, and roads pixel counts to proportions of the resolve 
+# # Convert FIRED pixel counts to area
+# resolve_daily_drivers <- prep_static_and_fluc_drivers(
+#   static_paths = paste0("data/out/ee/resolve-biomes-static-drivers_california_", static_version, ".csv"),
+#   roads_paths = paste0("data/out/ee/resolve-biomes-daily-roads-drivers_california_", roads_version, ".csv"),
+#   fluc_paths = paste0("data/out/ee/resolve-biomes-fluctuating-drivers_california_", fluc_version, ".csv"),
+#   nonwater_area_paths = here::here("data", "out", "ee", "resolve-biome-non-water-area-30m-pixel-count.csv")
+# )
+# 
+# resolve_daily_drivers <- resolve_daily_drivers[resolve_daily_drivers$nonwater_area_ha != 0, ]
+# resolve_daily_drivers <- resolve_daily_drivers[did %in% valid_did$did, ]
+# 
+# data.table::fwrite(x = resolve_daily_drivers, file = "data/out/drivers/resolve-fluc-static-driver-proportions.csv")

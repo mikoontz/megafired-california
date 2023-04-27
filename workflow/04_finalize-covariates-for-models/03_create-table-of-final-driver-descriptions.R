@@ -34,11 +34,11 @@ topography_drivers <-
   data.frame(type = "topography",
              variable = c("elevation", 
                           "rumple_index", 
-                          "peak_ridge_cliff", "valleys", "slope_warm", "slope_cool", "slope_neutral", "flat", 
+                          "peak_ridge_cliff", "valleys", "slope_warm", "slope_cool", "slope_neutral", "flat",
                           "landform_diversity"),
              display_name = c("Elevation (m)",
                               "Terrain roughness\n(rumple index)",
-                              "Peak/ridge/cliff fraction", "Valleys fraction", "Slopes (warm)\nfraction", "Slopes (cool)\nfraction", "Slopes (neutral)\nfraction", "Flat fraction",
+                              "Peak/ridge/cliff fraction", "Valleys fraction", "Slopes (warm)\nfraction", "Slopes (cool)\nfraction", "Slopes (neutral)\nfraction", "Flat \nfraction",
                               "Landform diversity"),
              source = c("Percentiles derived for this paper using USGS 3DEP", 
                         "Calculation and percentiles derived for this paper using USGS 3DEP", 
@@ -55,9 +55,11 @@ topography_drivers <-
                              "Percentile of Shannon-Wiener Index of the proportional cover of the 6 aggregated landform types [peak/ridge/cliff, valleys, slope (warm), slope (cool), slope (neutral), flat] within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"))
 #                             "Percentile of Shannon-Wiener Index of the proportional cover of all 15 landform types [peak/ridge (neutral), peak/ridge (warm), peak/ridge (cool), cliff, mountain/divide, valleys, narrow valleys, upper slope (warm), lower slope (warm), upper slope (cool), lower slope (cool), upper slope (neutral), lower slope (neutral), upper slope (flat), lower slope (flat)] within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"))
 
+
 weather_drivers <- 
   data.frame(type = "weather",
-             variable = c("wind_anisotropy_rtma", 
+             variable = c("wind_dir_ns_rtma", "wind_dir_ew_rtma",
+                          "wind_anisotropy_ns_rtma", "wind_anisotropy_ew_rtma", 
                           "min_wind_speed_rtma_pct", "max_wind_speed_rtma_pct", 
                           "min_wind_filled_gust_rtma_pct", "max_wind_filled_gust_rtma_pct", 
                           "min_rh_rtma_pct", "max_rh_rtma_pct",
@@ -65,7 +67,8 @@ weather_drivers <-
                           "min_vpd_rtma_pct", "max_vpd_rtma_pct", 
                           "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct",
                           "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z"),
-             display_name = c("Wind direction\nvariability",
+             display_name = c("Average N/S wind direction", "Average E/W wind direction",
+                              "Wind direction\nN/S variability", "Wind direction\nE/W variability",
                               "Min. wind speed", "Max. wind speed",
                               "Min. wind gust speed", "Max. wind gust speed",
                               "Min. relative humidity", "Max. relative humidity",
@@ -81,7 +84,7 @@ weather_drivers <-
                               "Standardized Precipitation-\nEvapotranspiration Index\n(2 years)",
                               "Standardized Precipitation-\nEvapotranspiration Index\n(5 years)",
                               "Palmer Drought Severity Index"),
-             source = c("Daily summary derived for this paper from NOAA Real Time Mesoscale Analysis", 
+             source = c(rep("Daily summary derived for this paper from NOAA Real Time Mesoscale Analysis", times = 4),
                         rep("Daily summary and percentiles derived for this paper from NOAA Real Time Mesoscale Analysis", times = 2),
                         rep("Wind speed filled for all missing gust data, daily summary, and percentiles derived for this paper using NOAA Real Time Mesoscale Analysis", times = 2),
                         rep("Daily summary and percentiles derived for this paper from NOAA Real Time Mesoscale Analysis", times = 4),
@@ -89,7 +92,10 @@ weather_drivers <-
                         rep("Percentiles derived for this paper using data from Abatzoglou (2012) [GRIDMET using NFDRS fire danger index scale]", times = 2),
                         rep("Percentiles derived for this paper using data from Abatzoglou (2012) [GRIDMET]", times = 2),
                         rep("Abatzoglou (2012) [GRIDMET]", times = 9)),
-             calculation = c("standard deviation of cosine of hourly wind directions each day",
+             calculation = c("mean of cosine of hourly wind directions each day",
+                             "mean of sine of hourly wind directions each day",
+                             "standard deviation of cosine of hourly wind directions each day",
+                             "standard deviation of sine of hourly wind directions each day",
                              "minimum percentile of hourly sustained wind speed in a day compared to hourly VPD between 2011-01-01 and 2020-12-31",
                              "maximum percentile of hourly sustained wind speed in a day compared to hourly VPD between 2011-01-01 and 2020-12-31",
                              "minimum percentile of hourly wind gust speed in a day (missing data filled with sustained wind speed) compared to hourly VPD between 2011-01-01 and 2020-12-31",
@@ -113,7 +119,6 @@ weather_drivers <-
                              "standardized precipitation evapotranspiration index (SPEI) aggregated across prior 2 years",                             
                              "standardized precipitation evapotranspiration index (SPEI) aggregated across prior 5 years",
                              "Palmer Drought Severity Index (PDSI) z-score"))
-
 
 fuel_drivers <- 
   data.frame(type = "fuel",
@@ -165,28 +170,84 @@ fuel_drivers <-
                              # "Percentile of proportional cover of LANDFIRE insect/disease disturbance that wasn't high-severity occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"
              ))
 
-interacting_drivers <- 
-  data.frame(type = "interacting",
-             variable = c("wind_terrain_anisotropy_rtma", "min_wind_terrain_alignment_rtma_pct", "max_wind_terrain_alignment_rtma_pct"),
-             display_name = c("Variability in\nWind/terrain alignment", "Min. wind/terrain alignment", "Max. wind/terrain alignment"),
-             source = c("Calculations and daily summary derived for this paper from NOAA Real Time Mesoscale Analysis (RTMA) and USGS 3DEP",
-                        rep("Calculations, percentiles, and daily summary derived for this paper from NOAA RTMA and 3DEP", times = 2)),
-             calculation = c("2 times standard deviation of hourly wind/terrain alignment [abs(cos(wind direction minus terrain aspect))] in a day",
-                             "minimum percentile of hourly wind/terrain alignment [abs(cos(wind direction minus terrain aspect))] in a day compared to hourly wind/terrain alignment between 2011-01-01 and 2020-12-31",
-                             "maximum percentile of hourly wind/terrain alignment [abs(cos(wind direction minus terrain aspect))] in a day compared to hourly wind/terrain alignment between 2011-01-01 and 2020-12-31"))
+# Version with only fire 1-10 years ago
+# fuel_drivers <- 
+#   data.frame(type = "fuel",
+#              variable = c("ndvi", "veg_structure_rumple", 
+#                           "trees_tm01", "shrubs_tm01", "grass_forb_herb_tm01", "barren_tm01", 
+#                           "landcover_diversity_tm01",
+#                           "fire_tm01_tm10"
+#                           # "fire_high_tm01_tm05", "fire_high_tm06_tm10",
+#                           # "fire_not_high_tm01_tm05", "fire_not_high_tm06_tm10",
+#                           # "clearcut_harvest_othermech_tm01_tm05", "clearcut_harvest_othermech_tm06_tm10",
+#                           # "fuel_trt_tm01_tm05", "fuel_trt_tm06_tm10",
+#                           # "insect_disease_tm01_tm10"
+#                           # "insect_disease_tm01_tm05", "insect_disease_tm06_tm10"
+#                           # "insect_disease_high_tm01_tm05", "insect_disease_high_tm06_tm10",
+#                           # "insect_disease_not_high_tm01_tm05", "insect_disease_not_high_tm06_tm10"
+#              ),
+#              display_name = c("Normalized difference\nvegetation index",
+#                               "Vegetation heterogeneity\n(NDVI rumple index)",
+#                               "Tree fraction", "Shrub fraction", "Grass/forb/herb fraction", "Barren fraction",
+#                               "Landcover diversity", 
+#                               "Fire fraction\n(within 1-10 years ago)"),
+#              # "High severity fire fraction\n(within 1-5 years ago)", "High severity fire fraction\n(within 6-10 years ago)",
+#              # "Low/moderate severity fire fraction\n(within 1-5 years ago)", "Low/moderate severity fire fraction\n(within 6-10 years ago)",
+#              # "Insect/disease fraction\n(within 1-10 years ago)"),
+#              source = c("Spatial summary and percentiles derived for this paper using Landsat surface reflectance", 
+#                         "Calculation and percentiles derived for this paper using Landsat surface reflectance-derived NDVI",
+#                         rep("Aggregated from US Forest Service Landscape Change Monitoring System (LCMS) Landcover and percentiles derived for this paper", times = 4),
+#                         "Calculation and percentiles derived for this paper using US Forest Service LCMS Landcover",
+#                         "Aggregated from DOI/USGS LANDFIRE Annual Disturbance and percentiles derived for this paper"),
+#              calculation = c("First, a per-pixel normalized difference vegetation index (NDVI; using near infrared and red surface reflectance) is calculated as a temporal mean across previous growing season (between day of year 152 to day of year 258 in the year before the fire) after cloud masking and applying Landsat Collection 2 scale/offset values. Then, the percentile of spatial mean NDVI within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire).",
+#                              "Percentile of rumple index (calculated using algorithm of Jenness (2004)) of NDVI values (multiplied by 100 for convenience) within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              "Percentile of proportional cover of LCMS 'trees' landcover type one year prior to fire event within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              "Percentile of proportional cover of LCMS 'shrubs' and 'shrubs/trees mix' landcover types one year prior to fire event within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              "Percentile of proportional cover of LCMS 'grass/forb/herb', 'grass/forb/herb/trees mix', and 'grass/forb/herb/shrubs mix' landcover types one year prior to fire event within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              "Percentile of proportional cover of LCMS 'barren', 'barren/trees mix', 'barren/shrubs mix', 'barren/grass/forb/herb mix', and 'snow or ice' landcover types one year prior to fire event within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              "Percentile of Shannon-Wiener Index of the proportional cover of the 4 aggregated LCMS landcover types [trees, shrubs, grass/forb/herb, barren] one year prior to fire event within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of Shannon-Wiener Index of the proportional cover of 11 LCMS landcover types [trees, shrubs/trees mix, shrubs, grass/forb/herb, grass/forb/herb/trees mix, grass/forb/herb/shrub mix, barren, snow or ice, barren/trees mix, barren/shrub mix, barren/grass/forb/herb mix] one year prior to fire event within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              "Percentile of proportional cover of LANDFIRE fire occurring 1 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"
+#                              # "Percentile of proportional cover of LANDFIRE high-severity fire occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE high-severity fire occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE fire disturbance that wasn't high-severity occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE fire disturbance that wasn't high-severity occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE clearcut, harvest, or other mechanical disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE clearcut, harvest, or other mechanical disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE thinning or mastication disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE thinning or mastication disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE insect/disease disturbance occurring 1 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"
+#                              # "Percentile of proportional cover of LANDFIRE insect/disease disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE insect/disease disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"
+#                              # "Percentile of proportional cover of LANDFIRE high-severity insect/disease disturbance occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE high-severity insect/disease disturbance occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE insect/disease disturbance that wasn't high-severity occurring 1 to 5 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)",
+#                              # "Percentile of proportional cover of LANDFIRE insect/disease disturbance that wasn't high-severity occurring 6 to 10 years prior to fire/day combination within polygon representing daily burn perimeter compared to same value calculated when that polygon is located in ~500 other locations within the fire's biome, but not where the fire burned (i.e., independent of fire)"
+#              ))
+
+# interacting_drivers <- 
+#   data.frame(type = "interacting",
+#              variable = c("wind_terrain_anisotropy_ns_rtma", "wind_terrain_anisotropy_ew_rtma",
+#                           "min_wind_terrain_alignment_rtma_pct", "max_wind_terrain_alignment_rtma_pct"),
+#              display_name = c("Variability in\nWind/terrain alignment", "Min. wind/terrain alignment", "Max. wind/terrain alignment"),
+#              source = c("Calculations and daily summary derived for this paper from NOAA Real Time Mesoscale Analysis (RTMA) and USGS 3DEP",
+#                         rep("Calculations, percentiles, and daily summary derived for this paper from NOAA RTMA and 3DEP", times = 2)),
+#              calculation = c("2 times standard deviation of hourly wind/terrain alignment [abs(cos(wind direction minus terrain aspect))] in a day",
+#                              "minimum percentile of hourly wind/terrain alignment [abs(cos(wind direction minus terrain aspect))] in a day compared to hourly wind/terrain alignment between 2011-01-01 and 2020-12-31",
+#                              "maximum percentile of hourly wind/terrain alignment [abs(cos(wind direction minus terrain aspect))] in a day compared to hourly wind/terrain alignment between 2011-01-01 and 2020-12-31"))
 
 fire_drivers <- 
   data.frame(type = "fire",
-             variable = "sqrt_aoi_tm1",
+             variable = "fireline_length_proxy_km",
              display_name = "Proxy for length of yesterday's\nactive fire line (km)",
              source = "Derived for this paper using daily FIRED events",
-             calculation = "Square root of daily area of increase at fire's previous time step")
+             calculation = "Half the circumference of a circle with equivalent area to daily area of increase at fire's previous time step")
 
 out <- rbind(human_drivers,
              topography_drivers,
              weather_drivers,
              fuel_drivers,
-             interacting_drivers,
+             # interacting_drivers,
              fire_drivers)
 
 out <-
@@ -196,45 +257,40 @@ out <-
 write.csv(x = out, file = "data/out/drivers/driver-descriptions.csv", row.names = FALSE)
 
 
-
-
-#### Interacting aggregations
-#           wind_terrain_anisotropy_rtma = 2*sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
-#           wind_terrain_alignment_rtma = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
-#           min_wind_terrain_alignment_rtma = min(abs(cos(wind_aspect_alignment_rad))),
-#           max_wind_terrain_alignment_rtma = max(abs(cos(wind_aspect_alignment_rad))),
-#           min_wind_terrain_alignment_rtma_pct = min(wind_aspect_alignment_rad_pct),
-#           max_wind_terrain_alignment_rtma_pct = max(wind_aspect_alignment_rad_pct),
-
-
 #### weather aggregations
-# summarize(wind_anisotropy_rtma = sd(cos(WDIR_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
-#           # multiply wind terrain anisotropy by 2 to put it on the same [0,1] scale as wind anisotropy and wind terrain alignment
-#           # instead of [0,0.5]
-#           max_wind_speed_rtma = max(WIND),
-#           min_wind_speed_rtma = min(WIND),
-#           max_wind_gust_rtma = max(GUST),
-#           min_wind_gust_rtma = min(GUST),
-#           max_wind_filled_gust_rtma = max(wind_filled_gust),
-#           min_wind_filled_gust_rtma = min(wind_filled_gust),
-#           max_wind_speed_rtma_pct = max(WIND_pct),
-#           min_wind_speed_rtma_pct = min(WIND_pct),
-#           max_wind_gust_rtma_pct = max(GUST_pct),
-#           min_wind_gust_rtma_pct = min(GUST_pct),
-#           max_wind_filled_gust_rtma_pct = max(wind_filled_gust_pct),
-#           min_wind_filled_gust_rtma_pct = min(wind_filled_gust_pct),
-#           max_rh_rtma = max(rh),
-#           min_rh_rtma = min(rh),
-#           max_rh_rtma_pct = max(rh_pct),
-#           min_rh_rtma_pct = min(rh_pct),
-#           max_temp_rtma = max(TMP),
-#           min_temp_rtma = min(TMP),
-#           max_temp_rtma_pct = max(TMP_pct),
-#           min_temp_rtma_pct = min(TMP_pct),
-#           max_vpd_rtma = max(vpd_hPa),
-#           min_vpd_rtma = min(vpd_hPa),
-#           max_vpd_rtma_pct = max(vpd_hPa_pct),
-#           min_vpd_rtma_pct = min(vpd_hPa_pct))
+# rtma_drivers_summarized <-
+#   rtma_drivers %>%
+#   dplyr::mutate(date = lubridate::ymd(date)) %>% 
+#   group_by(id, date, did) %>%
+#   summarize(wind_dir_ns_rtma = mean(cos(WDIR_rad)), # average northness of the wind direction in a day (1 is 24 hours of north winds; -1 is 24 hours of south winds)
+#             wind_dir_ew_rtma = mean(sin(WDIR_rad)), # average eastness of the wind direction in a day (1 is 24 hours of north winds; -1 is 24 hours of south winds)
+#             wind_anisotropy_ns_rtma = sd(cos(WDIR_rad)), # greater standard deviation means MORE north/south variability in wind direction in a day
+#             wind_anisotropy_ew_rtma = sd(sin(WDIR_rad)), # greater standard deviation means MORE east/west variability in wind direction in a day
+#             max_wind_speed_rtma = max(WIND),
+#             min_wind_speed_rtma = min(WIND),
+#             max_wind_gust_rtma = max(GUST),
+#             min_wind_gust_rtma = min(GUST),
+#             max_wind_filled_gust_rtma = max(wind_filled_gust),
+#             min_wind_filled_gust_rtma = min(wind_filled_gust),
+#             max_wind_speed_rtma_pct = max(WIND_pct),
+#             min_wind_speed_rtma_pct = min(WIND_pct),
+#             max_wind_gust_rtma_pct = max(GUST_pct),
+#             min_wind_gust_rtma_pct = min(GUST_pct),
+#             max_wind_filled_gust_rtma_pct = max(wind_filled_gust_pct),
+#             min_wind_filled_gust_rtma_pct = min(wind_filled_gust_pct),
+#             max_rh_rtma = max(rh),
+#             min_rh_rtma = min(rh),
+#             max_rh_rtma_pct = max(rh_pct),
+#             min_rh_rtma_pct = min(rh_pct),
+#             max_temp_rtma = max(TMP),
+#             min_temp_rtma = min(TMP),
+#             max_temp_rtma_pct = max(TMP_pct),
+#             min_temp_rtma_pct = min(TMP_pct),
+#             max_vpd_rtma = max(vpd_hPa),
+#             min_vpd_rtma = min(vpd_hPa),
+#             max_vpd_rtma_pct = max(vpd_hPa_pct),
+#             min_vpd_rtma_pct = min(vpd_hPa_pct)) %>%
+#   ungroup()
 
 #### Topography aggregations
 # peak_ridge_cliff = peak_ridge_warm + peak_ridge + peak_ridge_cool + mountain_divide + cliff,

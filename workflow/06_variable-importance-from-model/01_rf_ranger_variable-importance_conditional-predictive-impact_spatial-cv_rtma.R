@@ -412,3 +412,25 @@ for (biome_idx in seq_along(biome_shortnames)) {
 
 
 }
+
+# [1] "Starting the tcf biome at 2023-04-27 09:30:10"
+# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:30:14..."
+# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:41:45. "
+# [1] "Time elapsed: 11.5 minutes."
+# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:41:45..."
+# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:47:52. "
+# [1] "Time elapsed: 6.1 minutes."
+# [1] "Starting the mfws biome at 2023-04-27 09:47:52"
+# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-27 09:47:56..."
+# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-27 09:55:29. "
+# [1] "Time elapsed: 7.5 minutes."
+# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-27 09:55:29..."
+# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-27 09:58:22. "
+# [1] "Time elapsed: 2.9 minutes."
+# [1] "Starting the dxs biome at 2023-04-27 09:58:22"
+# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 09:58:24..."
+# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 09:59:58. "
+# [1] "Time elapsed: 1.6 minutes."
+# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 09:59:58..."
+# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 10:00:22. "
+# [1] "Time elapsed: 0.4 minutes."

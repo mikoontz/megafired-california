@@ -121,13 +121,17 @@ era5_drivers_summarized <-
   era5_drivers %>%
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   group_by(id, date, did) %>%
-  summarize(wind_anisotropy_era5 = sd(cos(wind_dir_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
-            # multiply wind terrain anisotropy by 2 to put it on the same [0,1] scale as wind anisotropy and wind terrain alignment
-            # instead of [0,0.5]
-            wind_terrain_anisotropy_era5 = 2*sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
-            wind_terrain_alignment_era5 = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
-            min_wind_terrain_alignment_era5 = min(abs(cos(wind_aspect_alignment_rad))),
-            max_wind_terrain_alignment_era5 = max(abs(cos(wind_aspect_alignment_rad))),
+  summarize(wind_dir_ns_era5 = mean(cos(wind_dir_rad)), # average northness of wind direction in a day (1 is all north winds; -1 is all south winds)
+            wind_dir_ew_era5 = mean(sin(wind_dir_rad)), # average eastness of wind direction in a day (1 is all east winds; -1 is all west winds)
+            wind_anisotropy_ns_era5 = sd(cos(wind_dir_rad)), # greater standard deviation means MORE north/south variability in wind direction in a day
+            wind_anisotropy_ew_era5 = sd(sin(wind_dir_rad)), # greater standard deviation means MORE east/west variability in wind direction in a day
+            # # multiply wind terrain anisotropy by 2 to put it on the same [0,1] scale as wind anisotropy and wind terrain alignment
+            # # instead of [0,0.5]
+            # wind_terrain_anisotropy_ns_era5 = 2*sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE north/south variability in wind/terrain alignment in a day
+            # wind_terrain_anisotropy_ew_era5 = 2*sd(abs(sin(wind_aspect_alignment_rad))), # greater standard deviation means MORE east/west variability in wind/terrain alignment in a day
+            # wind_terrain_alignment_era5 = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
+            # min_wind_terrain_alignment_era5 = min(abs(cos(wind_aspect_alignment_rad))),
+            # max_wind_terrain_alignment_era5 = max(abs(cos(wind_aspect_alignment_rad))),
             max_wind_speed_era5 = max(wind_speed),
             min_wind_speed_era5 = min(wind_speed),
             max_wind_speed_era5_pct = max(wind_speed_pct),
@@ -193,15 +197,19 @@ rtma_drivers_summarized <-
   rtma_drivers %>%
   dplyr::mutate(date = lubridate::ymd(date)) %>% 
   group_by(id, date, did) %>%
-  summarize(wind_anisotropy_rtma = sd(cos(WDIR_rad)), # greater standard deviation means MORE asymmetry in wind direction in a day
-            # multiply wind terrain anisotropy by 2 to put it on the same [0,1] scale as wind anisotropy and wind terrain alignment
-            # instead of [0,0.5]
-            wind_terrain_anisotropy_rtma = 2*sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE asymmetry in wind/terrain alignment in a day
-            wind_terrain_alignment_rtma = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
-            min_wind_terrain_alignment_rtma = min(abs(cos(wind_aspect_alignment_rad))),
-            max_wind_terrain_alignment_rtma = max(abs(cos(wind_aspect_alignment_rad))),
-            min_wind_terrain_alignment_rtma_pct = min(wind_aspect_alignment_rad_pct),
-            max_wind_terrain_alignment_rtma_pct = max(wind_aspect_alignment_rad_pct),
+  summarize(wind_dir_ns_rtma = mean(cos(WDIR_rad)), # average northness of the wind direction in a day (1 is 24 hours of north winds; -1 is 24 hours of south winds)
+            wind_dir_ew_rtma = mean(sin(WDIR_rad)), # average eastness of the wind direction in a day (1 is 24 hours of north winds; -1 is 24 hours of south winds)
+            wind_anisotropy_ns_rtma = sd(cos(WDIR_rad)), # greater standard deviation means MORE north/south variability in wind direction in a day
+            wind_anisotropy_ew_rtma = sd(sin(WDIR_rad)), # greater standard deviation means MORE east/west variability in wind direction in a day
+            # # multiply wind terrain anisotropy by 2 to put it on the same [0,1] scale as wind anisotropy and wind terrain alignment
+            # # instead of [0,0.5]
+            # wind_terrain_anisotropy_ns_rtma = 2*sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE north/south asymmetry in wind/terrain alignment in a day
+            # wind_terrain_anisotropy_ew_rtma = 2*sd(abs(sin(wind_aspect_alignment_rad))), # greater standard deviation means MORE east/west asymmetry in wind/terrain alignment in a day
+            # wind_terrain_alignment_rtma = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
+            # min_wind_terrain_alignment_rtma = min(abs(cos(wind_aspect_alignment_rad))),
+            # max_wind_terrain_alignment_rtma = max(abs(cos(wind_aspect_alignment_rad))),
+            # min_wind_terrain_alignment_rtma_pct = min(wind_aspect_alignment_rad_pct),
+            # max_wind_terrain_alignment_rtma_pct = max(wind_aspect_alignment_rad_pct),
             max_wind_speed_rtma = max(WIND),
             min_wind_speed_rtma = min(WIND),
             max_wind_gust_rtma = max(GUST),
@@ -283,6 +291,11 @@ creek$max_vpd_rtma_pct
 tubbs$max_wind_gust_rtma_pct
 tubbs$min_wind_gust_rtma_pct
 tubbs$min_wind_speed_rtma_pct
+tubbs$wind_anisotropy_ns_rtma
+tubbs$wind_anisotropy_ew_rtma
+tubbs$wind_dir_ns_rtma
+tubbs$wind_dir_ew_rtma
+
 tubbs$max_vpd_rtma_pct
 
 ###

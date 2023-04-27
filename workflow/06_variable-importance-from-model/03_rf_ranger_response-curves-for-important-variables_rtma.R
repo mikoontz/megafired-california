@@ -11,16 +11,19 @@ ard_dir <- here::here("data", "ard", latest_ard_date)
 rf_tuning_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
 rf_predict_dir <- here::here("data", "out", "rf", "predict", latest_ard_date)
 rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
+rf_tables_dir <- here::here("tables", "rf", latest_ard_date)
 
 rf_response_curves_dir <- here::here("figs", "rf", "response-curves", latest_ard_date)
 dir.create(rf_response_curves_dir, showWarnings = FALSE, recursive = TRUE)
 
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
-biome_shortnames <- c("tcf", "mfws", "dxs")
+# biome_shortnames <- c("tcf", "mfws", "dxs")
+biome_shortnames <- c("tcf", "mfws")
 
 # Full names of the biomes for the plot titles
 # biome_lookup <- c("Temperate Conifer Forests", "Mediterranean Forests, Woodlands & Scrub", "Temperate Grasslands, Savannas & Shrublands", "Deserts & Xeric Shrublands")
-biome_lookup <- c("Temperate Conifer Forests", "Mediterranean Forests, Woodlands & Scrub", "Deserts & Xeric Shrublands")
+# biome_lookup <- c("Temperate Conifer Forests", "Mediterranean Forests, Woodlands & Scrub", "Deserts & Xeric Shrublands")
+biome_lookup <- c("Temperate Conifer Forests", "Mediterranean Forests, Woodlands & Scrub")
 names(biome_lookup) <- biome_shortnames
 
 driver_description <- 
@@ -32,165 +35,15 @@ col_pal_df <-
 
 col_pal <- setNames(object = col_pal_df$hexcode, nm = col_pal_df$type)
 
-# Read in the CPI results based on the Matthew's Correlation Coefficient
-cpi_results_full <-
-  lapply(biome_shortnames, FUN = function(biome_shortname) {
-    return(data.table::fread(input = here::here(rf_cpi_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, ".csv"))))
-  }) %>% 
-  data.table::rbindlist()
-
-cpi_grouped_results_full <-
-  lapply(biome_shortnames, FUN = function(biome_shortname) {
-    return(data.table::fread(input = here::here(rf_cpi_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv"))))
-  }) %>%
-  data.table::rbindlist()
-
-
-# Get the threshold for classification so we can add it to the final plots
-# Tuned hyperparameters
-tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = here::here(rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv")))
-})
-
-tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
-
-tuned_hyperparameters <-
-  tuning_metrics %>% 
-  dplyr::filter(.metric == "mcc") %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>%
-  # Mean MCC across iterations for each spatial fold
-  summarize(n = n(),
-            n_not_missing = sum(!is.na(mean)),
-            mean_mcc = mean(x = mean, na.rm = TRUE),
-            lwr_mcc = mean(x = lwr, na.rm = TRUE)) %>%
-  dplyr::filter((n_not_missing / n >= 0.5)) %>% 
-  dplyr::group_by(biome) %>% 
-  dplyr::arrange(desc(mean_mcc)) %>% 
-  slice(1)
-
-# Tuned with informedness
-# tuned_hyperparameters <-
-#   tuning_metrics %>% 
-#   dplyr::filter(.metric == "informedness") %>% 
-#   group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>% 
-#   summarize(n = n(),
-#             n_not_missing = sum(!is.na(mean)),
-#             mean_informedness = mean(x = mean, na.rm = TRUE),
-#             lwr_informedness = mean(x = lwr, na.rm = TRUE)) %>%
-#   dplyr::filter((n_not_missing / n >= 0.5)) %>% 
-#   dplyr::group_by(biome) %>% 
-#   dplyr::arrange(desc(mean_informedness)) %>% 
-#   slice(1)
-
-tuned_hyperparameters <-
-  tuned_hyperparameters %>% 
-  dplyr::mutate(biome_fullname = biome_lookup[match(biome, names(biome_lookup))])
-
-# Summarize the CPI results across iterations and across folds to determine a single CPI value
-# per variable per biome (then rank those)
-cpi_results <-
-  cpi_results_full %>% 
-  dplyr::group_by(Variable, spatial_fold = id, biome) %>% 
-  dplyr::summarize(cpi = mean(CPI, na.rm = TRUE),
-                   sd = sd(CPI, na.rm = TRUE),
-                   count = sum(!is.na(CPI)),
-                   min = min(CPI, na.rm = TRUE),
-                   max = max(CPI, na.rm = TRUE),
-                   lwr = mean(CPI, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI))),
-                   upr = mean(CPI, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI)))) %>%
-  dplyr::arrange(biome, Variable, spatial_fold) %>% 
-  dplyr::group_by(Variable, biome) %>% 
-  dplyr::summarize(n_pos = length(which(cpi > 0)),
-                   n_neg = length(which(cpi < 0)),
-                   n_0 = length(which(cpi == 0)),
-                   cpi_mean = mean(x = cpi),
-                   cpi_lwr = mean(x = lwr),
-                   cpi_upr = mean(x = upr),
-                   cpi_median = median(x = cpi),
-                   n = n()) %>% 
-  # dplyr::filter(cpi_mean > 0) %>%
-  # dplyr::filter((n_pos / n) >= 1/3 & (n_neg / n) <= 1/3) %>%
-  # dplyr::arrange(biome, desc(cpi_mean))
-  dplyr::filter(cpi_median > 0) %>%
-  dplyr::arrange(biome, desc(cpi_median))
-
-cpi_grouped_results <-
-  cpi_grouped_results_full %>% 
-  dplyr::group_by(Group, spatial_fold = id, biome) %>% 
-  dplyr::summarize(cpi = mean(CPI, na.rm = TRUE),
-                   sd = sd(CPI, na.rm = TRUE),
-                   count = sum(!is.na(CPI)),
-                   min = min(CPI, na.rm = TRUE),
-                   max = max(CPI, na.rm = TRUE),
-                   lwr = mean(CPI, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI))),
-                   upr = mean(CPI, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI)))) %>%
-  dplyr::arrange(biome, Group, spatial_fold) %>% 
-  dplyr::group_by(Group, biome) %>% 
-  dplyr::summarize(n_pos = length(which(cpi > 0)),
-                   n_neg = length(which(cpi < 0)),
-                   n_0 = length(which(cpi == 0)),
-                   cpi_mean = mean(x = cpi),
-                   cpi_lwr = mean(x = lwr),
-                   cpi_upr = mean(x = upr),
-                   cpi_median = median(x = cpi),
-                   n = n()) %>% 
-  dplyr::arrange(biome, desc(cpi_median))
-
-cpi_grouped_results
-
-cpi_results %>% 
-  group_by(biome) %>% 
-  tally()
-
-cpi_results %>% 
-  filter(biome == "tcf") %>% 
-  print(n = 23)
-
-
-cpi_results %>% 
-  filter(biome == "mfws") %>% 
-  print(n = 23)
-
-
-cpi_results %>% 
-  filter(biome == "dxs") %>% 
-  print(n = 23)
-
-# # Summarize CPI results for groups across iterations and variables
-# cpi_grouped_results <-
-#   cpi_grouped_results_full %>%
-#   dplyr::group_by(Group, spatial_fold = id, biome) %>% 
-#   dplyr::summarize(cpi = mean(CPI, na.rm = TRUE),
-#                    sd = sd(CPI, na.rm = TRUE),
-#                    count = sum(!is.na(CPI)),
-#                    min = min(CPI, na.rm = TRUE),
-#                    max = max(CPI, na.rm = TRUE),
-#                    lwr = mean(CPI, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI))),
-#                    upr = mean(CPI, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(CPI)) - 1) * sd(CPI, na.rm = TRUE) / sqrt(sum(!is.na(CPI)))) %>%
-#   dplyr::arrange(biome, Group, spatial_fold) %>% 
-#   dplyr::group_by(Group, biome) %>% 
-#   dplyr::summarize(n_pos = length(which(cpi > 0)),
-#                    n_neg = length(which(cpi < 0)),
-#                    n_0 = length(which(cpi == 0)),
-#                    cpi_mean = mean(x = cpi),
-#                    cpi_lwr = mean(x = lwr),
-#                    cpi_upr = mean(x = upr),
-#                    cpi_median = median(x = cpi),
-#                    n = n()) %>% 
-#   dplyr::filter(cpi_mean > 0) %>% 
-#   dplyr::arrange(biome, desc(cpi_mean))
-# 
-# cpi_grouped_results
-# 
-# cpi_grouped_results %>% 
-#   group_by(biome) %>% 
-#   tally()
+cpi_results <- data.table::fread(here::here(rf_cpi_dir, "cpi-important-variables.csv"))
+model_skill_results <- data.table::fread(here::here(rf_tables_dir, "model-skill-results.csv"))
 
 for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
   
   key_vars <-
     cpi_results %>%
+    dplyr::filter(key_var == 1) %>%
     dplyr::filter(biome == biome_shortname) %>% 
     dplyr::pull(Variable)
   
@@ -241,9 +94,10 @@ for(counter in seq_along(biome_shortnames)) {
     dplyr::filter(target_var %in% key_vars) |>
     dplyr::mutate(target_var = factor(target_var, levels = key_vars))
   
-  # Get classification threshold and plot title from tuned_hyperparameters object
-  classification_thresh <- tuned_hyperparameters$classification_thresh[tuned_hyperparameters$biome == biome_shortname]
-  biome_fullname <- tuned_hyperparameters$biome_fullname[tuned_hyperparameters$biome == biome_shortname]
+  # Get tuned classification threshold from model skills table
+  classification_thresh <- model_skill_results$classification_thresh[model_skill_results$biome == biome_shortname]
+  # Get full name for biome from the biome lookup vector
+  biome_fullname <- biome_lookup[match(biome_shortname, names(biome_lookup))]  
   
   response_curves_spaghetti_gg <-
     ggplot() +

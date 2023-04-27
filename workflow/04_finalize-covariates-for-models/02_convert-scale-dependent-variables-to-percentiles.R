@@ -44,7 +44,7 @@ convert_proportions_to_percentiles <- function(fired_drivers, fi_drivers, out_fn
   fires_and_fi[, adj := mapply(data, value,
                                FUN = function(fi_value, fire_value) {
                                  vec <- c(fire_value, fi_value$value)
-                                 return((data.table::frank(vec) / length(vec))[1])
+                                 return((data.table::frank(vec, ties.method = "random") / length(vec))[1])
                                })]
   
   names(fires_and_fi)[names(fires_and_fi) == "value"] <- "measured_value"
@@ -80,6 +80,14 @@ keep_cols <- c("did", "id", "date",
                "peak_ridge_cliff", "valleys", "slope_warm", "slope_cool", "slope_neutral", "flat", 
                "trees_tm01", "shrubs_tm01", "grass_forb_herb_tm01", "barren_tm01",
                "landform_diversity", "landcover_diversity_tm01")
+
+# keep_cols <- c("did", "id", "date",
+#                "elevation", "rumple_index",
+#                "caltrans_road_density_mpha",
+#                "ndvi", "veg_structure_rumple", 
+#                "peak_ridge_cliff", "valleys", "slope_warm", "slope_cool", "slope_neutral", 
+#                "trees_tm01", "shrubs_tm01", "grass_forb_herb_tm01", "barren_tm01",
+#                "landform_diversity", "landcover_diversity_tm01")
 
 static_fluc_fi_drivers <- static_fluc_fi_drivers[, .SD, .SDcols = keep_cols]
 static_fluc_fired_drivers <- static_fluc_fired_drivers[, .SD, .SDcols = keep_cols]
@@ -120,32 +128,14 @@ lf_fired_drivers[, `:=`(date = as.Date(date),
 keep_cols <- c("did", "id", "date",
                "fire_high_tm01_tm05", "fire_high_tm06_tm10",
                "fire_not_high_tm01_tm05", "fire_not_high_tm06_tm10",
+               "fire_tm01_tm10",
                "insect_disease_tm01_tm10")
 
-# From late December 2022 run, where we used too many sparely represented categories
-# # modify any columns as necessary
-# lf_fi_drivers[, `:=`(date = as.Date(date),
-#                      samp_id = NULL,
-#                      fire_not_high_tm01_tm05 = fire_tm01_tm05 - fire_high_tm01_tm05,
-#                      fire_not_high_tm06_tm10 = fire_tm06_tm10 - fire_high_tm06_tm10,
-#                      insect_disease_not_high_tm01_tm05 = insect_disease_tm01_tm05 - insect_disease_high_tm01_tm05,
-#                      insect_disease_not_high_tm06_tm10 = insect_disease_tm06_tm10 - insect_disease_high_tm06_tm10)]
-# 
-# lf_fired_drivers[, `:=`(date = as.Date(date),
-#                         samp_id = NULL,
-#                         fire_not_high_tm01_tm05 = fire_tm01_tm05 - fire_high_tm01_tm05,
-#                         fire_not_high_tm06_tm10 = fire_tm06_tm10 - fire_high_tm06_tm10,
-#                         insect_disease_not_high_tm01_tm05 = insect_disease_tm01_tm05 - insect_disease_high_tm01_tm05,
-#                         insect_disease_not_high_tm06_tm10 = insect_disease_tm06_tm10 - insect_disease_high_tm06_tm10)]
+# lf_fi_drivers[, date := as.Date(date)]
+# lf_fired_drivers[, date := as.Date(date)]
 # 
 # # drop any unnecessary columns
-# keep_cols <- c("did", "id", "date",
-#                "fire_high_tm01_tm05", "fire_high_tm06_tm10",
-#                "fire_not_high_tm01_tm05", "fire_not_high_tm06_tm10",
-#                "clearcut_harvest_othermech_tm01_tm05", "clearcut_harvest_othermech_tm06_tm10",
-#                "fuel_trt_tm01_tm05", "fuel_trt_tm06_tm10",
-#                "insect_disease_high_tm01_tm05", "insect_disease_high_tm06_tm10",
-#                "insect_disease_not_high_tm01_tm05", "insect_disease_not_high_tm06_tm10")
+# keep_cols <- c("did", "id", "date", "fire_tm01_tm10")
 
 # We also subset to just the dids that are in the static_fluc drivers variables because
 # those have been properly subset to remove nonwater area mismatches between
@@ -159,33 +149,3 @@ lf_fired_drivers <- lf_fired_drivers[did %in% static_fluc_fired_drivers$did, ]
 convert_proportions_to_percentiles(fi_drivers = lf_fi_drivers,
                                    fired_drivers = lf_fired_drivers, 
                                    out_fname = "data/out/drivers/landfire-disturbance-driver-proportion-percentiles.csv")
-
-# ### Convert roads data to percentiles
-# # read data
-# roads_fired_drivers <-data.table::fread("data/out/drivers/roads/fired_daily_road-drivers_v1.csv")
-# roads_fi_drivers <- 
-#   list.files(path = "data/out/drivers/roads/fire-independent-locations/", 
-#              pattern = ".csv", 
-#              full.names = TRUE) %>% 
-#   lapply(FUN = data.table::fread) %>% 
-#   data.table::rbindlist()
-# 
-# # modify any columns as necessary
-# roads_fi_drivers[, `:=`(date = as.Date(date))]
-# roads_fired_drivers[, `:=`(date = as.Date(date))]
-# 
-# # drop unnecessary columns
-# keep_cols <- c("did", "id", "date",
-#                "elevation", "friction", "friction_walking_only", "rumple_index", "road_density_mpha",
-#                "ndvi", "veg_structure_rumple", 
-#                "peak_ridge_cliff", "valleys", "slope_warm", "slope_cool", "slope_neutral", "flat", 
-#                "trees_tm01", "shrubs_tm01", "grass_forb_herb_tm01", "barren_tm01",
-#                "landform_diversity", "landcover_diversity_tm01")
-# 
-# roads_fi_drivers <- roads_fi_drivers[, .SD, .SDcols = keep_cols]
-# roads_fired_drivers <- roads_fired_drivers[, .SD, .SDcols = keep_cols]
-# 
-# # convert to percentiles
-# convert_proportions_to_percentiles(fired_drivers = roads_fired_drivers,
-#                                    fi_drivers = roads_fi_drivers,
-#                                    out_fname = "data/out/drivers/fluc-static-driver-proportion-percentiles.csv")

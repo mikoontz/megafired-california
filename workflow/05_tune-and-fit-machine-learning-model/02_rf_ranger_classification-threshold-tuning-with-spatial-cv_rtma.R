@@ -6,11 +6,14 @@ library(data.table)
 # library(PRROC)
 library(ggplot2)
 
-latest_rf_tuning_date <- sort(list.files(path = here::here("data", "out", "rf", "tuning")), 
-                              decreasing = TRUE)[1]
+latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
+                        decreasing = TRUE)[1]
 
-latest_rf_tuning_dir <- here::here("data", "out", "rf", "tuning", latest_rf_tuning_date)
-latest_rf_figs_dir <- here::here("figs", "rf", "tuning", lubridate::today())
+# latest_rf_tuning_date <- sort(list.files(path = here::here("data", "out", "rf", "tuning")), 
+#                               decreasing = TRUE)[1]
+
+latest_rf_tuning_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
+latest_rf_figs_dir <- here::here("figs", "rf", "tuning", latest_ard_date)
 
 # We can tune the "classification threshold" for saying something is an EWE or not
 # No need to fit more models for this step, we merely adjust our classification threshold, convert the
@@ -166,4 +169,4 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
   
 })
 
-# Took about 40 minutes total on a 12-core machine with 64GB of RAM
+# Took about 60 minutes total on a 12-core machine with 64GB of RAM

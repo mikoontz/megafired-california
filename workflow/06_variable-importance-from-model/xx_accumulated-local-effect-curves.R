@@ -10,12 +10,16 @@ library(dplyr)
 library(ALEPlot)
 library(readr)
 library(here)
+library(ranger)
+library(ggplot2)
 
 latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
                         decreasing = TRUE)[1]
 
 latest_ard_dir <- here::here("data", "ard", latest_ard_date)
 rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
+rf_ale_curves_dir <- here::here("figs", "rf", "ale-curves", latest_ard_date)
+dir.create(rf_ale_curves_dir, showWarnings = FALSE, recursive = TRUE)
 
 biome_shortnames <- c("tcf", "mfws")
 
@@ -138,18 +142,30 @@ pdp_gg <- function(biome_shortname) {
 
 tcf <- ale_gg(biome_shortname = "tcf")
 tcf_ale <- tcf$out_all_key_vars
-tcf_x <- tcf$X
-tcf_ale$f[tcf_ale$variable == "sqrt_aoi_tm1"] <- sqrt((tcf_ale$f[tcf_ale$variable == "sqrt_aoi_tm1"]^2*1e4)/pi)/1e3 * ifelse(tcf_ale$f[tcf_ale$variable == "sqrt_aoi_tm1"] >= 0, yes = 1, no = -1)
-tcf_pdp <- pdp_gg(biome_shortname = "tcf")
+tcf_x <- 
+  tcf$X %>% 
+  tidyr::pivot_longer(cols = tidyselect::everything(), 
+                      names_to = "variable", 
+                      values_to = "x") %>% 
+  dplyr::left_join(y = driver_descriptions, by = "variable") %>% 
+  dplyr::filter(variable %in% tcf_ale$variable) %>% 
+  dplyr::mutate(display_name = factor(display_name, levels = levels(tcf_ale$display_name)))
 
-ggplot(tcf_ale, aes(x = x, y = f)) +
+tcf_ale_gg <- 
+  ggplot(data = tcf_ale, mapping = aes(x = x, y = f)) +
   geom_line() +
-  geom_rug(data = tcf_x, mapping = aes(x = x)) +
+  # geom_rug() +
+  geom_rug(data = tcf_x, mapping = aes(x = x), inherit.aes = FALSE) +
   facet_wrap(facets = "display_name", scales = "free") +
   theme_bw() +
   labs(x = "Variable value (local area)",
        y = "Local accumulated effect")
 
+ggsave(plot = tcf_ale_gg, 
+       filename = file.path(rf_ale_curves_dir, "tcf_ale-curves.png"),
+       width = 10, height = 10)
+
+# tcf_pdp <- pdp_gg(biome_shortname = "tcf")
 # ggplot(tcf_pdp, aes(x = x, y = f)) +
 #   geom_line() +
 #   geom_rug() +
@@ -157,23 +173,37 @@ ggplot(tcf_ale, aes(x = x, y = f)) +
 #   theme_bw()
 
 mfws <- ale_gg(biome_shortname = "mfws")
+mfws_ale <- mfws$out_all_key_vars
+mfws_x <- 
+  mfws$X %>% 
+  tidyr::pivot_longer(cols = tidyselect::everything(), 
+                      names_to = "variable", 
+                      values_to = "x") %>% 
+  dplyr::left_join(y = driver_descriptions, by = "variable") %>% 
+  dplyr::filter(variable %in% mfws_ale$variable) %>% 
+  dplyr::mutate(display_name = factor(display_name, levels = levels(mfws_ale$display_name)))
 
-ggplot(mfws, aes(x = x, y = f)) +
+mfws_ale_gg <- 
+  ggplot(mfws_ale, aes(x = x, y = f)) +
   geom_line() +
-  geom_rug() +
+  # geom_rug() +
+  geom_rug(data = mfws_x, mapping = aes(x = x), inherit.aes = FALSE) +
   facet_wrap(facets = "display_name", scales = "free") +
   theme_bw() +
   labs(x = "Variable value (local area)",
        y = "Local accumulated effect")
 
+ggsave(plot = mfws_ale_gg, 
+       filename = file.path(rf_ale_curves_dir, "mfws_ale-curves.png"),
+       width = 10, height = 10)
 
-mfws_pdp <- pdp_gg(biome_shortname = "mfws")
 
-ggplot(mfws_pdp, aes(x = x, y = f)) +
-  geom_line() +
-  geom_rug() +
-  facet_wrap(facets = "display_name", scales = "free") +
-  theme_bw()
+# mfws_pdp <- pdp_gg(biome_shortname = "mfws")
+# ggplot(mfws_pdp, aes(x = x, y = f)) +
+#   geom_line() +
+#   geom_rug() +
+#   facet_wrap(facets = "display_name", scales = "free") +
+#   theme_bw()
 
 
 

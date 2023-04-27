@@ -12,13 +12,13 @@ library(here)
 # library(mlr3measures)
 # library(MLmetrics)
 
-local_out_dir <- here::here("data", "out", "rf", "tuning", lubridate::today())
-dir.create(local_out_dir, recursive = TRUE, showWarnings = FALSE)
-
 latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
                         decreasing = TRUE)[1]
 
 latest_ard_dir <- here::here("data", "ard", latest_ard_date)
+
+local_out_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
+dir.create(local_out_dir, recursive = TRUE, showWarnings = FALSE)
 
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 biome_shortnames <- c("tcf", "mfws", "dxs")
@@ -125,12 +125,20 @@ for(counter in seq_along(biome_shortnames)) {
                   to = floor(length(predictor.variable.names) / 1.75),
                   by = 2)
   
+  # tune.df <- expand.grid(mtry = mtry_vec, 
+  #                        num.trees = c(1000), 
+  #                        sample.fraction = c(0.5, (1 - 1/exp(1)), 0.7, 0.8),
+  #                        min.node.size = c(1, 3, 5, 10, 25, 50),
+  #                        class.wgts = TRUE,
+  #                        iter = 1:10)
+  
   tune.df <- expand.grid(mtry = mtry_vec, 
                          num.trees = c(1000), 
-                         sample.fraction = c(0.5, (1 - 1/exp(1)), 0.7, 0.8),
-                         min.node.size = c(1, 3, 5, 10, 25, 50),
+                         sample.fraction = c(0.4, 0.5, (1 - 1/exp(1)), 0.7, 0.8, 0.9),
+                         min.node.size = c(1, 5, 10, 25, 50, 60),
                          class.wgts = TRUE,
                          iter = 1:10)
+  
   
   out <- pblapply(X = (1:nrow(tune.df)), 
                   FUN = spatial_cv_tune, 

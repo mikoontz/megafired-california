@@ -19,6 +19,14 @@ dir.create(gdrive_out_dir,
            recursive = TRUE,
            showWarnings = FALSE)
 
+# fluc_static <- 
+#   data.table::fread("data/out/drivers/fluc-static-driver-proportion-percentiles.csv") |>
+#   dplyr::select(did, id, date,
+#                 elevation, rumple_index, caltrans_road_density_mpha,
+#                 ndvi, veg_structure_rumple, 
+#                 peak_ridge_cliff, valleys, slope_warm, slope_cool, slope_neutral, 
+#                 trees_tm01, shrubs_tm01, grass_forb_herb_tm01, barren_tm01,
+#                 landform_diversity, landcover_diversity_tm01)
 fluc_static <- 
   data.table::fread("data/out/drivers/fluc-static-driver-proportion-percentiles.csv") |>
   dplyr::select(did, id, date,
@@ -52,6 +60,10 @@ fluc_static <-
 #                 insect_disease_high_tm01_tm05, insect_disease_high_tm06_tm10,
 #                 insect_disease_not_high_tm01_tm05, insect_disease_not_high_tm06_tm10)
 
+# landfire <- 
+#   data.table::fread("data/out/drivers/landfire-disturbance-driver-proportion-percentiles.csv") |>
+#   dplyr::select(did, id, date, fire_tm01_tm10)
+
 landfire <- 
   data.table::fread("data/out/drivers/landfire-disturbance-driver-proportion-percentiles.csv") |>
   dplyr::select(did, id, date,
@@ -63,12 +75,24 @@ weather_drivers <-
   data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
   dplyr::select(!tidyselect::contains("era5")) |> # not the ERA5 drivers; use the RTMA drivers in their place
   dplyr::select(did, id, date,
-                wind_anisotropy_rtma, wind_terrain_anisotropy_rtma, min_wind_terrain_alignment_rtma_pct, max_wind_terrain_alignment_rtma_pct,
+                wind_dir_ns_rtma, wind_dir_ew_rtma,
+                wind_anisotropy_ns_rtma, wind_anisotropy_ew_rtma,
                 min_wind_speed_rtma_pct, max_wind_speed_rtma_pct, min_wind_filled_gust_rtma_pct, max_wind_filled_gust_rtma_pct,
                 min_rh_rtma_pct, max_rh_rtma_pct, min_temp_rtma_pct, max_temp_rtma_pct, min_vpd_rtma_pct, max_vpd_rtma_pct,
                 spei14d, spei30d, spei90d, spei180d, spei270d, spei1y, spei2y, spei5y, pdsi_z,
                 erc_pct, bi_pct, fm100_pct, fm1000_pct) %>% 
   dplyr::filter(did %in% fluc_static$did)
+
+# weather_drivers <- 
+#   data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
+#   dplyr::select(!tidyselect::contains("era5")) |> # not the ERA5 drivers; use the RTMA drivers in their place
+#   dplyr::select(did, id, date,
+#                 wind_anisotropy_rtma, wind_terrain_anisotropy_rtma, min_wind_terrain_alignment_rtma_pct, max_wind_terrain_alignment_rtma_pct,
+#                 min_wind_speed_rtma_pct, max_wind_speed_rtma_pct, min_wind_filled_gust_rtma_pct, max_wind_filled_gust_rtma_pct,
+#                 min_rh_rtma_pct, max_rh_rtma_pct, min_temp_rtma_pct, max_temp_rtma_pct, min_vpd_rtma_pct, max_vpd_rtma_pct,
+#                 spei14d, spei30d, spei90d, spei180d, spei270d, spei1y, spei2y, spei5y, pdsi_z,
+#                 erc_pct, bi_pct, fm100_pct, fm1000_pct) %>% 
+#   dplyr::filter(did %in% fluc_static$did)
 
 other_fires_summary <- 
   data.table::fread("data/out/drivers/other-fires-summary.csv") |>
@@ -109,14 +133,15 @@ fired_biggest_poly <-
 fires <-
   data.table::fread("data/out/fired/05_daily-with-behavior-metrics/fired_daily_ca_behavior-metrics.csv") |>
   dplyr::mutate(area_log10 = log10(daily_area_ha),
-                sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha)) |>
+                sqrt_aoi_tm1 = sqrt(daily_area_tminus1_ha),
+                fireline_length_proxy_km = sqrt((sqrt_aoi_tm1^2*1e4)/pi)/1e3*pi) |>
   dplyr::rename(cumu_area_tm01 = cum_area_ha_tminus1) |>
   dplyr::left_join(biome_lookup, by = "biome_name_daily")
 
 fires <-
   merge(x = fires, y = fired_biggest_poly, by = c("did", "id", "date", "samp_id")) |>
   dplyr::select(did, id, date, biome_shortname, biome_name_daily, eco_name_daily,  x_biggest_poly_3310, y_biggest_poly_3310, 
-                daily_area_ha, area_log10, sqrt_aoi_tm1, event_day, cumu_area_tm01)
+                daily_area_ha, area_log10, fireline_length_proxy_km, sqrt_aoi_tm1, event_day, cumu_area_tm01)
 
 fires
 
@@ -143,6 +168,51 @@ fires_drivers %>%
 driver_descriptions <- read.csv("data/out/drivers/driver-descriptions.csv")
 predictor.variable.names <- driver_descriptions$variable
 
+# # Summaries of static, fluc, and landfire disturbance data
+# static_fluc_summary <- 
+#   data.table::fread("data/out/drivers/fluc-static-driver-proportion-percentiles_long.csv") %>% 
+#   dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj)
+# 
+# lf_summary <- 
+#   data.table::fread("data/out/drivers/landfire-disturbance-driver-proportion-percentiles_long.csv") %>% 
+#   dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj)
+# 
+# Summary of weather data
+weather_drivers_summary <-
+  weather_drivers %>%
+  dplyr::select(tidyselect::all_of(c("did", driver_descriptions$variable[driver_descriptions$type == "weather"]))) %>%
+  data.table::as.data.table() %>%
+  data.table::melt(id.vars = c("did"), value.name = "measured_value") %>%
+  dplyr::mutate(expected_value = 0.5,
+                expected_value_median = 0.5,
+                adj = measured_value,
+                diff = measured_value - expected_value,
+                diff_median = measured_value - expected_value_median) %>%
+  dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj) %>% 
+  dplyr::mutate(expected_value = ifelse(variable %in% c("wind_dir_ns_rtma", "wind_dir_ew_rtma", "wind_anisotropy_ns_rtma", "wind_anisotropy_ew_rtma"),
+                                        yes = NA,
+                                        no = expected_value),
+                expected_value_median = ifelse(variable %in% c("wind_dir_ns_rtma", "wind_dir_ew_rtma", "wind_anisotropy_ns_rtma", "wind_anisotropy_ew_rtma"),
+                                               yes = NA,
+                                               no = expected_value_median))
+# 
+# nonnormalized_summary <-
+#   fires_drivers %>% 
+#   dplyr::select(tidyselect::all_of(c("did", "ewe", "biome_shortname", driver_descriptions$variable[driver_descriptions$type %in% c("fire")], "npl", "short_concurrent_fires"))) %>% 
+#   data.table::as.data.table() %>% 
+#   data.table::melt(id.vars = c("did", "ewe", "biome_shortname"), value.name = "measured_value") %>% 
+#   dplyr::mutate(expected_value = NA,
+#                 expected_value_median = NA,
+#                 adj = measured_value,
+#                 diff = measured_value - expected_value,
+#                 diff_median = measured_value - expected_value_median) %>% 
+#   dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj)
+# 
+# all_summary <-
+#   rbind(static_fluc_summary, lf_summary, weather_drivers_summary, nonnormalized_summary) %>% 
+#   dplyr::left_join(fires_drivers[, c("did", "ewe", "biome_shortname", "daily_area_ha")]) %>% 
+#   dplyr::filter(!is.na(biome_shortname))
+
 set.seed(2308)
 
 lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
@@ -156,6 +226,25 @@ lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
   out <- out[complete.cases(out), ]
   
   out <- out[, c("did", "event_day", "daily_area_ha", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
+  
+  # Figure out which variables will exhibit badly scale-dependent behavior 
+  # (more than 50% of expected median values for EWE or non-EWE)
+  
+  # biome_driver_summary <- all_summary[all_summary$biome_shortname == biome_shortname, ]
+  # 
+  # biome_driver_summary %>%
+  #   dplyr::filter(did %in% out$did) %>% 
+  #   dplyr::filter(daily_area_ha >= 25) %>% 
+  #   group_by(variable, ewe) %>%
+  #   summarize(mean = mean(expected_value_median),
+  #             median = median(expected_value_median),
+  #             n_zeroes = length(which(expected_value_median == 0)),
+  #             n = n(),
+  #             prop_zeroes = n_zeroes / n) %>%
+  #   arrange(median) %>% 
+  #   print(n = 100)
+  # 
+  
   
   # set up spatial folds
   # https://spatialsample.tidymodels.org/articles/spatialsample.html

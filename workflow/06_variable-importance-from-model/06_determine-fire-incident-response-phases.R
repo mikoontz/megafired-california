@@ -32,8 +32,10 @@ last_simple_size %>% arrange(desc(cum_ha))
 zero_offset <- 0.1
 mean_switching_cumarea <- 10^mean(log10(last_simple_size$cum_ha + zero_offset))
 mean_switching_cumarea / 0.404686
+# 880.4882
 median_switching_cumarea <- 10^median(log10(last_simple_size$cum_ha + zero_offset))
 median_switching_cumarea / 0.404686
+# 800.2471
 
 last_simple_gg <-
   ggplot2::ggplot(last_simple_size, aes(x = cum_ha + zero_offset)) +

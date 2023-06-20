@@ -82,7 +82,6 @@ era5_drivers[, `:=`(`system:index` = NULL,
                     surface_pressure = NULL,
                     u_component_of_wind_10m = NULL,
                     v_component_of_wind_10m = NULL,
-                    wind_aspect_alignment_deg = NULL,
                     wind_dir_deg = NULL,
                     .geo = NULL)]
 

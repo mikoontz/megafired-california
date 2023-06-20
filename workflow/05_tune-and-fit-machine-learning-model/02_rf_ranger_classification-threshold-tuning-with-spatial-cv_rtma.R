@@ -22,6 +22,7 @@ latest_rf_figs_dir <- here::here("figs", "rf", "tuning", latest_ard_date)
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 biome_shortnames <- c("tcf", "mfws", "dxs")
 
+(start_time <- Sys.time())
 # Take the spatial CV results (observation for held out fold and predictions) and calculate various model skill metrics
 pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
   biome_tune <- data.table::fread(here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, ".csv")))
@@ -168,5 +169,7 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
   ggsave(filename = here::here(latest_rf_figs_dir, paste0("classification-threshold-effect_rtma_", biome_shortname, ".png")), plot = class_thresh_effect_gg)
   
 })
+(end_time <- Sys.time())
+(difftime(end_time, start_time, units = "hours"))
 
-# Took about 60 minutes total on a 12-core machine with 64GB of RAM
+# Took about 70 minutes total on a 12-core machine with 64GB of RAM

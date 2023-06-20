@@ -96,6 +96,8 @@ cpi_grouped_results <-
                    cpi_upr = mean(x = upr),
                    cpi_median = median(x = cpi),
                    n = n()) %>%
-  dplyr::arrange(biome, desc(cpi_median))
+  dplyr::arrange(biome, desc(cpi_median)) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::filter(Group != "wind_terrain")
 
 cpi_grouped_results

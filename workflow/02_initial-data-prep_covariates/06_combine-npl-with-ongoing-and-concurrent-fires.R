@@ -26,7 +26,7 @@ fired_events <-
   sf::st_drop_geometry() %>% 
   dplyr::mutate(ignition_date = lubridate::ymd(ignition_date), 
                 last_date = lubridate::ymd(last_date)) %>% 
-  dplyr::filter(ignition_year >= 2011 & ignition_year <= 2020)
+  dplyr::filter(ignition_year <= 2020)
 
 if(!file.exists("data/out/drivers/fired-concurrent-fires-by-day.csv")) {
 
@@ -72,9 +72,6 @@ if(!file.exists("data/out/short-fpa-fod_concurrent-fires-by-day.csv")) {
   # fires on a given day thoughout our study period
   # https://www.fs.usda.gov/rds/archive/catalog/RDS-2013-0009.6
   short <- sf::st_read("data/raw/RDS-2013-0009.6_GPKG/Data/FPA_FOD_20221014.gpkg")
-  ca <- 
-    USAboundaries::us_states(states = "California", resolution = "high") %>% 
-    sf::st_transform(sf::st_crs(short))
   
   short_ca <-
     short %>% 
@@ -83,7 +80,7 @@ if(!file.exists("data/out/short-fpa-fod_concurrent-fires-by-day.csv")) {
   
   # Subset to only data in california with both a reported discovery date and containment date
   # and must be in 2011 or later (the period of analysis)
-  short_ca <- short_ca[STATE == "CA" & !is.na(DISCOVERY_DATE) & !is.na(CONT_DOY) & FIRE_YEAR >= 2011 & FIRE_YEAR <= 2020, ]
+  short_ca <- short_ca[STATE == "CA" & !is.na(DISCOVERY_DATE) & !is.na(CONT_DOY), ]
   short_ca <- short_ca[, c("FOD_ID", "FPA_ID", "FIRE_YEAR", "DISCOVERY_DATE", "CONT_DATE")]
   short_ca[, `:=`(DISCOVERY_DATE = lubridate::mdy(DISCOVERY_DATE), CONT_DATE = lubridate::mdy(CONT_DATE))]
   
@@ -101,8 +98,8 @@ if(!file.exists("data/out/short-fpa-fod_concurrent-fires-by-day.csv")) {
     as.data.frame() %>% 
     setNames(c("date", "concurrent_fires")) %>% 
     dplyr::mutate(date = lubridate::ymd(date)) %>% 
-    dplyr::filter(lubridate::year(date) >= 2011 & lubridate::year(date) <= 2020) %>% 
-    tidyr::complete(date = seq(from = lubridate::ymd("2011-01-01"), to = lubridate::ymd("2020-12-31"), by = "day"), 
+    dplyr::filter(date < lubridate::ymd("2021-01-01")) %>% 
+    tidyr::complete(date = seq(from = lubridate::ymd("1992-01-01"), to = lubridate::ymd("2020-12-31"), by = "day"), 
                     fill = list(concurrent_fires = 0))
   
   write.csv(x = short_concurrent_fires, file = "data/out/short-fpa-fod_concurrent-fires-by-day.csv", row.names = FALSE)
@@ -111,16 +108,19 @@ if(!file.exists("data/out/short-fpa-fod_concurrent-fires-by-day.csv")) {
 
 fired_concurrent_fires <- 
   data.table::fread("data/out/drivers/fired-concurrent-fires-by-day.csv") %>% 
-  dplyr::select(date, concurrent_fires, cumu_area_ha, cumu_count)
+  dplyr::select(date, concurrent_fires, cumu_area_ha, cumu_count) %>% 
+  dplyr::arrange(date)
 
 short_concurrent_fires <- 
   data.table::fread("data/out/short-fpa-fod_concurrent-fires-by-day.csv") %>% 
-  dplyr::rename(short_concurrent_fires = concurrent_fires)
+  dplyr::rename(short_concurrent_fires = concurrent_fires) %>% 
+  dplyr::arrange(date)
 
 concurrent_fires <-
   fired_concurrent_fires %>% 
-  dplyr::left_join(y = short_concurrent_fires) %>% 
-  dplyr::mutate(date = lubridate::ymd(date))
+  dplyr::full_join(y = short_concurrent_fires) %>% 
+  dplyr::mutate(date = lubridate::ymd(date)) %>% 
+  dplyr::arrange(date)
 
 # Get National Preparedness Level data
 npl <- 

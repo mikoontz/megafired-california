@@ -88,16 +88,37 @@ spatial_cv_tune <- function(i, predictor.variable.names, folds, tune.df, num.thr
   return(results_out)
 }
 
-(start_time <- Sys.time())
 for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
   
-  data <- read.csv(paste0(latest_ard_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
-  data$ewe <- factor(data$ewe, levels = c(1, 0))
+  all_data <- read.csv(paste0(latest_ard_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  test <-
+    all_data %>% 
+    tidyr::separate_wider_delim(cols = "did", delim = "-", names = c("id", "year", "month", "day"), cols_remove = FALSE) %>% 
+    dplyr::mutate(date = lubridate::ymd(paste(year, month, day, sep = "-")))
   
-  data$short_concurrent_fires <- as.numeric(data$short_concurrent_fires)
-  predictor.variable.names <- names(data)[names(data) %in% full_predictor_variable_names]
+  nrow(test)
+  range(test$date)
+  all_data$ewe <- factor(all_data$ewe, levels = c(1, 0))
   
+  all_data$short_concurrent_fires <- as.numeric(all_data$short_concurrent_fires)
+  predictor.variable.names <- names(all_data)[names(all_data) %in% full_predictor_variable_names]
+  
+  ggplot(all_data, aes(x = event_day, y = daily_area_ha)) +
+    geom_point() +
+    geom_hline(yintercept = 2000, color = "red")
+  
+  ggplot(all_data, aes(x = cumu_area_tm01, y = daily_area_ha)) +
+    geom_point() +
+    geom_hline(yintercept = 2000, color = "red")
+  
+  data <- all_data[all_data$event_day <= 3, ]
+  nrow(data)
+  
+  data <- all_data[all_data$cumu_area_tm01 <= 880.4882, ]
+  
+  sum(as.numeric(as.character(data$ewe))) / nrow(data)
+  data %>% group_by(ewe, spatial_fold) %>% tally()
   print(paste0("Starting the ", biome_shortname, " biome at ", Sys.time()))
   
   # Set up analysis/assessment splits
@@ -152,31 +173,5 @@ for(counter in seq_along(biome_shortnames)) {
   
   data.table::fwrite(x = out_all, file = paste0(local_out_dir, "/rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, ".csv"))
 }
-(end_time <- Sys.time())
-(difftime(end_time, start_time, units = "hours"))
 
-# 12-core machine with 64GB of RAM for 2023-04-28 version
-# [1] "Starting the tcf biome at 2023-04-28 23:34:38"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=09h 13m 59s
-# [1] "Starting the mfws biome at 2023-04-29 08:48:39"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=07h 44m 37s
-# [1] "Starting the dxs biome at 2023-04-29 16:33:18"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=40m 17s
-# > (end_time <- Sys.time())
-# [1] "2023-04-29 17:13:36 MDT"
-# > (difftime(end_time, start_time, units = "hours"))
-# Time difference of 17.64931 hours
-
-
-
-# # 12-core machine with 64GB of RAM for 2023-06-16 version
-# [1] "Starting the tcf biome at 2023-06-16 16:03:56"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=09h 04m 44s
-# [1] "Starting the mfws biome at 2023-06-17 01:08:42"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=07h 42m 55s
-# [1] "Starting the dxs biome at 2023-06-17 08:51:41"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=39m 50s
-# > (end_time <- Sys.time())
-# [1] "2023-06-17 09:31:31 MDT"
-# > (difftime(end_time, start_time, units = "hours"))
-# Time difference of 17.45962 hours
+# Took about 6 hours total on a 12-core machine with 64GB of RAM

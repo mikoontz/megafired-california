@@ -22,6 +22,12 @@ rf_ale_curves_dir <- here::here("figs", "rf", "ale-curves", latest_ard_date)
 dir.create(rf_ale_curves_dir, showWarnings = FALSE, recursive = TRUE)
 
 biome_shortnames <- c("tcf", "mfws")
+biome_lookup <- 
+  tibble::tibble(biome_name_daily = c("Temperate Conifer Forests", 
+                                      "Mediterranean Forests, Woodlands & Scrub", 
+                                      "Temperate Grasslands, Savannas & Shrublands", 
+                                      "Deserts & Xeric Shrublands"),
+                 biome_shortname = c("tcf", "mfws", "tgss", "dxs"))
 
 driver_descriptions <- 
   read.csv("data/out/drivers/driver-descriptions.csv") %>% 
@@ -159,11 +165,12 @@ tcf_ale_gg <-
   facet_wrap(facets = "display_name", scales = "free") +
   theme_bw() +
   labs(x = "Variable value (local area)",
-       y = "Local accumulated effect")
+       y = "Accumulated local effect") +
+  ggtitle("Temperate Conifer Forests")
 
 ggsave(plot = tcf_ale_gg, 
        filename = file.path(rf_ale_curves_dir, "tcf_ale-curves.png"),
-       width = 10, height = 10)
+       width = 12, height = 12)
 
 # tcf_pdp <- pdp_gg(biome_shortname = "tcf")
 # ggplot(tcf_pdp, aes(x = x, y = f)) +
@@ -191,11 +198,12 @@ mfws_ale_gg <-
   facet_wrap(facets = "display_name", scales = "free") +
   theme_bw() +
   labs(x = "Variable value (local area)",
-       y = "Local accumulated effect")
+       y = "Accumulated local effect") +
+  ggtitle("Mediterranean Forests, Woodlands & Scrub")
 
 ggsave(plot = mfws_ale_gg, 
        filename = file.path(rf_ale_curves_dir, "mfws_ale-curves.png"),
-       width = 10, height = 10)
+       width = 12, height = 12)
 
 
 # mfws_pdp <- pdp_gg(biome_shortname = "mfws")
@@ -216,49 +224,49 @@ ggsave(plot = mfws_ale_gg,
 # J_mfws <- match(x = key_vars_mfws, table = names(X_mfws))
 # # dplyr::as_tibble(X_mfws[, J_mfws])
 # dplyr::tibble(J = J_mfws, variable = names(X_mfws)[J_mfws])
-
-sqrt_aoi_tm1 <- ALEPlot::ALEPlot(X = X_tcf, 
-                                 X.model = fm_tcf, 
-                                 J = J_tcf$J[which(J_tcf$rank == 1)],
-                                 pred.fun = yhat)
-
-insect_disease_tm01_tm10_l <- ALEPlot::ALEPlot(X = X_tcf, 
-                                               X.model = fm_tcf, 
-                                               J = J_tcf$J[which(J_tcf$variable == "insect_disease_tm01_tm10")],
-                                               pred.fun = yhat, K = 5)
-
-insect_disease_tm01_tm10_l <- ALEPlot::ALEPlot(X = X_tcf, 
-                                               X.model = fm_tcf, 
-                                               J = J_tcf$J[which(J_tcf$variable %in% c("insect_disease_tm01_tm10", "sqrt_aoi_tm1"))],
-                                               pred.fun = yhat, K = 75)
-
-insect_disease_tm01_tm10 <- 
-  dplyr::as_tibble(insect_disease_tm01_tm10_l[2:3]) %>% 
-  dplyr::mutate(variable = "insect_disease_tm01_tm10")
-
-ggplot(insect_disease_tm01_tm10, aes(x = x.values, y = f.values)) +
-  geom_line() +
-  geom_rug(inherit.aes = FALSE, data = data_tcf[, c("insect_disease_tm01_tm10", "ewe")], 
-           mapping = aes(x = insect_disease_tm01_tm10)) +
-  theme_bw() +
-  facet_wrap(facets = "variable") +
-  labs(x = "Percentile rank",
-       y = "Accumulated local effect on EWE probability")
-
-caltrans_road_density_mpha_l <- ALEPlot::ALEPlot(X = X_tcf, 
-                                                 X.model = fm_tcf, 
-                                                 J = J_tcf$J[which(J_tcf$variable == "caltrans_road_density_mpha")],
-                                                 pred.fun = yhat)
-
-caltrans_road_density_mpha <- 
-  dplyr::as_tibble(caltrans_road_density_mpha_l[2:3]) %>% 
-  dplyr::mutate(variable = "caltrans_road_density_mpha")
-
-ggplot(caltrans_road_density_mpha, aes(x = x.values, y = f.values)) +
-  geom_line() +
-  geom_rug(inherit.aes = FALSE, data = data_tcf[, c("caltrans_road_density_mpha", "ewe")], 
-           mapping = aes(x = caltrans_road_density_mpha)) +
-  theme_bw() +
-  facet_wrap(facets = "variable") +
-  labs(x = "Percentile rank",
-       y = "Accumulated local effect on EWE probability")
+# 
+# sqrt_aoi_tm1 <- ALEPlot::ALEPlot(X = X_tcf, 
+#                                  X.model = fm_tcf, 
+#                                  J = J_tcf$J[which(J_tcf$rank == 1)],
+#                                  pred.fun = yhat)
+# 
+# insect_disease_tm01_tm10_l <- ALEPlot::ALEPlot(X = X_tcf, 
+#                                                X.model = fm_tcf, 
+#                                                J = J_tcf$J[which(J_tcf$variable == "insect_disease_tm01_tm10")],
+#                                                pred.fun = yhat, K = 5)
+# 
+# insect_disease_tm01_tm10_l <- ALEPlot::ALEPlot(X = X_tcf, 
+#                                                X.model = fm_tcf, 
+#                                                J = J_tcf$J[which(J_tcf$variable %in% c("insect_disease_tm01_tm10", "sqrt_aoi_tm1"))],
+#                                                pred.fun = yhat, K = 75)
+# 
+# insect_disease_tm01_tm10 <- 
+#   dplyr::as_tibble(insect_disease_tm01_tm10_l[2:3]) %>% 
+#   dplyr::mutate(variable = "insect_disease_tm01_tm10")
+# 
+# ggplot(insect_disease_tm01_tm10, aes(x = x.values, y = f.values)) +
+#   geom_line() +
+#   geom_rug(inherit.aes = FALSE, data = data_tcf[, c("insect_disease_tm01_tm10", "ewe")], 
+#            mapping = aes(x = insect_disease_tm01_tm10)) +
+#   theme_bw() +
+#   facet_wrap(facets = "variable") +
+#   labs(x = "Percentile rank",
+#        y = "Accumulated local effect on EWE probability")
+# 
+# caltrans_road_density_mpha_l <- ALEPlot::ALEPlot(X = X_tcf, 
+#                                                  X.model = fm_tcf, 
+#                                                  J = J_tcf$J[which(J_tcf$variable == "caltrans_road_density_mpha")],
+#                                                  pred.fun = yhat)
+# 
+# caltrans_road_density_mpha <- 
+#   dplyr::as_tibble(caltrans_road_density_mpha_l[2:3]) %>% 
+#   dplyr::mutate(variable = "caltrans_road_density_mpha")
+# 
+# ggplot(caltrans_road_density_mpha, aes(x = x.values, y = f.values)) +
+#   geom_line() +
+#   geom_rug(inherit.aes = FALSE, data = data_tcf[, c("caltrans_road_density_mpha", "ewe")], 
+#            mapping = aes(x = caltrans_road_density_mpha)) +
+#   theme_bw() +
+#   facet_wrap(facets = "variable") +
+#   labs(x = "Percentile rank",
+#        y = "Accumulated local effect on EWE probability")

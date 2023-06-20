@@ -413,6 +413,7 @@ for (biome_idx in seq_along(biome_shortnames)) {
 
 }
 
+# When using RTMA data
 # [1] "Starting the tcf biome at 2023-04-27 09:30:10"
 # [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:30:14..."
 # [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:41:45. "
@@ -434,3 +435,26 @@ for (biome_idx in seq_along(biome_shortnames)) {
 # [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 09:59:58..."
 # [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 10:00:22. "
 # [1] "Time elapsed: 0.4 minutes."
+
+# When using ERA5 data (more observations, a couple fewer features)
+# [1] "Starting the tcf biome at 2023-04-29 19:23:16"
+# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-29 19:23:20..."
+# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-29 19:37:01. "
+# [1] "Time elapsed: 13.7 minutes."
+# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-29 19:37:01..."
+# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-29 19:45:32. "
+# [1] "Time elapsed: 8.5 minutes."
+# [1] "Starting the mfws biome at 2023-04-29 19:45:32"
+# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-29 19:45:36..."
+# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-29 19:57:52. "
+# [1] "Time elapsed: 12.3 minutes."
+# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-29 19:57:52..."
+# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-29 20:03:22. "
+# [1] "Time elapsed: 5.5 minutes."
+# [1] "Starting the dxs biome at 2023-04-29 20:03:22"
+# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-29 20:03:25..."
+# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-29 20:06:01. "
+# [1] "Time elapsed: 2.6 minutes."
+# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-29 20:06:01..."
+# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-29 20:06:45. "
+# [1] "Time elapsed: 0.7 minutes."

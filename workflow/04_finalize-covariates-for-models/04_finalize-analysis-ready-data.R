@@ -71,17 +71,32 @@ landfire <-
                 fire_not_high_tm01_tm05, fire_not_high_tm06_tm10,
                 insect_disease_tm01_tm10)
 
+# ERA5 Land data
 weather_drivers <- 
   data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
-  dplyr::select(!tidyselect::contains("era5")) |> # not the ERA5 drivers; use the RTMA drivers in their place
+  dplyr::select(!tidyselect::contains("rtma")) |> # not the RTMA drivers; use the ERA5 drivers in their place
   dplyr::select(did, id, date,
-                wind_dir_ns_rtma, wind_dir_ew_rtma,
-                wind_anisotropy_ns_rtma, wind_anisotropy_ew_rtma,
-                min_wind_speed_rtma_pct, max_wind_speed_rtma_pct, min_wind_filled_gust_rtma_pct, max_wind_filled_gust_rtma_pct,
-                min_rh_rtma_pct, max_rh_rtma_pct, min_temp_rtma_pct, max_temp_rtma_pct, min_vpd_rtma_pct, max_vpd_rtma_pct,
+                wind_dir_ns_era5, wind_dir_ew_era5,
+                wind_anisotropy_ns_era5, wind_anisotropy_ew_era5,
+                min_wind_speed_era5_pct, max_wind_speed_era5_pct,
+                min_rh_era5_pct, max_rh_era5_pct, min_temp_era5_pct, max_temp_era5_pct, min_vpd_era5_pct, max_vpd_era5_pct,
                 spei14d, spei30d, spei90d, spei180d, spei270d, spei1y, spei2y, spei5y, pdsi_z,
                 erc_pct, bi_pct, fm100_pct, fm1000_pct) %>% 
   dplyr::filter(did %in% fluc_static$did)
+
+
+# RTMA weather data
+# weather_drivers <- 
+#   data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
+#   dplyr::select(!tidyselect::contains("era5")) |> # not the ERA5 drivers; use the RTMA drivers in their place
+#   dplyr::select(did, id, date,
+#                 wind_dir_ns_rtma, wind_dir_ew_rtma,
+#                 wind_anisotropy_ns_rtma, wind_anisotropy_ew_rtma,
+#                 min_wind_speed_rtma_pct, max_wind_speed_rtma_pct, min_wind_filled_gust_rtma_pct, max_wind_filled_gust_rtma_pct,
+#                 min_rh_rtma_pct, max_rh_rtma_pct, min_temp_rtma_pct, max_temp_rtma_pct, min_vpd_rtma_pct, max_vpd_rtma_pct,
+#                 spei14d, spei30d, spei90d, spei180d, spei270d, spei1y, spei2y, spei5y, pdsi_z,
+#                 erc_pct, bi_pct, fm100_pct, fm1000_pct) %>% 
+#   dplyr::filter(did %in% fluc_static$did)
 
 # weather_drivers <- 
 #   data.table::fread("data/out/drivers/weather-drivers-as-percentiles.csv") |>
@@ -106,12 +121,21 @@ target_event_ids <-
   dplyr::filter(area_ha >= 121.406) %>% 
   dplyr::pull(id)
 
-drivers <- 
+# RTMA means we can only use data back to 2011
+# drivers <- 
+#   merge(x = weather_drivers, y = other_fires_summary, by = c("did", "id", "date"), all = TRUE) |>
+#   merge(y = fluc_static, by = c("did", "id", "date"), all = TRUE) |>
+#   merge(y = landfire, by = c("did", "id", "date"), all = TRUE) |>
+#   dplyr::filter(id %in% target_event_ids) |>
+#   dplyr::filter(date >= as.Date("2011-01-01"))
+
+# Using ERA5 means we can go back to 2003
+drivers <-
   merge(x = weather_drivers, y = other_fires_summary, by = c("did", "id", "date"), all = TRUE) |>
   merge(y = fluc_static, by = c("did", "id", "date"), all = TRUE) |>
   merge(y = landfire, by = c("did", "id", "date"), all = TRUE) |>
   dplyr::filter(id %in% target_event_ids) |>
-  dplyr::filter(date >= as.Date("2011-01-01"))
+  dplyr::filter(date >= as.Date("2003-01-01"))
 
 # For defining "ewe" or not, what is the percentage threshold? E.g., 0.95 means an "ewe" is in the top
 # 5th percentile for daily area of increase
@@ -152,6 +176,7 @@ fires_drivers <-
   dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
                 ewe = ifelse(area_log10_pct >= pct_threshold, yes = 1, no = 0)) |> 
   # dplyr::ungroup() |>
+  dplyr::mutate(early_late = as.numeric(event_day <= 7)) %>% 
   as.data.frame()
 
 # 95th percentile growth for temperate conifer forests is 2787 ha per day
@@ -178,23 +203,23 @@ predictor.variable.names <- driver_descriptions$variable
 #   dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj)
 # 
 # Summary of weather data
-weather_drivers_summary <-
-  weather_drivers %>%
-  dplyr::select(tidyselect::all_of(c("did", driver_descriptions$variable[driver_descriptions$type == "weather"]))) %>%
-  data.table::as.data.table() %>%
-  data.table::melt(id.vars = c("did"), value.name = "measured_value") %>%
-  dplyr::mutate(expected_value = 0.5,
-                expected_value_median = 0.5,
-                adj = measured_value,
-                diff = measured_value - expected_value,
-                diff_median = measured_value - expected_value_median) %>%
-  dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj) %>% 
-  dplyr::mutate(expected_value = ifelse(variable %in% c("wind_dir_ns_rtma", "wind_dir_ew_rtma", "wind_anisotropy_ns_rtma", "wind_anisotropy_ew_rtma"),
-                                        yes = NA,
-                                        no = expected_value),
-                expected_value_median = ifelse(variable %in% c("wind_dir_ns_rtma", "wind_dir_ew_rtma", "wind_anisotropy_ns_rtma", "wind_anisotropy_ew_rtma"),
-                                               yes = NA,
-                                               no = expected_value_median))
+# weather_drivers_summary <-
+#   weather_drivers %>%
+#   dplyr::select(tidyselect::all_of(c("did", driver_descriptions$variable[driver_descriptions$type == "weather"]))) %>%
+#   data.table::as.data.table() %>%
+#   data.table::melt(id.vars = c("did"), value.name = "measured_value") %>%
+#   dplyr::mutate(expected_value = 0.5,
+#                 expected_value_median = 0.5,
+#                 adj = measured_value,
+#                 diff = measured_value - expected_value,
+#                 diff_median = measured_value - expected_value_median) %>%
+#   dplyr::select(did, variable, expected_value, measured_value, diff, expected_value_median, diff_median, adj) %>% 
+#   dplyr::mutate(expected_value = ifelse(variable %in% c("wind_dir_ns_rtma", "wind_dir_ew_rtma", "wind_anisotropy_ns_rtma", "wind_anisotropy_ew_rtma"),
+#                                         yes = NA,
+#                                         no = expected_value),
+#                 expected_value_median = ifelse(variable %in% c("wind_dir_ns_rtma", "wind_dir_ew_rtma", "wind_anisotropy_ns_rtma", "wind_anisotropy_ew_rtma"),
+#                                                yes = NA,
+#                                                no = expected_value_median))
 # 
 # nonnormalized_summary <-
 #   fires_drivers %>% 

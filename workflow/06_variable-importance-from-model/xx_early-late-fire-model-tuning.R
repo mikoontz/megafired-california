@@ -12,7 +12,7 @@ library(here)
 # library(mlr3measures)
 # library(MLmetrics)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
                         decreasing = TRUE)[1]
 
 latest_ard_dir <- here::here("data", "ard", latest_ard_date)

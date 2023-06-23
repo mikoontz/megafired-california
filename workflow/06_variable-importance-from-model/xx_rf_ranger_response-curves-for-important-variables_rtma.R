@@ -4,7 +4,7 @@ library(readr)
 library(ggplot2)
 library(ranger)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
                         decreasing = TRUE)[1]
 
 ard_dir <- here::here("data", "ard", latest_ard_date)

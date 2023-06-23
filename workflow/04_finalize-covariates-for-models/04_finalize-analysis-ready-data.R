@@ -12,12 +12,20 @@ library(here)
 local_out_dir <- here::here("data", "ard", lubridate::today())
 gdrive_out_dir <- file.path("D:", "google-drive_cu-boulder", "My Drive", "_projects", "moore-foundation", "manuscripts", "megafired-california", "data", "ard", lubridate::today())
 
-dir.create(local_out_dir, 
-           recursive = TRUE,
-           showWarnings = FALSE)
-dir.create(gdrive_out_dir, 
-           recursive = TRUE,
-           showWarnings = FALSE)
+dir.create(local_out_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(gdrive_out_dir, recursive = TRUE, showWarnings = FALSE)
+
+local_out_dir_early <- here::here("data", "ard", "early", lubridate::today())
+gdrive_out_dir_early <- file.path("D:", "google-drive_cu-boulder", "My Drive", "_projects", "moore-foundation", "manuscripts", "megafired-california", "data", "ard", "early", lubridate::today())
+
+dir.create(local_out_dir_early, recursive = TRUE, showWarnings = FALSE)
+dir.create(gdrive_out_dir_early, recursive = TRUE, showWarnings = FALSE)
+
+local_out_dir_late <- here::here("data", "ard", "late", lubridate::today())
+gdrive_out_dir_late <- file.path("D:", "google-drive_cu-boulder", "My Drive", "_projects", "moore-foundation", "manuscripts", "megafired-california", "data", "ard", "late", lubridate::today())
+
+dir.create(local_out_dir_late, recursive = TRUE, showWarnings = FALSE)
+dir.create(gdrive_out_dir_late, recursive = TRUE, showWarnings = FALSE)
 
 # fluc_static <- 
 #   data.table::fread("data/out/drivers/fluc-static-driver-proportion-percentiles.csv") |>
@@ -176,7 +184,7 @@ fires_drivers <-
   dplyr::mutate(area_log10_pct = ecdf(area_log10)(area_log10),
                 ewe = ifelse(area_log10_pct >= pct_threshold, yes = 1, no = 0)) |> 
   # dplyr::ungroup() |>
-  dplyr::mutate(early_late = as.numeric(event_day <= 7)) %>% 
+  # dplyr::mutate(early_late = as.numeric(event_day <= 7)) %>% 
   as.data.frame()
 
 # 95th percentile growth for temperate conifer forests is 2787 ha per day
@@ -244,13 +252,25 @@ lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
   
   out <- fires_drivers[fires_drivers$biome_shortname == biome_shortname, ]
   
+  out_early <- fires_drivers[fires_drivers$biome_shortname == biome_shortname & fires_drivers$event_day <= 7, ]
+  out_late <- fires_drivers[fires_drivers$biome_shortname == biome_shortname & fires_drivers$event_day > 7, ]
+  
   # Which variables have lots of NAs?
   apply(out[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+  
+  apply(out_early[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
+  apply(out_late[, predictor.variable.names], MARGIN = 2, FUN = function(x) return(sum(is.na(x))))
   
   # Drop all rows that have an NA in any column
   out <- out[complete.cases(out), ]
   
+  out_early <- out_early[complete.cases(out_early), ]
+  out_late <- out_late[complete.cases(out_late), ]
+  
   out <- out[, c("did", "event_day", "daily_area_ha", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
+  
+  out_early <- out_early[, c("did", "event_day", "daily_area_ha", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
+  out_late <- out_late[, c("did", "event_day", "daily_area_ha", "cumu_area_tm01", "ewe", "biome_name_daily", "biome_shortname", "eco_name_daily", "x_biggest_poly_3310", "y_biggest_poly_3310", predictor.variable.names)]
   
   # Figure out which variables will exhibit badly scale-dependent behavior 
   # (more than 50% of expected median values for EWE or non-EWE)
@@ -289,6 +309,39 @@ lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
     }) %>% 
     data.table::rbindlist()
   
+  out_early <-
+    out_early %>% 
+    sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), 
+                 crs = 3310, remove = FALSE) %>%
+    spatialsample::spatial_clustering_cv(v = 10) %>% 
+    purrr::pmap(.f = function(id, splits) {
+      spatial_fold <- id
+      assessment_data <- 
+        splits %>% 
+        rsample::assessment() %>% 
+        sf::st_drop_geometry()
+      
+      return(cbind(assessment_data, spatial_fold))
+    }) %>% 
+    data.table::rbindlist()
+  
+  out_late <-
+    out_late %>% 
+    sf::st_as_sf(coords = c("x_biggest_poly_3310", "y_biggest_poly_3310"), 
+                 crs = 3310, remove = FALSE) %>%
+    spatialsample::spatial_clustering_cv(v = 10) %>% 
+    purrr::pmap(.f = function(id, splits) {
+      spatial_fold <- id
+      assessment_data <- 
+        splits %>% 
+        rsample::assessment() %>% 
+        sf::st_drop_geometry()
+      
+      return(cbind(assessment_data, spatial_fold))
+    }) %>% 
+    data.table::rbindlist()
+  
+  
   # Remove spatial folds with fewer than 40 observations or 2 EWE's
   n_in_fold <- 
     out %>% 
@@ -303,6 +356,32 @@ lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
   
   out <- out[spatial_fold %in% enough_n_folds, ]
   
+  n_in_fold_early <- 
+    out_early %>% 
+    dplyr::group_by(spatial_fold) %>% 
+    dplyr::summarize(n = n(),
+                     n_ewe = length(which(ewe == 1)))
+  
+  enough_n_folds_early <- 
+    n_in_fold_early %>% 
+    dplyr::filter(n_ewe >= 1) %>% 
+    dplyr::pull(spatial_fold)
+  
+  out_early <- out_early[spatial_fold %in% enough_n_folds_early, ]
+  
+  n_in_fold_late <- 
+    out_late %>% 
+    dplyr::group_by(spatial_fold) %>% 
+    dplyr::summarize(n = n(),
+                     n_ewe = length(which(ewe == 1)))
+  
+  enough_n_folds_late <- 
+    n_in_fold_late %>% 
+    dplyr::filter(n_ewe >= 1) %>% 
+    dplyr::pull(spatial_fold)
+  
+  out_late <- out_late[spatial_fold %in% enough_n_folds_late, ]
+  
   # no columnns with 0 variance (rounded to 4 decimal places) across whole dataset
   zero_variance_columns <-
     out %>%
@@ -314,6 +393,25 @@ lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
     dplyr::filter(zero_var) %>%
     dplyr::pull(variable)
   
+  zero_variance_columns_early <-
+    out_early %>%
+    tidyr::pivot_longer(cols = tidyselect::all_of(predictor.variable.names),
+                        names_to = "variable",
+                        values_to = "value") %>%
+    dplyr::group_by(variable) %>%
+    dplyr::summarize(zero_var = any(round(var(value, na.rm = TRUE), digits = 4) == 0)) %>%
+    dplyr::filter(zero_var) %>%
+    dplyr::pull(variable)
+  
+  zero_variance_columns_late <-
+    out_late %>%
+    tidyr::pivot_longer(cols = tidyselect::all_of(predictor.variable.names),
+                        names_to = "variable",
+                        values_to = "value") %>%
+    dplyr::group_by(variable) %>%
+    dplyr::summarize(zero_var = any(round(var(value, na.rm = TRUE), digits = 4) == 0)) %>%
+    dplyr::filter(zero_var) %>%
+    dplyr::pull(variable)
   # no columnns with 0 variance (rounded to 4 decimal places) in any folds
   # particularly important if using sequential knockoffs (as you might be if
   # you have factors as features)
@@ -334,10 +432,26 @@ lapply(X = biome_lookup$biome_shortname, FUN = function(biome_shortname) {
     out %>% 
     dplyr::select(!tidyselect::all_of(zero_variance_columns))
   
+  out_early <- 
+    out_early %>% 
+    dplyr::select(!tidyselect::all_of(zero_variance_columns))
+  
+  out_late <- 
+    out_late %>% 
+    dplyr::select(!tidyselect::all_of(zero_variance_columns))
+  
   data.table::fwrite(x = out, file = paste0(local_out_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  
+  data.table::fwrite(x = out_early, file = paste0(local_out_dir_early, "/daily-drivers-of-california-megafires_", biome_shortname,"_early.csv"))
+  data.table::fwrite(x = out_late, file = paste0(local_out_dir_late, "/daily-drivers-of-california-megafires_", biome_shortname,"_late.csv"))
   
   file.copy(from = paste0(local_out_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"),
             to = paste0(gdrive_out_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  
+  file.copy(from = paste0(local_out_dir_early, "/daily-drivers-of-california-megafires_", biome_shortname,"_early.csv"),
+            to = paste0(gdrive_out_dir_early, "/daily-drivers-of-california-megafires_", biome_shortname,"_early.csv"))
+  file.copy(from = paste0(local_out_dir_late, "/daily-drivers-of-california-megafires_", biome_shortname,"_late.csv"),
+            to = paste0(gdrive_out_dir_late, "/daily-drivers-of-california-megafires_", biome_shortname,"_late.csv"))
   
   return(NULL)
 })

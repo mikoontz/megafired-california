@@ -16,24 +16,26 @@ library(data.table)
 library(seqknockoff)
 library(foreach)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
+latest_rf_tuning_date <- sort(list.files(path = here::here("data", "out", "rf", "tuning", "late")), 
+                              decreasing = TRUE)[1]
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "late")), 
                         decreasing = TRUE)[1]
 
-latest_ard_dir <- here::here("data", "ard", latest_ard_date)
+latest_ard_dir <- here::here("data", "ard", "late", latest_ard_date)
 
-latest_rf_tuning_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
-rf_cpi_out_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_rf_tuning_date)
-rf_cpi_figs_dir <- here::here("figs", "rf", "conditional-predictive-impact", lubridate::today())
+latest_rf_tuning_dir <- here::here("data", "out", "rf", "tuning", "late", latest_rf_tuning_date)
+rf_cpi_out_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "late", latest_rf_tuning_date)
+rf_cpi_figs_dir <- here::here("figs", "rf", "conditional-predictive-impact", "late", lubridate::today())
 
 dir.create(rf_cpi_out_dir, showWarnings = FALSE, recursive = TRUE)
 dir.create(rf_cpi_figs_dir, showWarnings = FALSE, recursive = TRUE)
 
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
-biome_shortnames <- c("tcf", "mfws", "dxs")
+biome_shortnames <- c("tcf", "mfws")
 
 # Tuned hyperparameters
 tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv")))
+  data.table::fread(input = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, "_late.csv")))
 })
 
 tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
@@ -124,7 +126,7 @@ for (biome_idx in seq_along(biome_shortnames)) {
   biome_tuned_hyperparameters <- tuned_hyperparameters[tuned_hyperparameters$biome == biome_shortname, ]
   
   data <- 
-    data.table::fread(here::here(latest_ard_dir, paste0("daily-drivers-of-california-megafires_", biome_shortname, ".csv"))) |>
+    data.table::fread(here::here(latest_ard_dir, paste0("daily-drivers-of-california-megafires_", biome_shortname, "_late.csv"))) |>
     dplyr::mutate(ewe = factor(ewe, levels = c(1, 0))) |>
     as.data.frame()
   
@@ -366,7 +368,7 @@ for (biome_idx in seq_along(biome_shortnames)) {
   (start_time <- Sys.time())
   print(paste0("Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", start_time, "..."))
   
-  if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, ".csv")))) { 
+  if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, "_late.csv")))) { 
     out <- 
       foreach(idx = (1:nrow(folds_repeat)), 
               .combine = rbind, 
@@ -374,7 +376,7 @@ for (biome_idx in seq_along(biome_shortnames)) {
               .errorhandling = "remove") %dopar% 
       cpi_mcc(idx)
     
-    data.table::fwrite(x = out, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, ".csv")))
+    data.table::fwrite(x = out, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, "_late.csv")))
   }
   
   (end_time <- Sys.time())
@@ -386,73 +388,42 @@ for (biome_idx in seq_along(biome_shortnames)) {
   
   (start_time <- Sys.time())
   print(paste0("Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", start_time, "..."))
-
-  if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv")))) {
+  
+  if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, "_late.csv")))) {
     out_grouped <-
       foreach(idx = (1:nrow(folds_repeat)),
               .combine = rbind,
               .packages = c("dplyr", "cpi", "mlr3", "mlr3learners", "rsample", "sf"),
               .errorhandling = "remove") %dopar%
       cpi_mcc_grouped(idx)
-
-
-    data.table::fwrite(x = out_grouped, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv")))
-
+    
+    
+    data.table::fwrite(x = out_grouped, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, "_late.csv")))
+    
     (end_time <- Sys.time())
   }
-
+  
   print(paste0("Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", end_time, ". "))
   print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-
+  
   ###
-
+  
   parallel::stopCluster(cl = cl)
-
-
+  
+  
 }
 
-# When using RTMA data
-# [1] "Starting the tcf biome at 2023-04-27 09:30:10"
-# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:30:14..."
-# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:41:45. "
-# [1] "Time elapsed: 11.5 minutes."
-# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:41:45..."
-# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-27 09:47:52. "
-# [1] "Time elapsed: 6.1 minutes."
-# [1] "Starting the mfws biome at 2023-04-27 09:47:52"
-# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-27 09:47:56..."
-# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-27 09:55:29. "
+# [1] "Starting the tcf biome at 2023-06-22 19:19:17"
+# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-06-22 19:19:20..."
+# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-06-22 19:26:48. "
 # [1] "Time elapsed: 7.5 minutes."
-# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-27 09:55:29..."
-# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-27 09:58:22. "
-# [1] "Time elapsed: 2.9 minutes."
-# [1] "Starting the dxs biome at 2023-04-27 09:58:22"
-# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 09:58:24..."
-# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 09:59:58. "
-# [1] "Time elapsed: 1.6 minutes."
-# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 09:59:58..."
-# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-27 10:00:22. "
-# [1] "Time elapsed: 0.4 minutes."
-
-# When using ERA5 data (more observations, a couple fewer features)
-# [1] "Starting the tcf biome at 2023-04-29 19:23:16"
-# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-29 19:23:20..."
-# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-29 19:37:01. "
-# [1] "Time elapsed: 13.7 minutes."
-# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-29 19:37:01..."
-# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-04-29 19:45:32. "
-# [1] "Time elapsed: 8.5 minutes."
-# [1] "Starting the mfws biome at 2023-04-29 19:45:32"
-# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-29 19:45:36..."
-# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-29 19:57:52. "
-# [1] "Time elapsed: 12.3 minutes."
-# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-29 19:57:52..."
-# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-04-29 20:03:22. "
-# [1] "Time elapsed: 5.5 minutes."
-# [1] "Starting the dxs biome at 2023-04-29 20:03:22"
-# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-29 20:03:25..."
-# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-29 20:06:01. "
+# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-06-22 19:26:48..."
+# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for tcf at 2023-06-22 19:29:24. "
 # [1] "Time elapsed: 2.6 minutes."
-# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-29 20:06:01..."
-# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for dxs at 2023-04-29 20:06:45. "
-# [1] "Time elapsed: 0.7 minutes."
+# [1] "Starting the mfws biome at 2023-06-22 19:29:24"
+# [1] "Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-06-22 19:29:27..."
+# [1] "Finished conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-06-22 19:33:18. "
+# [1] "Time elapsed: 3.9 minutes."
+# [1] "Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-06-22 19:33:18..."
+# [1] "Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for mfws at 2023-06-22 19:34:36. "
+# [1] "Time elapsed: 1.3 minutes."

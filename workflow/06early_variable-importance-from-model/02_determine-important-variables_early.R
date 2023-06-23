@@ -4,11 +4,11 @@ library(readr)
 library(ggplot2)
 library(ranger)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "early")), 
                         decreasing = TRUE)[1]
 
-ard_dir <- here::here("data", "ard", latest_ard_date)
-rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
+ard_dir <- here::here("data", "ard", "early", latest_ard_date)
+rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "early", latest_ard_date)
 
 biome_shortnames <- c("tcf", "mfws")
 
@@ -22,7 +22,7 @@ cpi_results_full <- lapply(
           rf_cpi_dir, 
           paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", 
                  biome_shortname, 
-                 ".csv")
+                 "_early.csv")
         )
       )
     )
@@ -39,7 +39,7 @@ cpi_grouped_results_full <-
             rf_cpi_dir, 
             paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", 
                    biome_shortname, 
-                   ".csv")
+                   "_early.csv")
           )
         )
       )
@@ -72,7 +72,7 @@ cpi_results <-
   dplyr::ungroup() %>% 
   dplyr::mutate(key_var = ifelse(cpi_median > 0, 1, 0))
 
-data.table::fwrite(x = cpi_results, file = here::here(rf_cpi_dir, "cpi-important-variables.csv"))
+data.table::fwrite(x = cpi_results, file = here::here(rf_cpi_dir, "cpi-important-variables_early.csv"))
 
 
 ## Grouped CPI results

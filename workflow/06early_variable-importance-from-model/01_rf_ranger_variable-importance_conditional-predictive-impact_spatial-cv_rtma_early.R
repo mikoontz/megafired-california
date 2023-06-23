@@ -16,14 +16,16 @@ library(data.table)
 library(seqknockoff)
 library(foreach)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
+latest_rf_tuning_date <- sort(list.files(path = here::here("data", "out", "rf", "tuning", "early")), 
+                              decreasing = TRUE)[1]
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "early")), 
                         decreasing = TRUE)[1]
 
-latest_ard_dir <- here::here("data", "ard", latest_ard_date)
+latest_ard_dir <- here::here("data", "ard", "early", latest_ard_date)
 
-latest_rf_tuning_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
-rf_cpi_out_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_rf_tuning_date)
-rf_cpi_figs_dir <- here::here("figs", "rf", "conditional-predictive-impact", lubridate::today())
+latest_rf_tuning_dir <- here::here("data", "out", "rf", "tuning", "early", latest_rf_tuning_date)
+rf_cpi_out_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "early", latest_rf_tuning_date)
+rf_cpi_figs_dir <- here::here("figs", "rf", "conditional-predictive-impact", "early", lubridate::today())
 
 dir.create(rf_cpi_out_dir, showWarnings = FALSE, recursive = TRUE)
 dir.create(rf_cpi_figs_dir, showWarnings = FALSE, recursive = TRUE)
@@ -33,7 +35,7 @@ biome_shortnames <- c("tcf", "mfws", "dxs")
 
 # Tuned hyperparameters
 tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
-  data.table::fread(input = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv")))
+  data.table::fread(input = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, "_early.csv")))
 })
 
 tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
@@ -124,7 +126,7 @@ for (biome_idx in seq_along(biome_shortnames)) {
   biome_tuned_hyperparameters <- tuned_hyperparameters[tuned_hyperparameters$biome == biome_shortname, ]
   
   data <- 
-    data.table::fread(here::here(latest_ard_dir, paste0("daily-drivers-of-california-megafires_", biome_shortname, ".csv"))) |>
+    data.table::fread(here::here(latest_ard_dir, paste0("daily-drivers-of-california-megafires_", biome_shortname, "_early.csv"))) |>
     dplyr::mutate(ewe = factor(ewe, levels = c(1, 0))) |>
     as.data.frame()
   
@@ -366,7 +368,7 @@ for (biome_idx in seq_along(biome_shortnames)) {
   (start_time <- Sys.time())
   print(paste0("Starting conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", start_time, "..."))
   
-  if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, ".csv")))) { 
+  if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, "_early.csv")))) { 
     out <- 
       foreach(idx = (1:nrow(folds_repeat)), 
               .combine = rbind, 
@@ -374,7 +376,7 @@ for (biome_idx in seq_along(biome_shortnames)) {
               .errorhandling = "remove") %dopar% 
       cpi_mcc(idx)
     
-    data.table::fwrite(x = out, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, ".csv")))
+    data.table::fwrite(x = out, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_spatial-cv_", biome_shortname, "_early.csv")))
   }
   
   (end_time <- Sys.time())
@@ -386,29 +388,29 @@ for (biome_idx in seq_along(biome_shortnames)) {
   
   (start_time <- Sys.time())
   print(paste0("Starting grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", start_time, "..."))
-
-  if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv")))) {
+  
+  if(!file.exists(here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, "_early.csv")))) {
     out_grouped <-
       foreach(idx = (1:nrow(folds_repeat)),
               .combine = rbind,
               .packages = c("dplyr", "cpi", "mlr3", "mlr3learners", "rsample", "sf"),
               .errorhandling = "remove") %dopar%
       cpi_mcc_grouped(idx)
-
-
-    data.table::fwrite(x = out_grouped, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, ".csv")))
-
+    
+    
+    data.table::fwrite(x = out_grouped, file = here::here(rf_cpi_out_dir, paste0("rf_ranger_variable-importance_rtma_cpi_classif-mcc_grouped_spatial-cv_", biome_shortname, "_early.csv")))
+    
     (end_time <- Sys.time())
   }
-
+  
   print(paste0("Finished grouped conditional predictive impact calculations based on the Matthews Correlation Coefficient for ", biome_shortname, " at ", end_time, ". "))
   print(paste0("Time elapsed: ", round(difftime(time1 = end_time, time2 = start_time, units = "mins"), 1), " minutes."))
-
+  
   ###
-
+  
   parallel::stopCluster(cl = cl)
-
-
+  
+  
 }
 
 # When using RTMA data

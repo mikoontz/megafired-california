@@ -67,8 +67,8 @@ weather_drivers <-
                           "min_vpd_era5_pct", "max_vpd_era5_pct", 
                           "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct",
                           "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z"),
-             display_name = c("Average N/S wind direction", "Average E/W wind direction",
-                              "Wind direction\nN/S variability", "Wind direction\nE/W variability",
+             display_name = c("Average N/S wind direction\n(1 = FROM the north)", "Average E/W wind direction\n(1 = FROM the east)",
+                              "Wind direction\nN/S variability\n(1 = consistent FROM the north)", "Wind direction\nE/W variability\n(1 = consistent FROM the east)",
                               "Min. wind speed", "Max. wind speed",
                               "Min. relative humidity", "Max. relative humidity",
                               "Min. temperature", "Max. temperature",
@@ -297,12 +297,19 @@ fuel_drivers <-
 #                              "minimum percentile of hourly wind/terrain alignment [abs(cos(wind direction minus terrain aspect))] in a day compared to hourly wind/terrain alignment between 2011-01-01 and 2020-12-31",
 #                              "maximum percentile of hourly wind/terrain alignment [abs(cos(wind direction minus terrain aspect))] in a day compared to hourly wind/terrain alignment between 2011-01-01 and 2020-12-31"))
 
+# fire_drivers <- 
+#   data.frame(type = "fire",
+#              variable = c("fireline_length_proxy_km", "early_late"),
+#              display_name = c("Proxy for length of yesterday's\nactive fire line (km)", "Early or late"),
+#              source = "Derived for this paper using daily FIRED events",
+#              calculation = c("Half the circumference of a circle with equivalent area to daily area of increase at fire's previous time step", "'0' for the first seven event days, '1' thereafter"))
+
 fire_drivers <- 
   data.frame(type = "fire",
-             variable = c("fireline_length_proxy_km", "early_late"),
-             display_name = c("Proxy for length of yesterday's\nactive fire line (km)", "Early or late"),
+             variable = "fireline_length_proxy_km",
+             display_name = "Proxy for length of yesterday's\nactive fire line (km)",
              source = "Derived for this paper using daily FIRED events",
-             calculation = c("Half the circumference of a circle with equivalent area to daily area of increase at fire's previous time step", "'0' for the first seven event days, '1' thereafter"))
+             calculation = "Half the circumference of a circle with equivalent area to daily area of increase at fire's previous time step")
 
 out <- rbind(human_drivers,
              topography_drivers,

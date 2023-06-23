@@ -13,14 +13,15 @@ library(here)
 library(ranger)
 library(ggplot2)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "late")), 
                         decreasing = TRUE)[1]
 
-latest_ard_dir <- here::here("data", "ard", latest_ard_date)
-rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
-rf_fitted_dir <- here::here("data", "out", "rf", "fitted", latest_ard_date)
+latest_ard_dir <- here::here("data", "ard", "late", latest_ard_date)
+rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "late", latest_ard_date)
 
-rf_ale_curves_dir <- here::here("figs", "rf", "ale-curves", latest_ard_date)
+rf_fitted_dir <- here::here("data", "out", "rf", "fitted", "late", latest_ard_date)
+
+rf_ale_curves_dir <- here::here("figs", "rf", "ale-curves", "late", latest_ard_date)
 dir.create(rf_ale_curves_dir, showWarnings = FALSE, recursive = TRUE)
 
 biome_shortnames <- c("tcf", "mfws")
@@ -37,7 +38,7 @@ driver_descriptions <-
 
 # What are the important variables (as determined by CPI)?
 key_vars <- 
-  data.table::fread(input = here::here(rf_cpi_dir, "cpi-important-variables.csv")) %>%
+  data.table::fread(input = here::here(rf_cpi_dir, "cpi-important-variables_late.csv")) %>%
   dplyr::rename(variable = Variable) %>% 
   dplyr::filter(key_var == 1) %>% 
   dplyr::left_join(driver_descriptions) %>% 
@@ -55,7 +56,7 @@ key_vars_l <-
 
 fitted_models <-
   lapply(X = biome_shortnames, FUN = function(biome_shortname) {
-    fname <- here::here(rf_fitted_dir, paste0("rf_ranger_fitted-model_rtma_", biome_shortname, ".rds"))
+    fname <- here::here(rf_fitted_dir, paste0("rf_ranger_fitted-model_rtma_", biome_shortname, "_late.rds"))
     return(readr::read_rds(fname))
   }) %>% 
   setNames(biome_shortnames)
@@ -171,7 +172,7 @@ tcf_ale_gg <-
   ggtitle("Temperate Conifer Forests")
 
 ggsave(plot = tcf_ale_gg, 
-       filename = file.path(rf_ale_curves_dir, "tcf_ale-curves.png"),
+       filename = file.path(rf_ale_curves_dir, "tcf_ale-curves_late.png"),
        width = 12, height = 12)
 
 # tcf_pdp <- pdp_gg(biome_shortname = "tcf")
@@ -204,7 +205,7 @@ mfws_ale_gg <-
   ggtitle("Mediterranean Forests, Woodlands & Scrub")
 
 ggsave(plot = mfws_ale_gg, 
-       filename = file.path(rf_ale_curves_dir, "mfws_ale-curves.png"),
+       filename = file.path(rf_ale_curves_dir, "mfws_ale-curves_late.png"),
        width = 12, height = 12)
 
 

@@ -12,12 +12,12 @@ library(here)
 # library(mlr3measures)
 # library(MLmetrics)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "early")), 
                         decreasing = TRUE)[1]
 
-latest_ard_dir <- here::here("data", "ard", latest_ard_date)
+latest_ard_dir <- here::here("data", "ard", "early", latest_ard_date)
 
-local_out_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
+local_out_dir <- here::here("data", "out", "rf", "tuning", "early", latest_ard_date)
 dir.create(local_out_dir, recursive = TRUE, showWarnings = FALSE)
 
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
@@ -92,7 +92,7 @@ spatial_cv_tune <- function(i, predictor.variable.names, folds, tune.df, num.thr
 for(counter in seq_along(biome_shortnames)) {
   biome_shortname <- biome_shortnames[counter]
   
-  data <- read.csv(paste0(latest_ard_dir, "/daily-drivers-of-california-megafires_", biome_shortname,".csv"))
+  data <- read.csv(paste0(latest_ard_dir, "/daily-drivers-of-california-megafires_", biome_shortname,"_early.csv"))
   data$ewe <- factor(data$ewe, levels = c(1, 0))
   
   data$short_concurrent_fires <- as.numeric(data$short_concurrent_fires)
@@ -150,33 +150,19 @@ for(counter in seq_along(biome_shortnames)) {
   
   out_all <- data.table::rbindlist(out)
   
-  data.table::fwrite(x = out_all, file = paste0(local_out_dir, "/rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, ".csv"))
+  data.table::fwrite(x = out_all, file = paste0(local_out_dir, "/rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, "_early.csv"))
 }
 (end_time <- Sys.time())
 (difftime(end_time, start_time, units = "hours"))
 
-# 12-core machine with 64GB of RAM for 2023-04-28 version
-# [1] "Starting the tcf biome at 2023-04-28 23:34:38"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=09h 13m 59s
-# [1] "Starting the mfws biome at 2023-04-29 08:48:39"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=07h 44m 37s
-# [1] "Starting the dxs biome at 2023-04-29 16:33:18"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=40m 17s
+# 12-core machine with 64GB of RAM for 2023-06-21 early fire version
+# [1] "Starting the tcf biome at 2023-06-21 13:04:04"
+# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=02h 16m 03s
+# [1] "Starting the mfws biome at 2023-06-21 15:20:08"
+# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=04h 56m 31s
+# [1] "Starting the dxs biome at 2023-06-21 20:16:39"
+|++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=26m 52s
 # > (end_time <- Sys.time())
-# [1] "2023-04-29 17:13:36 MDT"
+# [1] "2023-06-21 20:43:31 MDT"
 # > (difftime(end_time, start_time, units = "hours"))
-# Time difference of 17.64931 hours
-
-
-
-# # 12-core machine with 64GB of RAM for 2023-06-16 version
-# [1] "Starting the tcf biome at 2023-06-16 16:03:56"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=09h 04m 44s
-# [1] "Starting the mfws biome at 2023-06-17 01:08:42"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=07h 42m 55s
-# [1] "Starting the dxs biome at 2023-06-17 08:51:41"
-# |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=39m 50s
-# > (end_time <- Sys.time())
-# [1] "2023-06-17 09:31:31 MDT"
-# > (difftime(end_time, start_time, units = "hours"))
-# Time difference of 17.45962 hours
+# Time difference of 7.657518 hours

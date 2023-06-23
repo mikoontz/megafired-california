@@ -2,17 +2,17 @@ library(dplyr)
 library(data.table)
 library(ggplot2)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "late")), 
                         decreasing = TRUE)[1]
 
-latest_ard_dir <- here::here("data", "ard", latest_ard_date)
+latest_ard_dir <- here::here("data", "ard", "late", latest_ard_date)
 
-latest_rf_cpi_date <- sort(list.files(path = here::here("data", "out", "rf", "conditional-predictive-impact")), 
+latest_rf_cpi_date <- sort(list.files(path = here::here("data", "out", "rf", "conditional-predictive-impact", "late")), 
                            decreasing = TRUE)[1]
 
 rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
 
-latest_rf_ttest_dir <- here::here("figs", "rf", "ewe-vs-nonewe-driver-comparison", latest_ard_date)
+latest_rf_ttest_dir <- here::here("figs", "rf", "ewe-vs-nonewe-driver-comparison", "late", latest_ard_date)
 dir.create(latest_rf_ttest_dir, showWarnings = FALSE, recursive = TRUE)
 
 driver_descriptions <- 
@@ -21,7 +21,7 @@ driver_descriptions <-
 
 # What are the important variables (as determined by CPI)?
 key_vars <- 
-  data.table::fread(input = here::here(rf_cpi_dir, "cpi-important-variables.csv")) %>%
+  data.table::fread(input = here::here(rf_cpi_dir, "cpi-important-variables_late.csv")) %>%
   dplyr::rename(variable = Variable) %>% 
   dplyr::filter(key_var == 1) %>% 
   dplyr::left_join(driver_descriptions) %>% 

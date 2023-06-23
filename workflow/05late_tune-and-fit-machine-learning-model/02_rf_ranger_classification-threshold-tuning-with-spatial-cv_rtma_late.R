@@ -6,14 +6,14 @@ library(data.table)
 # library(PRROC)
 library(ggplot2)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "late")), 
                         decreasing = TRUE)[1]
 
 # latest_rf_tuning_date <- sort(list.files(path = here::here("data", "out", "rf", "tuning")), 
 #                               decreasing = TRUE)[1]
 
-latest_rf_tuning_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
-latest_rf_figs_dir <- here::here("figs", "rf", "tuning", latest_ard_date)
+latest_rf_tuning_dir <- here::here("data", "out", "rf", "tuning", "late", latest_ard_date)
+latest_rf_figs_dir <- here::here("figs", "rf", "tuning", "late", latest_ard_date)
 
 # We can tune the "classification threshold" for saying something is an EWE or not
 # No need to fit more models for this step, we merely adjust our classification threshold, convert the
@@ -25,7 +25,7 @@ biome_shortnames <- c("tcf", "mfws", "dxs")
 (start_time <- Sys.time())
 # Take the spatial CV results (observation for held out fold and predictions) and calculate various model skill metrics
 pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
-  biome_tune <- data.table::fread(here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, ".csv")))
+  biome_tune <- data.table::fread(here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning_rtma_", biome_shortname, "_late.csv")))
   biome_tune[, o_fac := factor(o, levels = c(1, 0))]
   
   # We can tune the classification threshold for calling a prediction on {0, 1} a 0 versus a 1
@@ -118,7 +118,7 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
                  by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric)]
   
   
-  data.table::fwrite(x = results_across_iter, file = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv")))
+  data.table::fwrite(x = results_across_iter, file = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, "_late.csv")))
   
 })
 
@@ -126,7 +126,7 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
 tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
   
   tuning_metrics <- 
-    data.table::fread(input = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, ".csv")))
+    data.table::fread(input = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, "_late.csv")))
   
   tune_gg_data <- 
     tuning_metrics %>%
@@ -146,7 +146,7 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
     geom_point() +
     theme_bw()
   
-  ggsave(filename = here::here(latest_rf_figs_dir, "informedness-vs-mcc_rtma_", biome_shortname, ".png"), plot = informedness_mcc_gg)
+  ggsave(filename = here::here(latest_rf_figs_dir, "informedness-vs-mcc_rtma_", biome_shortname, "_late.png"), plot = informedness_mcc_gg)
   
   class_thresh_effect_data <-
     tuning_metrics %>% 
@@ -166,7 +166,7 @@ tuning_metrics_l <- lapply(biome_shortnames, FUN = function(biome_shortname) {
     facet_wrap(facets = ".metric") +
     theme_bw()
   
-  ggsave(filename = here::here(latest_rf_figs_dir, paste0("classification-threshold-effect_rtma_", biome_shortname, ".png")), plot = class_thresh_effect_gg)
+  ggsave(filename = here::here(latest_rf_figs_dir, paste0("classification-threshold-effect_rtma_", biome_shortname, "_late.png")), plot = class_thresh_effect_gg)
   
 })
 (end_time <- Sys.time())

@@ -10,7 +10,7 @@ library(tmap)
 library(patchwork)
 library(here)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard"), pattern = "[0-9]"), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
                         decreasing = TRUE)[1]
 
 latest_rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)

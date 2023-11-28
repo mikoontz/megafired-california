@@ -2,12 +2,21 @@
 library(magrittr)
 
 # Color palette
+# original (maybe not enough contrast between human, weather, and topography)
+# col_pal <- tibble::tribble(~type, ~hexcode, ~col_desc,
+#                            "fire", "#D81B60", "red",
+#                            "weather", "#1E88E5", "blue",
+#                            "interacting", "#FFC107", "yellow",
+#                            "topography", "#004D40", "dark green",
+#                            "human", "#19DABE", "minty green",
+#                            "fuel", "#3D9221", "green") 
+
 col_pal <- tibble::tribble(~type, ~hexcode, ~col_desc,
                            "fire", "#D81B60", "red",
                            "weather", "#1E88E5", "blue",
                            "interacting", "#FFC107", "yellow",
-                           "topography", "#004D40", "dark green",
-                           "human", "#19DABE", "minty green",
+                           "topography", "#4B2D0B", "brown",
+                           "human", "#6F2DA8", "purple",
                            "fuel", "#3D9221", "green") 
 
 write.csv(x = col_pal, file = here::here("data", "out", "driver-color-palette.csv"), 
@@ -68,7 +77,8 @@ weather_drivers <-
                           "bi_pct", "erc_pct", "fm100_pct", "fm1000_pct",
                           "spei14d", "spei30d", "spei90d", "spei180d", "spei270d", "spei1y", "spei2y", "spei5y", "pdsi_z"),
              display_name = c("Average N/S wind direction\n(1 = FROM the north)", "Average E/W wind direction\n(1 = FROM the east)",
-                              "Wind direction\nN/S variability\n(1 = consistent FROM the north)", "Wind direction\nE/W variability\n(1 = consistent FROM the east)",
+                              "Wind variability (N/S)\n(0 = consistent along N/S axis;\n1 = variable along N/S axis)", 
+                              "Wind variability (E/W)\n(0 = consistent along E/W axis;\n1 = variable along E/W axis)",
                               "Min. wind speed", "Max. wind speed",
                               "Min. relative humidity", "Max. relative humidity",
                               "Min. temperature", "Max. temperature",

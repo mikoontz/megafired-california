@@ -2,17 +2,13 @@ library(dplyr)
 library(data.table)
 library(ggplot2)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "early")), 
                         decreasing = TRUE)[1]
 
 latest_ard_dir <- here::here("data", "ard", latest_ard_date)
+rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "early", latest_ard_date)
 
-latest_rf_cpi_date <- sort(list.files(path = here::here("data", "out", "rf", "conditional-predictive-impact")), 
-                           decreasing = TRUE)[1]
-
-rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
-
-latest_rf_ttest_dir <- here::here("figs", "rf", "ewe-vs-nonewe-driver-comparison", latest_ard_date)
+latest_rf_ttest_dir <- here::here("figs", "rf", "ewe-vs-nonewe-driver-comparison", "early", latest_ard_date)
 dir.create(latest_rf_ttest_dir, showWarnings = FALSE, recursive = TRUE)
 
 driver_descriptions <- 

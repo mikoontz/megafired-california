@@ -13,11 +13,12 @@ library(here)
 latest_ard_date <- sort(list.files(path = here::here("data", "ard", "late")), 
                         decreasing = TRUE)[1]
 
-latest_rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "late", latest_ard_date)
-latest_rf_cpi_figs_dir <- here::here("figs", "rf", "conditional-predictive-impact", "late", latest_ard_date)
+rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "late", latest_ard_date)
+rf_cpi_figs_dir <- here::here("figs", "rf", "conditional-predictive-impact", "late", latest_ard_date)
+rf_tables_dir <- here::here("tables", "rf", "late", latest_ard_date)
 
-dir.create(latest_rf_cpi_dir, showWarnings = FALSE, recursive = TRUE)
-dir.create(latest_rf_cpi_figs_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(rf_cpi_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(rf_cpi_figs_dir, showWarnings = FALSE, recursive = TRUE)
 
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 biome_shortnames <- c("tcf", "mfws", "dxs")
@@ -97,7 +98,7 @@ tcf_cpi_gg <-
 
 tcf_cpi_gg
 
-ggsave(filename = here::here(latest_rf_cpi_figs_dir, "cpi_tcf.png"), plot = tcf_cpi_gg, height = 18, width = 10, units = "in")
+ggsave(filename = here::here(rf_cpi_figs_dir, "cpi_tcf.png"), plot = tcf_cpi_gg, height = 18, width = 10, units = "in")
 
 #### Mediterranean Forest Woodland and Scrub
 
@@ -119,4 +120,4 @@ mfws_cpi_gg <-
 
 mfws_cpi_gg
 
-ggsave(filename = here::here(latest_rf_cpi_figs_dir, "cpi_mfws_late.png"), plot = mfws_cpi_gg, height = 18, width = 10, units = "in")
+ggsave(filename = here::here(rf_cpi_figs_dir, "cpi_mfws_late.png"), plot = mfws_cpi_gg, height = 18, width = 10, units = "in")

@@ -161,15 +161,19 @@ tcf_x <-
   dplyr::mutate(display_name = factor(display_name, levels = levels(tcf_ale$display_name)))
 
 tcf_ale_gg <- 
-  ggplot(data = tcf_ale, mapping = aes(x = x, y = f)) +
+  ggplot(data = tcf_ale, mapping = aes(x = x, y = f, color = type)) +
   geom_line() +
-  # geom_rug() +
-  geom_rug(data = tcf_x, mapping = aes(x = x), inherit.aes = FALSE) +
+  geom_rug() +
+  scale_color_manual(values = color_table$hexcode) +
   facet_wrap(facets = "display_name", scales = "free") +
   theme_bw() +
+  theme(strip.background = element_rect(fill = "white")) +
   labs(x = "Variable value (local area)",
-       y = "Accumulated local effect") +
-  ggtitle("Temperate Conifer Forests")
+       y = "Accumulated local effect",
+       color = "Driver type") +
+  ggtitle("Temperate Conifer Forests (early EWE)")
+
+tcf_ale_gg
 
 ggsave(plot = tcf_ale_gg, 
        filename = file.path(rf_ale_curves_dir, "tcf_ale-curves_early.png"),
@@ -194,15 +198,19 @@ mfws_x <-
   dplyr::mutate(display_name = factor(display_name, levels = levels(mfws_ale$display_name)))
 
 mfws_ale_gg <- 
-  ggplot(mfws_ale, aes(x = x, y = f)) +
+  ggplot(mfws_ale, aes(x = x, y = f, color = type)) +
   geom_line() +
-  # geom_rug() +
-  geom_rug(data = mfws_x, mapping = aes(x = x), inherit.aes = FALSE) +
+  geom_rug() +
+  scale_color_manual(values = color_table$hexcode) +
   facet_wrap(facets = "display_name", scales = "free") +
   theme_bw() +
+  theme(strip.background = element_rect(fill = "white")) +
   labs(x = "Variable value (local area)",
-       y = "Accumulated local effect") +
-  ggtitle("Mediterranean Forests, Woodlands & Scrub")
+       y = "Accumulated local effect",
+       color = "Driver type") +
+  ggtitle("Mediterranean Forests, Woodlands & Scrub (early EWE)")
+
+mfws_ale_gg
 
 ggsave(plot = mfws_ale_gg, 
        filename = file.path(rf_ale_curves_dir, "mfws_ale-curves_early.png"),

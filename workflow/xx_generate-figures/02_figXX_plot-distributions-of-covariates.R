@@ -8,11 +8,11 @@ library(sf)
 library(patchwork)
 
 # Get the function to take the generic analysis ready data and prepare it for {ranger}
-latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "early")), 
                         decreasing = TRUE)[1]
 
-ard_dir <- here::here("data", "ard", latest_ard_date)
-
+ard_dir <- here::here("data", "ard", "early", latest_ard_date)
+rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "early", latest_ard_date)
 biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 # biome_shortnames <- c("tcf", "mfws", "dxs")
 
@@ -30,7 +30,7 @@ col_pal_df <-
 
 col_pal <- setNames(object = col_pal_df$hexcode, nm = col_pal_df$type)
 
-ard_fnames <- here::here(ard_dir, paste0("daily-drivers-of-california-megafires_", biome_shortnames, ".csv"))
+ard_fnames <- here::here(ard_dir, paste0("daily-drivers-of-california-megafires_", biome_shortnames, "_early.csv"))
 ard_fires <- lapply(ard_fnames, FUN = data.table::fread) |> data.table::rbindlist(fill = TRUE)
 
 scale_drought <- c("pdsi_z", "spei14d", "spei30d", 

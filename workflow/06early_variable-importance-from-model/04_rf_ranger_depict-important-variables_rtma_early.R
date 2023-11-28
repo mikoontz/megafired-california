@@ -10,14 +10,15 @@ library(tmap)
 library(patchwork)
 library(here)
 
-latest_ard_date <- sort(list.files(path = here::here("data", "ard")), 
+latest_ard_date <- sort(list.files(path = here::here("data", "ard", "early")), 
                         decreasing = TRUE)[1]
 
-latest_rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", latest_ard_date)
-latest_rf_cpi_figs_dir <- here::here("figs", "rf", "conditional-predictive-impact", latest_ard_date)
+rf_cpi_dir <- here::here("data", "out", "rf", "conditional-predictive-impact", "early", latest_ard_date)
+rf_cpi_figs_dir <- here::here("figs", "rf", "conditional-predictive-impact", "early", latest_ard_date)
+rf_tables_dir <- here::here("tables", "rf", "early", latest_ard_date)
 
-dir.create(latest_rf_cpi_dir, showWarnings = FALSE, recursive = TRUE)
-dir.create(latest_rf_cpi_figs_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(rf_cpi_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(rf_cpi_figs_dir, showWarnings = FALSE, recursive = TRUE)
 
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
 biome_shortnames <- c("tcf", "mfws", "dxs")
@@ -36,7 +37,7 @@ col_pal_df <-
 col_pal <- setNames(object = col_pal_df$hexcode, nm = col_pal_df$type)
 
 cpi_results <- 
-  data.table::fread(here::here(rf_cpi_dir, "cpi-important-variables.csv")) %>% 
+  data.table::fread(here::here(rf_cpi_dir, "cpi-important-variables_early.csv")) %>% 
   dplyr::rename(variable = Variable) %>% 
   dplyr::left_join(driver_description) %>% 
   dplyr::group_by(biome) %>% 
@@ -73,7 +74,7 @@ cpi_results <-
   })
 
 names(cpi_results) <- sapply(cpi_results, FUN = \(x) return(unique(x$biome)))
-model_skill_results <- data.table::fread(here::here(rf_tables_dir, "model-skill-results.csv"))
+model_skill_results <- data.table::fread(here::here(rf_tables_dir, "model-skill-results_early.csv"))
 
 
 
@@ -97,7 +98,7 @@ tcf_cpi_gg <-
 
 tcf_cpi_gg
 
-ggsave(filename = here::here(latest_rf_cpi_figs_dir, "cpi_tcf.png"), plot = tcf_cpi_gg, height = 18, width = 10, units = "in")
+ggsave(filename = here::here(rf_cpi_figs_dir, "cpi_tcf.png"), plot = tcf_cpi_gg, height = 18, width = 10, units = "in")
 
 #### Mediterranean Forest Woodland and Scrub
 
@@ -119,4 +120,4 @@ mfws_cpi_gg <-
 
 mfws_cpi_gg
 
-ggsave(filename = here::here(latest_rf_cpi_figs_dir, "cpi_mfws.png"), plot = mfws_cpi_gg, height = 18, width = 10, units = "in")
+ggsave(filename = here::here(rf_cpi_figs_dir, "cpi_mfws.png"), plot = mfws_cpi_gg, height = 18, width = 10, units = "in")

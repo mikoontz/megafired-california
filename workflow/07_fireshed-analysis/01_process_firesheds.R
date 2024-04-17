@@ -32,7 +32,10 @@ firesheds <-
                 majregion = MajRegion,
                 exposure = AnnualExposure,
                 pct_dist = PctRecentlyDisturbed) |> 
-  dplyr::select(-Shape_Length, -Shape_Area)
+  dplyr::select(-Shape_Length, -Shape_Area) |> 
+  dplyr::mutate(samp_id = 0,
+                date = lubridate::ymd("2020-08-01"),
+                did = glue::glue("{id}-{date}"))
 
 sf::st_write(obj = firesheds, dsn = here::here("data", "out", "firesheds_conus.shp"))
 sf::st_write(obj = firesheds, dsn = here::here("data", "out", "firesheds_conus.gpkg"))

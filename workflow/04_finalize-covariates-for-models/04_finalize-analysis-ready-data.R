@@ -151,11 +151,13 @@ pct_threshold <- 0.95
 
 # Defining "ewe" as whether daily area of increase was >95th percentile for the biome
 biome_lookup <- 
-  tibble::tibble(biome_name_daily = c("Temperate Conifer Forests", 
-                                      "Mediterranean Forests, Woodlands & Scrub", 
-                                      "Temperate Grasslands, Savannas & Shrublands", 
-                                      "Deserts & Xeric Shrublands"),
-                 biome_shortname = c("tcf", "mfws", "tgss", "dxs"))
+  tibble::tibble(
+    biome_name_daily = c("Temperate Conifer Forests", 
+                         "Mediterranean Forests, Woodlands & Scrub", 
+                         "Temperate Grasslands, Savannas & Shrublands", 
+                         "Deserts & Xeric Shrublands"),
+    biome_shortname = c("tcf", "mfws", "tgss", "dxs")
+  )
 
 # We need to get X/Y coordinates for biggest polygon
 fired_biggest_poly <- 

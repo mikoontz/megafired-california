@@ -225,14 +225,17 @@ prep_static_and_fluc_drivers <- function(static_paths, roads_paths, fluc_paths, 
 # We'll call it a mismatch if the fire-independent nonwater area divided by the FIRED nonwater area
 # is less than 0.9 or greater than 1.1
 
+### FIRED non-water
 fired_nonwater_area_DT <- 
   data.table::fread(here::here("data", "out", "ee", "fired-non-water-area-30m-pixel-count.csv"))
+
 fired_nonwater_area_DT[, `:=`(.geo = NULL,
                               `system:index` = NULL,
                               fired_nonwater_area_ha = sum * 30 * 30 / 1e4,
                               sum = NULL,
                               samp_id = NULL)]
 
+### Fire-independent FIRED non-water
 fi_nonwater_area_DT <-
   lapply(list.files(path = here::here("data", "out", "ee"), 
                     pattern = "fi_fired_.*\\_non-water-area-30m-pixel-count.csv",
@@ -260,36 +263,59 @@ valid_nonwater_area_DT <-
 valid_did <- valid_nonwater_area_DT[N >= 400]
 
 # Convert FIRED pixel counts to area
-fired_daily_drivers <- prep_static_and_fluc_drivers(static_paths = paste0("data/out/ee/FIRED-daily-static-drivers_california_", static_version, ".csv"),
-                                                    roads_paths = paste0("data/out/drivers/roads/fired_daily_road-drivers_", roads_version, ".csv"),
-                                                    fluc_paths = paste0("data/out/ee/FIRED-daily-fluctuating-drivers_california_", fluc_version, ".csv"),
-                                                    nonwater_area_paths = here::here("data", "out", "ee", "fired-non-water-area-30m-pixel-count.csv"))
+fired_daily_drivers <- prep_static_and_fluc_drivers(
+  static_paths = paste0("data/out/ee/FIRED-daily-static-drivers_california_", static_version, ".csv"),
+  roads_paths = paste0("data/out/drivers/roads/fired_daily_road-drivers_", roads_version, ".csv"),
+  fluc_paths = paste0("data/out/ee/FIRED-daily-fluctuating-drivers_california_", fluc_version, ".csv"),
+  nonwater_area_paths = here::here("data", "out", "ee", "fired-non-water-area-30m-pixel-count.csv")
+)
 
 fired_daily_drivers <- fired_daily_drivers[fired_daily_drivers$nonwater_area_ha != 0, ]
 fired_daily_drivers <- fired_daily_drivers[did %in% valid_did$did, ]
 
 data.table::fwrite(x = fired_daily_drivers, file = "data/out/drivers/fired-fluc-static-driver-proportions.csv")
 
-fi_daily_drivers <- prep_static_and_fluc_drivers(static_paths = list.files(path = "data/out/ee/fire-independent-drivers", 
-                                                                           pattern = "static", 
-                                                                           full.names = TRUE),
-                                                 roads_paths = list.files(path = "data/out/drivers/roads/fire-independent-locations/", 
-                                                                          pattern = ".csv", 
-                                                                          full.names = TRUE),
-                                                 fluc_paths = list.files(path = "data/out/ee/fire-independent-drivers", 
-                                                                         pattern = "fluc", 
-                                                                         full.names = TRUE),
-                                                 nonwater_area_paths = list.files(path = here::here("data", "out", "ee"), 
-                                                                                  pattern = "fi_fired_.*\\_non-water-area-30m-pixel-count.csv",
-                                                                                  full.names = TRUE))
+fi_daily_drivers <- prep_static_and_fluc_drivers(
+  static_paths = list.files(
+    path = "data/out/ee/fire-independent-drivers", 
+    pattern = "static", 
+    full.names = TRUE
+  ),
+  roads_paths = list.files(
+    path = "data/out/drivers/roads/fire-independent-locations/", 
+    pattern = ".csv", 
+    full.names = TRUE
+  ),
+  fluc_paths = list.files(
+    path = "data/out/ee/fire-independent-drivers", 
+    pattern = "fluc", 
+    full.names = TRUE
+  ),
+  nonwater_area_paths = list.files(
+    path = here::here("data", "out", "ee"), 
+    pattern = "fi_fired_.*\\_non-water-area-30m-pixel-count.csv",
+    full.names = TRUE
+  )
+)
 
 fi_daily_drivers <- fi_daily_drivers[fi_daily_drivers$nonwater_area_ha != 0, ]
 fi_daily_drivers <- fi_daily_drivers[did %in% valid_did$did, ]
 
 data.table::fwrite(x = fi_daily_drivers, file = "data/out/drivers/fi-fluc-static-driver-proportions.csv")
 
+### Fireshed analysis
+fireshed_drivers <- prep_static_and_fluc_drivers(
+  static_paths = paste0("data/out/ee/fireshed-static-drivers_california_", static_version, ".csv"),
+  roads_paths = paste0("data/out/drivers/roads/fireshed_road-drivers_", roads_version, ".csv"),
+  fluc_paths = paste0("data/out/ee/fireshed-fluctuating-drivers-2020_california_", fluc_version, ".csv"),
+  nonwater_area_paths = here::here("data", "out", "ee", "fireshed-non-water-area-30m-pixel-count.csv")
+)
 
-# ### Convert the static, fluc, and roads pixel counts to proportions of the resolve 
+fireshed_drivers <- fireshed_drivers[fireshed_drivers$nonwater_area_ha != 0, ]
+
+data.table::fwrite(x = fireshed_drivers, file = "data/out/drivers/fireshed-fluc-static-driver-proportions.csv")
+
+# ### Convert the static, fluc, and roads pixel counts to proportions of the resolve ecoregion
 # # Convert FIRED pixel counts to area
 # resolve_daily_drivers <- prep_static_and_fluc_drivers(
 #   static_paths = paste0("data/out/ee/resolve-biomes-static-drivers_california_", static_version, ".csv"),

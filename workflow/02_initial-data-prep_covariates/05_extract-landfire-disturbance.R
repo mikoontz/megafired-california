@@ -523,4 +523,86 @@ for(k in seq_along(fi_files)[!file.exists(fi_out_names)]) {
   
 }
 
+### Fireshed analysis
 
+firesheds <- sf::st_read(here::here("data", "out", "firesheds_conus.gpkg"))
+ca <- USAboundaries::us_states(states = "California", resolution = "high")
+
+firesheds_ca <-
+  firesheds |> 
+  sf::st_make_valid() |> 
+  sf::st_filter(ca) |> 
+  dplyr::mutate(date = lubridate::ymd("2020-08-01"),
+                samp_id = 0,
+                did = glue::glue("{id}-{date}")) |> 
+  dplyr::select(did, id, date, samp_id) 
+
+
+firesheds_ca_list <- 
+  firesheds_ca |>
+  dplyr::mutate(group = sample(x = 1:n_cores, size = dplyr::n(), replace = TRUE)) |> 
+  dplyr::group_by(group) |> 
+  dplyr::group_split()
+
+cl <- parallel::makeCluster(n_cores)
+parallel::clusterEvalQ(cl = cl, expr = {
+  library(dplyr)
+  library(lubridate)
+  library(stringr)
+  library(tidyr)
+  library(exactextractr)
+  library(terra)
+  library(data.table)
+})
+parallel::clusterExport(cl, c("new_dist_sev_table_simple", "relevant_files", "extract_disturbance_fracs"))
+
+(start <- Sys.time())
+out_fired <- 
+  pblapply(X = firesheds_ca_list, cl = cl, FUN = function(fired) {
+    fired_unique_years <- unique(lubridate::year(fired$date))
+    out_group <- vector(mode = "list", length = length(fired_unique_years))
+    
+    for (i in seq_along(fired_unique_years)) {
+      relevant_files_idx <- match(x = fired_unique_years[i], table = relevant_files$year)
+      
+      fired_year <- 
+        fired %>% 
+        dplyr::filter(lubridate::year(date) == fired_unique_years[i]) %>% 
+        sf::st_transform(crs = sf::st_crs(terra::rast(relevant_files$out_path_ca[relevant_files_idx])))
+      
+      relevant_files_year <- 
+        relevant_files %>% 
+        dplyr::mutate(tm_year = fired_unique_years[i] - year,
+                      tm_name = ifelse(tm_year >= 0, 
+                                       yes = paste0("tm", stringr::str_pad(string = tm_year, width = 2, side = "left", pad = "0")),
+                                       no = paste0("tp", stringr::str_pad(string = abs(tm_year), width = 2, side = "left", pad = "0")))) %>% 
+        dplyr::filter(tm_year %in% 1:10) %>% 
+        dplyr::arrange(tm_year)
+      
+      landfire_year <-
+        terra::rast(relevant_files_year$out_path_ca) %>% 
+        setNames(nm = relevant_files_year$tm_name)
+      
+      out_group[[i]] <- 
+        exactextractr::exact_extract(x = landfire_year, y = fired_year,
+                                     fun = extract_disturbance_fracs,
+                                     coverage_area = TRUE,
+                                     include_area = FALSE,
+                                     stack_apply = FALSE,
+                                     append_cols = c("did", "id", "date", "samp_id"))
+      
+      
+    }
+    
+    out_group <- data.table::rbindlist(out_group, fill = TRUE)
+    
+    return(out_group)
+  }) %>% 
+  data.table::rbindlist(fill = TRUE)
+(end <- Sys.time())
+(difftime(end, start, units = "mins"))
+
+data.table::setnafill(x = out_fired, type = "const", fill = 0, cols = names(out_fired)[!(names(out_fired) %in% c("did", "id", "date", "samp_id"))])
+parallel::stopCluster(cl)
+
+data.table::fwrite(x = out_fired, file = here::here("data", "out", "drivers", "landfire-disturbance", "fireshed_daily_disturbance-drivers_v1.csv"))

@@ -118,3 +118,55 @@ for(k in seq_along(fi_files)[!file.exists(fi_out_names)]) {
 }
 
 parallel::stopCluster(cl)
+
+### Fireshed analysis
+firesheds <- sf::st_read(here::here("data", "out", "firesheds_conus.gpkg"))
+ca <- USAboundaries::us_states(states = "California", resolution = "high")
+
+firesheds_ca <-
+  firesheds |> 
+  sf::st_make_valid() |> 
+  sf::st_filter(ca) |> 
+  dplyr::mutate(date = lubridate::ymd("2020-08-01"),
+                samp_id = 0,
+                did = glue::glue("{id}-{date}")) |> 
+  dplyr::select(did, id, date, samp_id) |> 
+  sf::st_transform(sf::st_crs(roads))
+
+firesheds_ca_list <- 
+  firesheds_ca |>
+  dplyr::mutate(group = sample(x = 1:n_workers, size = dplyr::n(), replace = TRUE)) |> 
+  dplyr::group_by(group) |> 
+  dplyr::group_split()
+
+cl <- parallel::makeCluster(n_workers)
+parallel::clusterEvalQ(cl = cl, expr = {
+  library(dplyr)
+  library(sf)
+  library(data.table)
+})
+parallel::clusterExport(cl, c("roads"))
+
+if (!file.exists(here::here("data", "out", "drivers", "roads", paste0("fireshed_road-drivers_", roads_version, ".csv")))) {
+  (start <- Sys.time())
+  out_fired <- 
+    pbapply::pblapply(X = firesheds_ca_list, cl = cl, FUN = function(fired) {
+      
+      inter <- 
+        sf::st_intersection(x = fired, y = roads) %>% 
+        dplyr::mutate(length = sf::st_length(.)) %>% 
+        sf::st_drop_geometry() %>% 
+        data.table::as.data.table()
+      
+      out <- inter[, .(road_length_m = as.numeric(sum(length))), by = .(did, id, date, samp_id)]
+      
+      return(out)
+    }) %>% 
+    data.table::rbindlist(fill = TRUE)
+  (end <- Sys.time())
+  (difftime(end, start, units = "mins"))
+  
+  data.table::fwrite(x = out_fired, file = here::here("data", "out", "drivers", "roads", "fireshed_road-drivers_v1.csv"))
+}
+
+parallel::stopCluster(cl)

@@ -360,32 +360,16 @@ extract_disturbance_fracs <- function(new_val, area) {
 ### Extract disturbance data for FIRED data
 # Note this takes about 5.5 minutes across 12 cores.
 set.seed(1103)
-firesheds <- sf::st_read(here::here("data", "out", "firesheds_conus.gpkg"))
-ca <- USAboundaries::us_states(states = "California", resolution = "high")
 
-firesheds_ca <-
-  firesheds |> 
+pods = sf::st_read(here::here("data", "out", "sierra-nevada-pods.gpkg")) |> 
   sf::st_make_valid() |> 
-  sf::st_filter(ca) |> 
-  dplyr::mutate(date = lubridate::ymd("2020-08-01"),
-                samp_id = 0,
-                did = glue::glue("{id}-{date}")) |> 
   dplyr::select(did, id, date, samp_id) 
 
-
-firesheds_ca_list <- 
-  firesheds_ca |>
+pods_list <- 
+  pods |>
   dplyr::mutate(group = sample(x = 1:n_cores, size = dplyr::n(), replace = TRUE)) |> 
   dplyr::group_by(group) |> 
   dplyr::group_split()
-
-# fired_list <-
-#   sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>%
-#   dplyr::filter(lubridate::year(date) %in% years) %>%
-#   dplyr::select(did, id, date, samp_id) %>%
-#   dplyr::mutate(group = sample(x = 1:n_cores, size = nrow(.), replace = TRUE)) %>%
-#   dplyr::group_by(group) %>%
-#   dplyr::group_split()
 
 cl <- parallel::makeCluster(n_cores)
 parallel::clusterEvalQ(cl = cl, expr = {
@@ -401,7 +385,7 @@ parallel::clusterExport(cl, c("new_dist_sev_table_simple", "relevant_files", "ex
 
 (start <- Sys.time())
 out_fired <- 
-  pblapply(X = firesheds_ca_list, cl = cl, FUN = function(fired) {
+  pblapply(X = pods_list, cl = cl, FUN = function(fired) {
     fired_unique_years <- unique(lubridate::year(fired$date))
     out_group <- vector(mode = "list", length = length(fired_unique_years))
     
@@ -448,7 +432,7 @@ out_fired <-
 data.table::setnafill(x = out_fired, type = "const", fill = 0, cols = names(out_fired)[!(names(out_fired) %in% c("did", "id", "date", "samp_id"))])
 parallel::stopCluster(cl)
 
-data.table::fwrite(x = out_fired, file = here::here("data", "out", "drivers", "landfire-disturbance", "fireshed_daily_disturbance-drivers_v1.csv"))
+data.table::fwrite(x = out_fired, file = here::here("data", "out", "drivers", "landfire-disturbance", "sierra-nevada-pods_daily_disturbance-drivers_v1.csv"))
 
 
 

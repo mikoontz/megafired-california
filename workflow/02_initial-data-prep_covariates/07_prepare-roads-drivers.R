@@ -15,15 +15,6 @@ n_workers <- 6L
 
 set.seed(1103)
 
-# Our cutoff is fires from 2011, because that's when RTMA weather data starts
-fired_list <- 
-  sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>%  
-  dplyr::filter(lubridate::year(date) %in% 2011:2020) %>% 
-  dplyr::select(did, id, date, samp_id) %>% 
-  dplyr::mutate(group = sample(x = 1:n_workers, size = nrow(.), replace = TRUE)) %>% 
-  dplyr::group_by(group) %>% 
-  dplyr::group_split()
-
 # https://gisdata-caltrans.opendata.arcgis.com/datasets/cf4982ddf16c4c9ca7242364c94c7ad6_0/explore
 if (!file.exists("data/out/roads.gpkg")) {
   gdal_utils(util = "vectortranslate",
@@ -38,6 +29,15 @@ if (!file.exists("data/out/roads.gpkg")) {
 }
 
 roads <- sf::st_read("data/out/roads.gpkg")
+
+# Our cutoff is fires from 2011, because that's when RTMA weather data starts
+fired_list <- 
+  sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>%  
+  dplyr::filter(lubridate::year(date) %in% 2011:2020) %>% 
+  dplyr::select(did, id, date, samp_id) %>% 
+  dplyr::mutate(group = sample(x = 1:n_workers, size = nrow(.), replace = TRUE)) %>% 
+  dplyr::group_by(group) %>% 
+  dplyr::group_split()
 
 cl <- parallel::makeCluster(n_workers)
 parallel::clusterEvalQ(cl = cl, expr = {
@@ -167,6 +167,50 @@ if (!file.exists(here::here("data", "out", "drivers", "roads", paste0("fireshed_
   (difftime(end, start, units = "mins"))
   
   data.table::fwrite(x = out_fired, file = here::here("data", "out", "drivers", "roads", "fireshed_road-drivers_v1.csv"))
+}
+
+parallel::stopCluster(cl)
+
+### PODS analysis
+### Fireshed analysis
+pods = sf::st_read(here::here("data", "out", "sierra-nevada-pods.gpkg")) |> 
+  sf::st_make_valid() |>
+  dplyr::select(did, id, date, samp_id) 
+
+pods_list = 
+  pods |>
+  dplyr::mutate(group = sample(x = 1:n_workers, size = dplyr::n(), replace = TRUE)) |> 
+  dplyr::group_by(group) |> 
+  dplyr::group_split()
+
+cl <- parallel::makeCluster(n_workers)
+parallel::clusterEvalQ(cl = cl, expr = {
+  library(dplyr)
+  library(sf)
+  library(data.table)
+})
+parallel::clusterExport(cl, c("roads"))
+
+if (!file.exists(here::here("data", "out", "drivers", "roads", paste0("pods_road-drivers_", roads_version, ".csv")))) {
+  (start <- Sys.time())
+  out_fired <- 
+    pbapply::pblapply(X = pods_list, cl = cl, FUN = function(fired) {
+      
+      inter <- 
+        sf::st_intersection(x = fired, y = roads) %>% 
+        dplyr::mutate(length = sf::st_length(.)) %>% 
+        sf::st_drop_geometry() %>% 
+        data.table::as.data.table()
+      
+      out <- inter[, .(road_length_m = as.numeric(sum(length))), by = .(did, id, date, samp_id)]
+      
+      return(out)
+    }) %>% 
+    data.table::rbindlist(fill = TRUE)
+  (end <- Sys.time())
+  (difftime(end, start, units = "mins"))
+  
+  data.table::fwrite(x = out_fired, file = here::here("data", "out", "drivers", "roads", "pods_road-drivers_v1.csv"))
 }
 
 parallel::stopCluster(cl)

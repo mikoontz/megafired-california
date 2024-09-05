@@ -315,6 +315,20 @@ fireshed_drivers <- fireshed_drivers[fireshed_drivers$nonwater_area_ha != 0, ]
 
 data.table::fwrite(x = fireshed_drivers, file = "data/out/drivers/fireshed-fluc-static-driver-proportions.csv")
 
+
+### Sierra Nevada PODS analysis
+pods_drivers <- prep_static_and_fluc_drivers(
+  static_paths = paste0("data/out/ee/pods-static-drivers_california_", static_version, ".csv"),
+  roads_paths = paste0("data/out/drivers/roads/pods_road-drivers_", roads_version, ".csv"),
+  fluc_paths = paste0("data/out/ee/pods-fluctuating-drivers-2020_california_", fluc_version, ".csv"),
+  nonwater_area_paths = here::here("data", "out", "ee", "pods-non-water-area-30m-pixel-count.csv")
+)
+
+pods_drivers <- pods_drivers[pods_drivers$nonwater_area_ha != 0, ]
+
+data.table::fwrite(x = pods_drivers, file = "data/out/drivers/pods-fluc-static-driver-proportions.csv")
+
+
 # ### Convert the static, fluc, and roads pixel counts to proportions of the resolve ecoregion
 # # Convert FIRED pixel counts to area
 # resolve_daily_drivers <- prep_static_and_fluc_drivers(

@@ -82,7 +82,54 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
                    pr_auc = PRROC::pr.curve(scores.class0 = p, weights.class0 = o)[[2]]),
                by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, iter)]
   
-  # Then, we can derive model skill metrics based on the confusion matrix
+  results2 <-
+    biome_tune[, .(tp = as.numeric(length(which(o == 1 & p_fac == "1"))),
+                   fp = as.numeric(length(which(o == 0 & p_fac == "1"))),
+                   fn = as.numeric(length(which(o == 1 & p_fac == "0"))),
+                   tn = as.numeric(length(which(o == 0 & p_fac == "0"))),
+                   accuracy = mean(o_fac == p_fac),
+                   rmse = sqrt(mean((o - p)^2)),
+                   # logloss code from {MLmetrics} package
+                   logloss = -mean(o * log(pmax(pmin(p, 1 - 1e-15), 1e-15)) + (1 - o) * log(1 - pmax(pmin(p, 1 - 1e-15), 1e-15))),
+                   # roc_auc code from {mlr3measures} package
+                   roc_auc = (mean(rank(p, ties.method = "average")[which(o == 1)]) - (as.numeric(length(which(o == 1))) + 1)/2) / as.numeric(length(which(o == 0))),
+                   pr_auc = PRROC::pr.curve(scores.class0 = p, weights.class0 = o)[[2]]),
+               by = .(mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, iter)]
+  
+  results2[, `:=`(precision = tp / (tp + fp),
+                 recall = tp / (tp + fn),
+                 specificity = tn / (tn + fp))]
+  
+  results2[, `:=`(f_meas = 2 * (precision * recall / (precision + recall)),
+                 informedness = (tp / (tp + fn)) + (tn / (tn + fp)) - 1,
+                 mcc = ((tp * tn) - (fn * fp)) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))]
+  
+  results2[mtry == 4 & num.trees == 1000 & min.node.size == 1 & class.wgts & classification_thresh == 0.01 & sample.fraction == 0.4, ]
+  max(results2$mcc, na.rm = TRUE)
+  
+  results_long <-
+    data.table::melt(results2, 
+                     id.vars = c("mtry", "num.trees", "sample.fraction", "classification_thresh", "min.node.size", "class.wgts", "iter"),
+                     measure.vars = metrics,
+                     variable.name = ".metric",
+                     value.name = ".estimate")
+  
+  # Apply summary functions to the .estimate column across iterations
+  results_across_iter <-
+    results_long[, .(mean = mean(.estimate, na.rm = TRUE),
+                     sd = sd(.estimate, na.rm = TRUE),
+                     n = sum(!is.na(.estimate)),
+                     min = min(.estimate, na.rm = TRUE),
+                     max = max(.estimate, na.rm = TRUE),
+                     lwr = mean(.estimate, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
+                     upr = mean(.estimate, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
+                     biome = biome_shortname),
+                 by = .(mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric)]
+  
+  mcc = results_across_iter[.metric == "mcc", ]
+  dplyr::arrange(mcc, dplyr::desc(mean))
+  dplyr::arrange(mcc, dplyr::desc(lwr))
+  # Then, we can derive modeTRUE# Then, we can derive model skill metrics based on the confusion matrix
   results[, `:=`(precision = tp / (tp + fp),
                  recall = tp / (tp + fn),
                  specificity = tn / (tn + fp))]

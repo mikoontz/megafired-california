@@ -4,8 +4,6 @@ library(mlr3pipelines)
 library(ranger)
 # detach("package:cpi", unload=TRUE)
 # remove.packages("cpi")
-# remotes::install_github(repo = "mikoontz/cpi@megafired-california") # install from my patch
-# remotes::install_github(repo = "mikoontz/cpi@modify-probability") # install from my patch
 # remotes::install_github(repo = "mikoontz/cpi@dev") # install from my dev
 # install.packages("cpi") # install from CRAN
 library(cpi)

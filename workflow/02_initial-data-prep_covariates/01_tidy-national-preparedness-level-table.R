@@ -7,36 +7,41 @@ library(tidyr)
 dir.create("data/out/drivers", recursive = TRUE, showWarnings = FALSE)
 
 # https://www.nifc.gov/sites/default/files/2020-09/PreparednessLevels.xlsx
+# Now at https://www.nifc.gov/sites/default/files/PreparednessLevels/PreparednessLevels.xlsx
+# as of 2024-04-18
 if(!file.exists("data/raw/PreparednessLevels.xlsx")) {
   download.file(url = "https://www.nifc.gov/sites/default/files/2020-09/PreparednessLevels.xlsx",
                 destfile = "data/raw/PreparednessLevels.xlsx")
 }
 
-npl <- 
+npl <-
   lapply(X = 1:12, FUN = function(month) {
-    out <- readxl::read_excel(path = "data/raw/PreparednessLevels.xlsx", 
-                              sheet = month, 
-                              skip = 1, 
-                              col_types = c("text"))
-    
+
+    out <- readxl::read_excel(
+      path = "data/raw/PreparednessLevels.xlsx",
+                              sheet = month,
+                              skip = 1,
+                              col_types = c("text")
+      )
+
     if (month == 4) {
-      out <- 
-        out %>% 
+      out <-
+        out %>%
         dplyr::rename(`2021` = `...33`)
     }
-    
+
     month_string <- stringr::str_pad(string = month, width = 2, side = "left", pad = "0")
-    
+
     out <- out[1:lubridate::days_in_month(paste0("2020-", month_string, "-01")), 1:33]
-    
+
     out <-
-      out %>% 
-      tidyr::pivot_longer(cols = -1, names_to = "year", values_to = "npl") %>% 
-      dplyr::mutate(month = month) %>% 
-      dplyr::rename(day = Day) %>% 
-      dplyr::select(year, month, day, npl) %>% 
+      out %>%
+      tidyr::pivot_longer(cols = -1, names_to = "year", values_to = "npl") %>%
+      dplyr::mutate(month = month) %>%
+      dplyr::rename(day = Day) %>%
+      dplyr::select(year, month, day, npl) %>%
       dplyr::mutate_all(as.integer)
-    
+
     return(out)
   })
 

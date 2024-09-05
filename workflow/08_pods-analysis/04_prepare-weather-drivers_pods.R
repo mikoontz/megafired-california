@@ -1,5 +1,3 @@
-# Normalize weather variables into percentile scale
-
 library(dplyr)
 library(sf)
 library(data.table)
@@ -7,15 +5,20 @@ library(lubridate)
 library(pbapply)
 library(USAboundaries)
 
-fired_daily <- 
-  sf::st_read("data/out/fired/02_time-filter-crs-transform/fired_daily_ca_epsg3310_2003-2020.gpkg") %>% 
-  dplyr::rename(geometry = geom) %>% 
-  dplyr::mutate(date = lubridate::ymd(date)) %>% 
-  sf::st_set_agr(value = "constant")
+### Weather drivers for PODS analysis (August 17, 2021)
+pods = sf::st_read("data/out/sierra-nevada-pods.gpkg") |> 
+  sf::st_make_valid() |>
+  dplyr::select(did, id, date, samp_id)
 
-fired_daily_biggest_poly_centroids <-
-  data.table::fread("data/out/fired/03_joined-with-other-data/fired-biggest-poly-info.csv")
+coords = pods |> 
+  sf::st_centroid() |> 
+  sf::st_coordinates(pods) |> 
+  as.data.frame()
 
+pods = pods |> 
+  dplyr::mutate(x = coords[["X"]], y = coords[["Y"]])
+
+#### --- era5 drivers prep PODS
 # Some important notes on the wind variables derived from ERA5 and RTMA
 # wind_aspect_alignment_rad = wind direction (radians) - slope aspect (radians); wind blowing uphill = 0, wind blowing downhill = pi, wind blowing across slope is pi/2 or 3pi/2
 # wind terrain alignment = abs(cos(wind_aspect_alignment_rad)); wind blowing uphill and wind blowing downhill get max value of 1; wind blowing across slope gets value of 0
@@ -45,10 +48,15 @@ extract_percentile <- function(x) {
   return(percentile)
 }
 
+
 match_percentile <- function(r, var, drivers_DT) {
   
-  percentile_matrix <- terra::extract(x = r, y = as.matrix(fired_daily_biggest_poly_centroids[, c("x_biggest_poly_3310", "y_biggest_poly_3310")]), method = "simple")
-  percentile_matrix <- cbind(did = fired_daily_biggest_poly_centroids$did, percentile_matrix)
+  percentile_matrix <- terra::extract(
+      x = r, 
+      y = as.matrix(sf::st_drop_geometry(pods)[, c("x", "y")]), 
+      method = "simple"
+    )
+  percentile_matrix <- cbind(did = pods$did, percentile_matrix)
   percentile_matrix <- as.data.table(percentile_matrix)
   percentile_matrix <- percentile_matrix[drivers_DT[, c("did", ..var)], on = "did"][, did := NULL]
   percentile_matrix[, names(r) := lapply(names(r), FUN = function(i) {return(abs(get(i) - get(var)))})]
@@ -66,15 +74,11 @@ r_era5 <-
 r_gridmet <-
   terra::rast("data/out/ee/gridmet-weather-percentiles_1981-01-01_2020-12-31.tif")
 
-r_rtma <-
-  terra::rast("data/out/ee/rtma-weather-percentiles_2011-01-01_2020-12-31.tif")
-
 pcts <- stringr::str_pad(string = as.character(seq(0, 100, by = 0.25) * 100),
                          width = 5, side = "left", pad = "0")
 
-#### --- era5 drivers prep
-era5_drivers <- data.table::fread("data/out/ee/FIRED-era5-drivers_california_biggest-poly.csv")
-era5_drivers <- era5_drivers[did %in% fired_daily$did, ]
+era5_drivers <- data.table::fread("data/out/ee/pods-era5-drivers_california_biggest-poly.csv")
+era5_drivers <- era5_drivers[did %in% pods$did, ]
 era5_drivers[, `:=`(`system:index` = NULL,
                     ea = NULL,
                     era5_datetime = NULL,
@@ -84,12 +88,6 @@ era5_drivers[, `:=`(`system:index` = NULL,
                     v_component_of_wind_10m = NULL,
                     wind_dir_deg = NULL,
                     .geo = NULL)]
-
-# convert some raw era5 values to percentiles
-# percentile raster exported from Earth Engine for ERA5 weather data
-# 2005 bands; 5 weather variables * 1001 percentiles
-# temperature_2m, volumetric_soil_water_layer_1, vpd_hPa, rh, wind_speed
-# 00000, 00025, 00050, 00075, 00100
 
 # other percentiles that might be valuable
 vars_era5 <- c("temperature_2m", "volumetric_soil_water_layer_1", "vpd_hPa", "rh", "wind_speed")
@@ -116,8 +114,8 @@ era5_pct_out <- do.call(what = cbind, args = era5_pct_out)
 era5_drivers <- cbind(era5_drivers, era5_pct_out)
 
 era5_drivers_summarized <-
-  era5_drivers %>%
-  dplyr::mutate(date = lubridate::ymd(date)) %>% 
+  era5_drivers |> 
+  dplyr::mutate(date = as.Date(date)) |>  
   group_by(id, date, did) %>%
   summarize(wind_dir_ns_era5 = mean(cos(wind_dir_rad)), # average northness of wind direction in a day (1 is all north winds; -1 is all south winds)
             wind_dir_ew_era5 = mean(sin(wind_dir_rad)), # average eastness of wind direction in a day (1 is all east winds; -1 is all west winds)
@@ -151,97 +149,12 @@ era5_drivers_summarized <-
             max_vpd_era5_pct = max(vpd_hPa_pct),
             min_vpd_era5_pct = min(vpd_hPa_pct)) %>%
   ungroup()
-#### --- end era5 drivers prep
-
-#### --- begin RTMA drivers prep (only for fires from 2011 to 2020)
-rtma_drivers <- data.table::fread("data/out/ee/FIRED-rtma-drivers_california_biggest-poly.csv")
-rtma_drivers <- rtma_drivers[did %in% fired_daily$did, ]
-rtma_drivers[, `:=`(`system:index` = NULL,
-                    ea = NULL,
-                    rtma_datetime = NULL,
-                    esat = NULL,
-                    PRES = NULL,
-                    UGRD = NULL,
-                    VGRD = NULL,
-                    wind_aspect_alignment_deg = NULL,
-                    WDIR = NULL,
-                    .geo = NULL)]
-
-vars_rtma <- c('TMP', 'vpd_hPa', 'rh', 'WIND', 'GUST', 'wind_filled_gust', 'wind_aspect_alignment_rad')
-
-bandnames_rtma <- 
-  expand.grid(pcts = pcts, vars = vars_rtma) %>% 
-  as.data.frame() %>% 
-  dplyr::mutate(bandname = paste0(vars, "_p_", pcts))
-
-names(r_rtma) <- bandnames_rtma$bandname
-
-temp_rtma <- r_rtma[[1:401]]
-vpd_rtma <- r_rtma[[402:802]]
-rh_rtma <- r_rtma[[803:1203]]
-wind_rtma <- r_rtma[[1204:1604]]
-gust_rtma <- r_rtma[[1605:2005]]
-wind_filled_gust_rtma <- r_rtma[[2006:2406]]
-wind_terrain_alignment_rtma <- r_rtma[[2407:2807]]
-
-l <- list(temp_rtma, vpd_rtma, rh_rtma, wind_rtma, gust_rtma, wind_filled_gust_rtma, wind_terrain_alignment_rtma)
-var <- list('TMP', 'vpd_hPa', 'rh', 'WIND', 'GUST', 'wind_filled_gust', 'wind_aspect_alignment_rad')
-
-rtma_pct_out <- pblapply(seq_along(l), FUN = function(i) match_percentile(r = l[[i]], var = var[[i]], drivers_DT = rtma_drivers))
-rtma_pct_out <- do.call(what = cbind, args = rtma_pct_out)
-rtma_drivers <- cbind(rtma_drivers, rtma_pct_out)
-
-rtma_drivers_summarized <-
-  rtma_drivers %>%
-  dplyr::mutate(date = lubridate::ymd(date)) %>% 
-  group_by(id, date, did) %>%
-  summarize(wind_dir_ns_rtma = mean(cos(WDIR_rad)), # average northness of the wind direction in a day (1 is 24 hours of north winds; -1 is 24 hours of south winds)
-            wind_dir_ew_rtma = mean(sin(WDIR_rad)), # average eastness of the wind direction in a day (1 is 24 hours of north winds; -1 is 24 hours of south winds)
-            wind_anisotropy_ns_rtma = sd(cos(WDIR_rad)), # greater standard deviation means MORE north/south variability in wind direction in a day
-            wind_anisotropy_ew_rtma = sd(sin(WDIR_rad)), # greater standard deviation means MORE east/west variability in wind direction in a day
-            # # multiply wind terrain anisotropy by 2 to put it on the same [0,1] scale as wind anisotropy and wind terrain alignment
-            # # instead of [0,0.5]
-            # wind_terrain_anisotropy_ns_rtma = 2*sd(abs(cos(wind_aspect_alignment_rad))), # greater standard deviation means MORE north/south asymmetry in wind/terrain alignment in a day
-            # wind_terrain_anisotropy_ew_rtma = 2*sd(abs(sin(wind_aspect_alignment_rad))), # greater standard deviation means MORE east/west asymmetry in wind/terrain alignment in a day
-            # wind_terrain_alignment_rtma = mean(abs(cos(wind_aspect_alignment_rad))), # cos() such that exact alignment (wind blowing into uphill slope) gets a 1, 180 degrees off gets a -1 (wind blowing into downhill slope); take the absolute value such that either blowing into uphill or downhill slope gets maximum alignment value 
-            # min_wind_terrain_alignment_rtma = min(abs(cos(wind_aspect_alignment_rad))),
-            # max_wind_terrain_alignment_rtma = max(abs(cos(wind_aspect_alignment_rad))),
-            # min_wind_terrain_alignment_rtma_pct = min(wind_aspect_alignment_rad_pct),
-            # max_wind_terrain_alignment_rtma_pct = max(wind_aspect_alignment_rad_pct),
-            max_wind_speed_rtma = max(WIND),
-            min_wind_speed_rtma = min(WIND),
-            max_wind_gust_rtma = max(GUST),
-            min_wind_gust_rtma = min(GUST),
-            max_wind_filled_gust_rtma = max(wind_filled_gust),
-            min_wind_filled_gust_rtma = min(wind_filled_gust),
-            max_wind_speed_rtma_pct = max(WIND_pct),
-            min_wind_speed_rtma_pct = min(WIND_pct),
-            max_wind_gust_rtma_pct = max(GUST_pct),
-            min_wind_gust_rtma_pct = min(GUST_pct),
-            max_wind_filled_gust_rtma_pct = max(wind_filled_gust_pct),
-            min_wind_filled_gust_rtma_pct = min(wind_filled_gust_pct),
-            max_rh_rtma = max(rh),
-            min_rh_rtma = min(rh),
-            max_rh_rtma_pct = max(rh_pct),
-            min_rh_rtma_pct = min(rh_pct),
-            max_temp_rtma = max(TMP),
-            min_temp_rtma = min(TMP),
-            max_temp_rtma_pct = max(TMP_pct),
-            min_temp_rtma_pct = min(TMP_pct),
-            max_vpd_rtma = max(vpd_hPa),
-            min_vpd_rtma = min(vpd_hPa),
-            max_vpd_rtma_pct = max(vpd_hPa_pct),
-            min_vpd_rtma_pct = min(vpd_hPa_pct)) %>%
-  ungroup()
-
-#### --- end RTMA drivers prep
-
 
 #### -- daily drivers prep
 # GRIDMET drivers
 
-gridmet_drivers <- data.table::fread("data/out/ee/FIRED-daily-gridmet-drivers_california_biggest-poly.csv")
-gridmet_drivers <- gridmet_drivers[did %in% fired_daily$did, ]
+gridmet_drivers <- data.table::fread("data/out/ee/pods-daily-gridmet-drivers_california_biggest-poly.csv")
+gridmet_drivers <- gridmet_drivers[did %in% pods$did, ]
 gridmet_drivers[, `:=`(.geo = NULL, samp_id = NULL,
                        `system:index` = NULL, 
                        pdsi_z = z, z = NULL, 
@@ -267,41 +180,24 @@ fm1000 <- r_gridmet[[1204:1604]]
 l <- list(erc, bi, fm100, fm1000)
 var <- list("erc", "bi", "fm100", "fm1000")
 
-gridmet_pct_out <- pblapply(seq_along(l), FUN = function(i) match_percentile(r = l[[i]], var = var[[i]], drivers_DT = gridmet_drivers))
+gridmet_pct_out <- pblapply(
+  seq_along(l), 
+  FUN = function(i) match_percentile(r = l[[i]], var = var[[i]], drivers_DT = gridmet_drivers)
+)
 gridmet_pct_out <- do.call(what = cbind, args = gridmet_pct_out)
 
 gridmet_drivers <- 
   cbind(gridmet_drivers, gridmet_pct_out) %>% 
-  dplyr::mutate(date = lubridate::ymd(date))
+  dplyr::mutate(date = as.Date(date))
 
 summary(gridmet_drivers)
-
-## Reality check with known fires
-frap <- read.csv("data/out/fired/03_joined-with-other-data/fired-frap-mtbs-join.csv")
-frap %>% filter(name_frap == "TUBBS")
-creek <- rtma_drivers_summarized[rtma_drivers_summarized$id == 135921, ]
-tubbs <- rtma_drivers_summarized[rtma_drivers_summarized$id == 117324, ]
-
-creek$max_wind_gust_rtma_pct
-creek$min_wind_speed_rtma_pct
-creek$max_vpd_rtma_pct
-
-tubbs$max_wind_gust_rtma_pct
-tubbs$min_wind_gust_rtma_pct
-tubbs$min_wind_speed_rtma_pct
-tubbs$wind_anisotropy_ns_rtma
-tubbs$wind_anisotropy_ew_rtma
-tubbs$wind_dir_ns_rtma
-tubbs$wind_dir_ew_rtma
-
-tubbs$max_vpd_rtma_pct
 
 ###
 
 out_sf <- 
-  fired_daily %>% 
-  dplyr::left_join(era5_drivers_summarized, by = c("did", "id", "date")) %>% 
-  dplyr::left_join(rtma_drivers_summarized, by = c("did", "id", "date")) %>% 
+  pods |>  
+  dplyr::mutate(date = as.Date("2021-08-17")) |> 
+  dplyr::left_join(era5_drivers_summarized, by = c("did", "id", "date")) |>  
   dplyr::left_join(gridmet_drivers, by = c("did", "id", "date"))
 
 out <- 
@@ -309,6 +205,6 @@ out <-
   sf::st_drop_geometry() %>% 
   as.data.table()
 
-data.table::fwrite(x = out, file = "data/out/drivers/weather-drivers-as-percentiles.csv")
+data.table::fwrite(x = out, file = "data/out/drivers/weather-drivers-as-percentiles_pods.csv")
 
 

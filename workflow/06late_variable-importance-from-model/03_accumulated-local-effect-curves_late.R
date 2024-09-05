@@ -156,6 +156,25 @@ pdp_gg <- function(biome_shortname) {
   return(list(out_all_key_vars = out_all_key_vars, X = X))
 }
 
+# out = ALEPlot::ALEPlot(
+#   X = X,
+#   X.model = fm, 
+#   J = c("flat", "caltrans_road_density_mpha"),
+#   pred.fun = yhat,
+#   NA.plot = FALSE
+# )
+# 
+# out = ALEPlot::ALEPlot(
+#   X = X,
+#   X.model = fm, 
+#   J = c("fireline_length_proxy_km", "flat"),
+#   pred.fun = yhat,
+#   NA.plot = FALSE
+# )
+# 
+# image(out$x.values[[1]], out$x.values[[2]], out$f.values, xlab = "fireline_length_proxy_km", ylab = "flat", col = colorspace::diverge_hcl(n = 100, palette = "Blue-Red"))
+# contour(out$x.values[[1]], out$x.values[[2]], out$f.values, add=TRUE, drawlabels=TRUE)
+
 tcf <- ale_gg(biome_shortname = "tcf")
 tcf_ale <- tcf$out_all_key_vars
 tcf_x <- 

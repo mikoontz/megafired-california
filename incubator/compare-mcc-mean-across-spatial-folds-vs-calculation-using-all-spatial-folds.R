@@ -55,13 +55,6 @@ recipe = tibble::tibble(
   )
 )
 
-# out = compare_mean_vs_median_across_folds(
-#   fold_avg_fname = here::here("data/out/rf/tuning/early/2023-06-21/rf_ranger_spatial-cv-tuning-metrics_rtma_tcf_early.csv"),
-#   across_fold_fname = here::here("data/out/rf/tuning/early/2023-06-21/rf_ranger_spatial-cv-tuning-metrics_across-folds_tcf_early.csv"),
-#   biome = "tcf",
-#   early_or_late = "early"
-# )
-
 out = purrr::pmap(
   .l = recipe,
   .f = compare_mean_vs_median_across_folds
@@ -78,35 +71,4 @@ ggplot(out, aes(x = mcc_across_all_folds, y = diff, color = diff_type)) +
   facet_grid(early_or_late ~ biome) +
   geom_hline(yintercept = 0) + 
   theme_bw()
-
-
-
-
-
-
-
-tuned_hyperparameters <-
-  tuning_metrics %>% 
-  dplyr::filter(.metric %in% c("mcc", "f_meas", "informedness")) %>% 
-  group_by(biome, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>%
-  # Mean MCC across iterations for each spatial fold
-  summarize(n = n(),
-            n_not_missing = sum(!is.na(mean)),
-            mean = mean(x = mean, na.rm = TRUE),
-            lwr = mean(x = lwr, na.rm = TRUE)) %>%
-  dplyr::filter((n_not_missing / n >= 0.5)) %>% 
-  tidyr::pivot_wider(id_cols = c(biome, mtry, num.trees, 
-                                 sample.fraction, classification_thresh, 
-                                 min.node.size, class.wgts, n, n_not_missing),
-                     names_from = .metric,
-                     values_from = c("mean", "lwr")) %>% 
-  dplyr::group_by(biome) %>% 
-  dplyr::arrange(desc(mean_mcc)) %>% 
-  slice(1)
-
-
-
-
-
-
 

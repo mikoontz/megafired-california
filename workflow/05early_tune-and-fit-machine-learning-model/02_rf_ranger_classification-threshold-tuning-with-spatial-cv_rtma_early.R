@@ -20,7 +20,7 @@ latest_rf_figs_dir <- here::here("figs", "rf", "tuning", "early", latest_ard_dat
 # pseudo-probability predictions from the models already fit to crisp 0 or 1 values, then calculate the 
 # model skill metrics.
 # biome_shortnames <- c("tcf", "mfws", "tgss", "dxs")
-biome_shortnames <- c("tcf", "mfws", "dxs")
+biome_shortnames <- c("tcf", "mfws")
 
 (start_time <- Sys.time())
 # Take the spatial CV results (observation for held out fold and predictions) and calculate various model skill metrics
@@ -81,8 +81,67 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
                    roc_auc = (mean(rank(p, ties.method = "average")[which(o == 1)]) - (as.numeric(length(which(o == 1))) + 1)/2) / as.numeric(length(which(o == 0))),
                    pr_auc = PRROC::pr.curve(scores.class0 = p, weights.class0 = o)[[2]]),
                by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, iter)]
+
+  results_long <-
+    data.table::melt(results2,
+                     id.vars = c("mtry", "num.trees", "sample.fraction", "classification_thresh", "min.node.size", "class.wgts", "iter"),
+                     measure.vars = metrics,
+                     variable.name = ".metric",
+                     value.name = ".estimate")
+
+  # Apply summary functions to the .estimate column across iterations
+  results_across_iter <-
+    results_long[, .(mean = mean(.estimate, na.rm = TRUE),
+                     sd = sd(.estimate, na.rm = TRUE),
+                     n = sum(!is.na(.estimate)),
+                     min = min(.estimate, na.rm = TRUE),
+                     max = max(.estimate, na.rm = TRUE),
+                     lwr = mean(.estimate, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
+                     upr = mean(.estimate, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
+                     biome = biome_shortname),
+                 by = .(mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric)]
+
+  # Then, we can derive modeTRUE# Then, we can derive model skill metrics based on the confusion matrix
+  results[, `:=`(precision = tp / (tp + fp),
+                 recall = tp / (tp + fn),
+                 specificity = tn / (tn + fp))]
+
+  results[, `:=`(f_meas = 2 * (precision * recall / (precision + recall)),
+                 informedness = (tp / (tp + fn)) + (tn / (tn + fp)) - 1,
+                 mcc = ((tp * tn) - (fn * fp)) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))]
+
+  # Here, we calculate the mean of all of the model skill metrics across the 10 iterations (i.e., for each
+  # combo of hyperparameters, for each spatial fold)
+  # https://stackoverflow.com/questions/35618545/applying-a-function-to-all-columns-of-a-data-table-together-with-a-group-by
+  # lwr and upr confidence intervals; https://stackoverflow.com/questions/48612153/how-to-calculate-confidence-intervals-for-a-vector
+
+  # Melt data to get to long form for next pieces
+  # https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reshape.html
+  results_long <-
+    data.table::melt(results,
+                     id.vars = c("id", "assessment_ewe_n", "assessment_ewe_0", "assessment_ewe_1", "mtry", "num.trees", "sample.fraction", "classification_thresh", "min.node.size", "class.wgts", "iter"),
+                     measure.vars = metrics,
+                     variable.name = ".metric",
+                     value.name = ".estimate")
+
+  # Apply summary functions to the .estimate column across iterations
+  results_across_iter <-
+    results_long[, .(mean = mean(.estimate, na.rm = TRUE),
+                     sd = sd(.estimate, na.rm = TRUE),
+                     n = sum(!is.na(.estimate)),
+                     min = min(.estimate, na.rm = TRUE),
+                     max = max(.estimate, na.rm = TRUE),
+                     lwr = mean(.estimate, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
+                     upr = mean(.estimate, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
+                     biome = biome_shortname),
+                 by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric)]
+
+  data.table::fwrite(x = results_across_iter, file = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, "_early.csv")))
   
-  results2 <-
+  # Now calculate metrics across the full set of spatial folds all at once
+  # Summarize across unique hyperparameter/iteration combinations, meaning that we capture model skill metrics
+  # measured across all of the spatial folds at once
+  results_across_folds <-
     biome_tune[, .(tp = as.numeric(length(which(o == 1 & p_fac == "1"))),
                    fp = as.numeric(length(which(o == 0 & p_fac == "1"))),
                    fn = as.numeric(length(which(o == 1 & p_fac == "0"))),
@@ -96,76 +155,34 @@ pbapply::pblapply(X = biome_shortnames, FUN = function(biome_shortname) {
                    pr_auc = PRROC::pr.curve(scores.class0 = p, weights.class0 = o)[[2]]),
                by = .(mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, iter)]
   
-  results2[, `:=`(precision = tp / (tp + fp),
-                 recall = tp / (tp + fn),
-                 specificity = tn / (tn + fp))]
+  results_across_folds[, `:=`(precision = tp / (tp + fp),
+                              recall = tp / (tp + fn),
+                              specificity = tn / (tn + fp))]
   
-  results2[, `:=`(f_meas = 2 * (precision * recall / (precision + recall)),
-                 informedness = (tp / (tp + fn)) + (tn / (tn + fp)) - 1,
-                 mcc = ((tp * tn) - (fn * fp)) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))]
+  results_across_folds[, `:=`(f_meas = 2 * (precision * recall / (precision + recall)),
+                              informedness = (tp / (tp + fn)) + (tn / (tn + fp)) - 1,
+                              mcc = ((tp * tn) - (fn * fp)) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))]
   
-  results2[mtry == 4 & num.trees == 1000 & min.node.size == 1 & class.wgts & classification_thresh == 0.01 & sample.fraction == 0.4, ]
-  max(results2$mcc, na.rm = TRUE)
-  
-  results_long <-
-    data.table::melt(results2, 
+  results_across_folds_long <-
+    data.table::melt(results_across_folds, 
                      id.vars = c("mtry", "num.trees", "sample.fraction", "classification_thresh", "min.node.size", "class.wgts", "iter"),
                      measure.vars = metrics,
                      variable.name = ".metric",
                      value.name = ".estimate")
   
   # Apply summary functions to the .estimate column across iterations
-  results_across_iter <-
-    results_long[, .(mean = mean(.estimate, na.rm = TRUE),
-                     sd = sd(.estimate, na.rm = TRUE),
-                     n = sum(!is.na(.estimate)),
-                     min = min(.estimate, na.rm = TRUE),
-                     max = max(.estimate, na.rm = TRUE),
-                     lwr = mean(.estimate, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
-                     upr = mean(.estimate, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
-                     biome = biome_shortname),
-                 by = .(mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric)]
+  results_across_folds_across_iter <-
+    results_across_folds_long[, .(mean = mean(.estimate, na.rm = TRUE),
+                                  sd = sd(.estimate, na.rm = TRUE),
+                                  n = sum(!is.na(.estimate)),
+                                  min = min(.estimate, na.rm = TRUE),
+                                  max = max(.estimate, na.rm = TRUE),
+                                  lwr = mean(.estimate, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
+                                  upr = mean(.estimate, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
+                                  biome = biome_shortname),
+                              by = .(mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric)]
   
-  mcc = results_across_iter[.metric == "mcc", ]
-  dplyr::arrange(mcc, dplyr::desc(mean))
-  dplyr::arrange(mcc, dplyr::desc(lwr))
-  # Then, we can derive modeTRUE# Then, we can derive model skill metrics based on the confusion matrix
-  results[, `:=`(precision = tp / (tp + fp),
-                 recall = tp / (tp + fn),
-                 specificity = tn / (tn + fp))]
-  
-  results[, `:=`(f_meas = 2 * (precision * recall / (precision + recall)),
-                 informedness = (tp / (tp + fn)) + (tn / (tn + fp)) - 1,
-                 mcc = ((tp * tn) - (fn * fp)) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))]
-  
-  # Here, we calculate the mean of all of the model skill metrics across the 10 iterations (i.e., for each
-  # combo of hyperparameters, for each spatial fold)
-  # https://stackoverflow.com/questions/35618545/applying-a-function-to-all-columns-of-a-data-table-together-with-a-group-by
-  # lwr and upr confidence intervals; https://stackoverflow.com/questions/48612153/how-to-calculate-confidence-intervals-for-a-vector
-  
-  # Melt data to get to long form for next pieces
-  # https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reshape.html
-  results_long <-
-    data.table::melt(results, 
-                     id.vars = c("id", "assessment_ewe_n", "assessment_ewe_0", "assessment_ewe_1", "mtry", "num.trees", "sample.fraction", "classification_thresh", "min.node.size", "class.wgts", "iter"),
-                     measure.vars = metrics,
-                     variable.name = ".metric",
-                     value.name = ".estimate")
-  
-  # Apply summary functions to the .estimate column across iterations
-  results_across_iter <-
-    results_long[, .(mean = mean(.estimate, na.rm = TRUE),
-                     sd = sd(.estimate, na.rm = TRUE),
-                     n = sum(!is.na(.estimate)),
-                     min = min(.estimate, na.rm = TRUE),
-                     max = max(.estimate, na.rm = TRUE),
-                     lwr = mean(.estimate, na.rm = TRUE) - qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
-                     upr = mean(.estimate, na.rm = TRUE) + qt(p = 0.975, df = sum(!is.na(.estimate)) - 1) * sd(.estimate, na.rm = TRUE) / sqrt(sum(!is.na(.estimate))),
-                     biome = biome_shortname),
-                 by = .(id, assessment_ewe_n, assessment_ewe_0, assessment_ewe_1, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric)]
-  
-  
-  data.table::fwrite(x = results_across_iter, file = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_rtma_", biome_shortname, "_early.csv")))
+  data.table::fwrite(x = results_across_folds_across_iter, file = here::here(latest_rf_tuning_dir, paste0("rf_ranger_spatial-cv-tuning-metrics_across-folds_", biome_shortname, "_early.csv")))
   
 })
 

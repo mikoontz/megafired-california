@@ -33,7 +33,7 @@ basemap <- ceramic::cc_location(loc = fired_creek)
 basemap_out <- ceramic::cc_location(loc = sf::st_buffer(fired_creek, dist = 30000))
 basemap_ca <- ceramic::cc_location(loc = ca)
 
-png(here::here('figs/creek-geometry.png'), width = )
+# png(here::here('figs/creek-geometry.png'), width = )
 plot(sf::st_geometry(fired_creek))
 
 tmap::tm_shape(basemap) +

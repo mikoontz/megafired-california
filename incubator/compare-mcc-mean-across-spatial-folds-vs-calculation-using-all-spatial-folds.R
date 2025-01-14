@@ -72,3 +72,53 @@ ggplot(out, aes(x = mcc_across_all_folds, y = diff, color = diff_type)) +
   geom_hline(yintercept = 0) + 
   theme_bw()
 
+ggplot(out, aes(x = mcc_mean_across_folds, y = diff, color = diff_type)) +
+  # geom_point(alpha = 0.1) +
+  geom_smooth() +
+  facet_grid(early_or_late ~ biome) +
+  geom_hline(yintercept = 0) + 
+  theme_bw()
+
+ggplot(out, aes(x = mcc_median_across_folds, y = diff, color = diff_type)) +
+  # geom_point(alpha = 0.1) +
+  geom_smooth() +
+  facet_grid(early_or_late ~ biome) +
+  geom_hline(yintercept = 0) + 
+  theme_bw()
+
+###
+# Tuned hyperparameters
+tuning_metrics_l = purrr::map2(
+  .x = c(here::here("data/out/rf/tuning/early/2023-06-21/rf_ranger_spatial-cv-tuning-metrics_rtma_tcf_early.csv"),
+         here::here("data/out/rf/tuning/early/2023-06-21/rf_ranger_spatial-cv-tuning-metrics_rtma_mfws_early.csv"),
+         here::here("data/out/rf/tuning/late/2023-06-21/rf_ranger_spatial-cv-tuning-metrics_rtma_tcf_late.csv"),
+         here::here("data/out/rf/tuning/late/2023-06-21/rf_ranger_spatial-cv-tuning-metrics_rtma_mfws_late.csv")
+  ),
+  .y = c("early", "early", "late", "late"),
+  .f = \(x, y) {
+    out = data.table::fread(x) |> dplyr::mutate(early_or_late = y)
+    return(out)
+  }
+)
+
+tuning_metrics <- data.table::rbindlist(tuning_metrics_l)
+
+# Tune with MCC
+tuned_hyperparameters <-
+  tuning_metrics %>% 
+  dplyr::filter(.metric %in% c("mcc", "f_meas", "informedness")) %>% 
+  group_by(biome, early_or_late, mtry, num.trees, sample.fraction, classification_thresh, min.node.size, class.wgts, .metric) %>%
+  # Mean MCC across iterations for each spatial fold
+  summarize(n = n(),
+            n_not_missing = sum(!is.na(mean)),
+            mean = mean(x = mean, na.rm = TRUE),
+            lwr = mean(x = lwr, na.rm = TRUE)) %>%
+  dplyr::filter((n_not_missing / n >= 0.5)) %>% 
+  tidyr::pivot_wider(id_cols = c(biome, early_or_late, mtry, num.trees, 
+                                 sample.fraction, classification_thresh, 
+                                 min.node.size, class.wgts, n, n_not_missing),
+                     names_from = .metric,
+                     values_from = c("mean", "lwr")) %>% 
+  dplyr::group_by(biome, early_or_late) %>% 
+  dplyr::arrange(desc(mean_mcc)) %>% 
+  slice(1)

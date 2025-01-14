@@ -100,4 +100,30 @@ for (i in 1:nrow(relevant_files)) {
 (end <- Sys.time())
 (difftime(end, start, units = "mins"))
 
+### Reclassify the CONUS version
+
+relevant_files <-
+  relevant_files %>% 
+  dplyr::mutate(out_path_ca = glue::glue("../extreme-resilience/data/interim/{basename(out_path)}"))
+
+(start <- Sys.time())
+for (i in 1:nrow(relevant_files)) {
+  
+  reclassification_mat <- 
+    rat %>% 
+    dplyr::filter(year == relevant_files$year[i]) %>% 
+    dplyr::select(value, new_val) %>% 
+    as.matrix() %>% 
+    rbind(c(-9999, NA))
+  
+  r <- 
+    terra::rast(relevant_files$out_path[i]) %>% 
+    terra::classify(rcl = reclassification_mat, 
+                    filename = relevant_files$out_path_ca[i], 
+                    overwrite = TRUE)
+  
+}
+(end <- Sys.time())
+(difftime(end, start, units = "mins"))
+
 

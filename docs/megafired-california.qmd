@@ -1,5 +1,5 @@
 ---
-title: "'Fine-scale drivers of California megafire hazard' or 'Fine-scale drivers of explosive wildfire growth: factors associated with extremes in daily spread rates in California wildfires'"
+title: "Fine-scale drivers of extreme wildfire spread events in California"
 author:
   - name: Michael J. Koontz
     orcid: 0000-0002-8276-210X
@@ -79,11 +79,21 @@ keywords:
   - hazard
 date: last-modified
 bibliography: megafired-california.bib
-format: 
+
+format:
+  elsevier-pdf:
+    keep-tex: true
+    journal:
+      name: Ecography
+      formatting: preprint
+      model: 3p
+      cite-style: authoryear
   html:
     embed-resources: true
----
 
+---
+<!-- html: -->
+<!--     embed-resources: true -->
 <!-- format: -->
 <!--   elsevier-pdf: -->
 <!--     keep-tex: true -->
@@ -251,8 +261,8 @@ GRIDMET variables on a daily scale were extracted for each daily polygon for the
 
 ## Topography
 We implemented the rumple index as “surface area / projected area” [@jenness2004] to capture terrain roughness across each daily polygon using the 3DEP 10m digital elevation model (USGS -- citation needed). 
-We simplified the fifteen different landform types from [@theobold2015] into five broader categories by combining some similar, relatively rare cover types (see Table 1), then calculated the fractional cover of each of the five broader categories for each daily polygon. 
-We then calculated the Shannon-Wiener diversity index for landform cover using the fractional cover of those five landform types per daily polygon using the `vegan` package in R [@oksanen2024]. 
+We simplified the fifteen different landform types from [@theobald2015] into five broader categories by combining some similar, relatively rare cover types (see Table 1), then calculated the fractional cover of each of the five broader categories for each daily polygon. 
+We then calculated the Shannon-Wiener diversity index for landform cover using the fractional cover of those five landform types per daily polygon using the `vegan` package in R [@oksanen2025]. 
 
 ## Fuels
 We extracted the spatial mean NDVI across each daily polygon for the year prior to the observed fire spread. 
@@ -305,7 +315,7 @@ Accumulated local effects plots
 -	PODs 
 -	How models used to predict relative hazard in different PODs under different assumptions about previous day’s fireline length / area burned. 
 
-![A) Location of the spread event on September 7, 2020 from the Creek Fire from the FIRED dataset. B) Location of actual spread event (red), and location of a portion of the fire-independent spread events (blue). C) Same as B, but showing coverage across the full temperate forest biome in the state of California.](figs/establishing-counterfactual-landcover.png){#fig-counterfactual-land-cover}
+![A) Location of the spread event on September 7, 2020 from the Creek Fire from the FIRED dataset. B) Location of actual spread event (red), and location of a portion of the fire-independent spread events (blue). C) Same as B, but showing coverage across the full temperate forest biome in the state of California.](figs/establishing-counterfactual-landcover.png){#fig-counterfactual-landcover}
 
 <!-- Calculating percentiles from raw weather data -->
 <!-- For each weather variable, we generated a 401-layer raster at the data product’s original resolution where each layer represented the value of that weather variable that corresponded to a particular percentile (0th through 100th percentiles in increments of 0.25) aggregated through time between January 1, 1981 and December 31, 2020.  -->

@@ -44,3 +44,5 @@ figs/
 docs/
 incubator/
 tables/
+
+*.pdf

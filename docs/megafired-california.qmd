@@ -387,10 +387,9 @@ The effect of a highlighted feature on the model response for each value of the 
 # Hazard mapping
 
 We mapped relative hazard of extreme spread events across the landscape of the temperate conifer forest biome using Potential Operational Delineation units (PODs) for spatial aggregation [@thompson2022].
-We first calculated the actual values of topographic and fuel variables within each POD.
-Next, we ranked the values of each topographic and fuel feature across the PODs and converted them to percentiles (e.g., the POD with the maximum value for a feature had a percentile value of 1, the POD that had a value for a )
--   PODs
--   How models used to predict relative hazard in different PODs under different assumptions about previous day’s fireline length / area burned.
+We first calculated the actual values of topographic and fuel variables within each POD in 2019 (thus the relative hazard is "current" for 2020).
+Next, we ranked the values of each topographic and fuel feature across the PODs and converted them to percentiles (e.g., the POD with the maximum value for a feature was given a percentile value of 1, the POD that had the median value for a feature was given a percentile value of 0.5).
+For all other variables, we set them at fixed values to 
 
 <!-- Calculating percentiles from raw weather data -->
 

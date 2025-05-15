@@ -267,7 +267,7 @@ Finally, we use geographically varying drivers to produce a map ranking potentia
 
 We used the FIRED algorithm with a spatial window of 5 pixels and a temporal window of 11 days [@balch2020] to generate a dataset of daily fire growth in California between 2003 and 2020.
 Each polygon represents the daily area of growth– a spread event– for one fire event.
-Across all daily polygons, we calculated the 95th percentile of daily area of growth and classified all spread events that exceeded that threshold (corresponding to spread \> xxxx ha) as an “extreme spread event” (ESE).
+Across all spread events, we calculated the 95th percentile of daily area of growth and classified all spread events that exceeded that threshold (corresponding to spread \> xxxx ha) as an “extreme spread event” (ESE).
 For each spread event, we assigned a Resolve biome based on greatest fractional coverage: 1) temperate conifer forests, 2) Mediterranean forests, woodlands, and scrub 3) temperate grasslands, savannas, and shrublands, and 4) deserts and xeric shrublands (Resolve 2017).
 To capture a semblance of “surprise” in the spread events, we divided events into two temporal contexts: “early” spread events occurred within the first seven days of the fire event, and “late” spread events occurred after the first seven days of the fire event.
 Ultimately, we assembled eight separate datasets (unique combinations of four biomes and two temporal contexts).
@@ -314,7 +314,7 @@ GRIDMET variables on a daily scale were extracted for each daily polygon for the
 
 ## Topography
 
-We implemented the rumple index as “surface area / projected area” [@jenness2004] to capture terrain roughness across each daily polygon using the 3DEP 10m digital elevation model (USGS -- citation needed).
+We implemented the rumple index as “surface area / projected area” [@jenness2004] to capture terrain roughness across each daily polygon using the 3DEP 10m digital elevation model (U.S. Geological Survey, 3D Elevation Program 10-Meter Resolution Digital Elevation Model).
 We simplified the fifteen different landform types from [@theobald2015] into five broader categories by combining some similar, relatively rare cover types (see Table 1), then calculated the fractional cover of each of the five broader categories for each daily polygon.
 We then calculated the Shannon-Wiener diversity index for landform cover using the fractional cover of those five landform types per daily polygon using the `vegan` package in R [@oksanen2025].
 
@@ -345,7 +345,7 @@ For the first spread event within a fire event, we recorded this value as zero.
 
 Initial analysis revealed very few extreme spread events in the temperate grasslands and the xeric desert and shrub biomes, so we focused further analyses on the temperate forests and the Mediterranean forest, woodland, and scrub biomes.
 
-# Analysis of all spread events
+# Percentile analysis of all spread events
 
 We visualized the distribution and calculated the mean value of all predictor variables across the two remaining biomes and the two temporal contexts.
 For the normalized variables, we compared the mean normalized value to the expectation for the variable (i.e., 50th percentile or a z-score of 0) in order to characterize the overall conditions of fire spread, regardless of whether that spread was extreme or not.
@@ -389,89 +389,8 @@ The effect of a highlighted feature on the model response for each value of the 
 We mapped relative hazard of extreme spread events across the landscape of the temperate conifer forest biome using Potential Operational Delineation units (PODs) for spatial aggregation [@thompson2022].
 We first calculated the actual values of topographic and fuel variables within each POD in 2019 (thus the relative hazard is "current" for 2020).
 Next, we ranked the values of each topographic and fuel feature across the PODs and converted them to percentiles (e.g., the POD with the maximum value for a feature was given a percentile value of 1, the POD that had the median value for a feature was given a percentile value of 0.5).
-For all other variables, we set them at fixed values to 
-
-<!-- Calculating percentiles from raw weather data -->
-
-<!-- For each weather variable, we generated a 401-layer raster at the data product’s original resolution where each layer represented the value of that weather variable that corresponded to a particular percentile (0th through 100th percentiles in increments of 0.25) aggregated through time between January 1, 1981 and December 31, 2020.  -->
-
-<!-- Then, for each daily fire polygon location, we matched the extracted weather variable value on the day of the fire to the value closest to it in the 401-layer raster.  -->
-
-<!-- The percentile to which the layer of closest match corresponded was the approximate percentile of the observed fire weather on the day of interest (compared to the 40-year record of the weather data at that location). -->
-
-<!-- Where and when are the fastest spread days? -->
-
-<!-- To evaluate drivers of EWEs, we classified each daily fire spread increment as EWEs or non-EWEs.  -->
-
-<!-- We set a simple size percentile threshold to define EWEs – across the entire dataset of daily California fire spread, we flagged as EWEs the event/day combinations with area burned in the top 5% (> xxxx ha).  -->
-
-<!-- What are the drivers of daily fire spread? -->
-
-<!-- For each event/day combination, we extracted the variables described in Table 1 using Google Earth Engine.  -->
-
-<!-- For weather variables, we extracted the single weather value at the centroid of the largest polygon of each event/day combination (which could be different from the centroid of the whole polygon for an event/day combination in the case of multipolygons).  -->
-
-<!-- For subdaily weather variables (i.e., hourly values from ERA5-Land and RTMA), we extracted each of the 24 hours worth of data at the centroid of the largest polygon for each day for each event.   -->
-
-<!-- For “rumple” variables (i.e., topography rumple index and heterogeneity of NDVI vegetation structure rumple index), we summed the surface area and projected area values within the polygon then calculated the indices as “surface area / projected area” at the event/day combination scale.  -->
-
-<!-- For all other variables, we calculated the mean value within the event/day combination polygon. -->
-
-<!-- For each biome, we reduced the candidate covariates to a set of model covariates such that: -->
-
-<!-- 1. No covariate had more than 50 missing values  -->
-
-<!-- 1. Covariates all had >0 variance -->
-
-<!-- What are the conditions associated with the very largest daily fire spread events? -->
-
-<!-- To compare the covariate values within the fire-generated polygons to expectations of those covariate values within a similar-sized polygon independent of fire, we created “fire-independent” polygons throughout each biome. -->
-
-<!-- We calculated the expectation of each covariate as a function of polygon area as the median value of each covariate within each polygon size.  -->
-
-<!-- For each event/day combination of the fire polygons, we calculated the difference between the measured value of each covariate and the expected median of that value by linearly interpolating the expected median between the two fire-independent polygon sizes closest to the size of the fire event/day polygon of interest. -->
-
-<!-- For each biome, we divided the daily fire polygons into deciles based on their size, and calculated the mean value of each driver within each decile. -->
-
-<!-- In Figures 3 through 7, we show the mean value of the difference between the measured daily fire polygon covariates and the expected median as a function of size. We also show the distribution of the expected value of each covariate as a function of size (centered on 0) and with its interquartile range represented by the gray ribbon. -->
-
-<!-- ## Characterize extreme wildfire events -->
-
-<!-- FIRED dataset daily fire perimeters [@balch2020]. -->
-
-<!-- 2000 fire events in California between 2001 and 2020. -->
-
-<!-- MODIS active fire product (MCD14ML) [@giglio2016]. -->
-
-<!-- Fire radiative power (FRP) to fireline intensity on a 4x daily timestep, then classification of that day based on @tedim2018. -->
-
-<!-- Classes 5, 6, and 7 considered "extreme wildfire events." -->
-
-<!-- Fire radiative power to fire radiative energy (FRE) by integrating through time course of each event. -->
-
-<!-- Additional characterization of "extreme" based on FRE due to smoke impact -->
-
-<!-- ## Causes of extreme wildfire events -->
-
-<!-- Collate potential causes of extreme wildfire events (or perhaps of all events; might as well?) -->
-
-<!-- Total fuel, fuel heterogeneity   -->
-
-<!-- Max wind speed from nearby RAWS station   -->
-
-<!-- VPD from ERA-5 or Gridmet [@abatzoglou2013]   -->
-
-<!-- Wind alignment [@abatzoglou2013] with slope (National Elevation Dataset)   -->
-
-<!-- Historic aridity from CWD? [@flint2013]   -->
-
-<!-- ## Interpretable machine learning -->
-
-<!-- ### Random Forest -->
-
-<!-- ### Conditional predictive impact -->
-
-<!-- ### Accumulated local effect curves -->
+For all other variables, we set them to be different sets of fixed values in order to compare the influence of those manipulated features on the relative hazard, given the actual measured values of fuel and topography features.
+Relative hazard was then determined by fitting the most skillful model to each set of new values for the features (i.e., the percentile ranked actual measures of the fuel and topography features within each pod and the fixed values of the human, weather, and fire features).
 
 # Results
 

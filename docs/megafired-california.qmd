@@ -66,7 +66,8 @@ author:
     orcid: 0000-0001-8098-0448
     affiliations:
         - ref: davis
-abstract: |
+  
+abstract:
   Fire behavior arises from the confluence of fuel, topography, weather, and human factors at multiple scales of time and space. 
   Experimental burns under controlled conditions can help uncover the relative influence of these factors on fire propagation at fine temporal resolutions (e.g., over the course of minutes, hours, or days), but only at small spatial extents. 
   On the other hand, characterizing phenomenological patterns across broad spatial extents can add to our understanding of wildfire, but only at coarser temporal resolutions (e.g., over the course of whole fires, fire seasons, years, or decades). 
@@ -77,325 +78,371 @@ keywords:
   - megafire
   - risk
   - hazard
+  
 date: last-modified
 bibliography: megafired-california.bib
 
 format:
-  elsevier-pdf:
-    keep-tex: true
-    journal:
-      name: Ecography
-      formatting: preprint
-      model: 3p
-      cite-style: authoryear
-  html:
-    embed-resources: true
-
+  docx
+  # elsevier-pdf:
+  #   keep-tex: true
+  #   journal:
+  #     name: Ecography
+  #     formatting: preprint
+  #     model: 3p
+  #     cite-style: authoryear
+  # html:
+  #   embed-resources: true
+  
+appendix-style: default
 ---
-<!-- html: -->
-<!--     embed-resources: true -->
-<!-- format: -->
-<!--   elsevier-pdf: -->
-<!--     keep-tex: true -->
-<!--     journal: -->
-<!--       name: Ecography -->
-<!--       formatting: preprint -->
-<!--       model: 3p -->
-<!--       cite-style: authoryear -->
+
+```{r}
+#| echo: false
+#| message: false
+
+drivers <- readr::read_csv("./tables/drivers.csv")
+ese_summary_table <- readr::read_csv("./tables/ese-summary-table.csv")
+driver_descriptions <- readr::read_csv(file = "../data/out/drivers/driver-descriptions.csv")
+```
 
 # Introduction
 
-Over the past two decades, wildfires in California have significantly grown in size and severity, with major ecological and social impacts. 
-Wildfire has reached sizes and daily spread rates that are much higher than those seen throughout most of the 20th century, posing a growing risk to communities in the wildland urban interface (WUI). 
-These fires are spreading despite record fire suppression efforts and costs (reaching $4.4 billion in 2021 for Federal Suppression only [https://www.nifc.gov/fire-information/statistics/suppression-costs]).  
-Many fires escape containment and are simply spreading too fast and releasing too much energy to be fought effectively. 
-Crucially, though large fires often burn for months, only a few days of extremely rapid spread generally account for most area burned, as well as most damage to property and lives lost [@balch2024]. 
-For example, in the record fire year of 2020, of the 4 million hectares burned in the United states, >50% burned in just the largest 5% of fire-days [@coop2022]. 
-To better understand the causes of wildfire impacts and threats to communities, it’s important to discover what drives these extreme spread events. 
-While the term “megafires” is increasingly used to characterize the larger scale and intensity of some recent fires [@stephens2014; @tedim2018; @linley2022], we focus here on the few days of extreme spread during which these fires exert most of their dangerous and negative effects – we call these days of extremely fast fire spread “extreme wildfire events” (EWEs). 
+Fast fires are disproportionately impactful to ecosystems and society [@balch2024]. Over the past two decades, wildfires in California have significantly grown in size and severity, with major ecological and social impacts. Wildfire has reached sizes and daily spread rates that are much higher than those seen throughout most of the 20th century, posing a growing risk to communities in the wildland urban interface (WUI). These fires are spreading despite record fire suppression efforts and costs (reaching \$4.4 billion in 2021 for Federal Suppression only [https://www.nifc.gov/fire-information/statistics/suppression-costs]).\
+Many fires escape containment and are simply spreading too fast and releasing too much energy to be fought effectively.
+Crucially, though large fires often burn for months, only a few days of extremely rapid spread generally account for most area burned, as well as most damage to property and lives lost [@balch2024].
+For example, in the record fire year of 2020, of the 4 million hectares burned in the United states, \>50% burned in just the largest 5% of fire-days [@coop2022].
+To better understand the causes of wildfire impacts and threats to communities, it’s important to discover what drives these extreme spread events.
+While the term “megafires” is increasingly used to characterize the larger scale and intensity of some recent fires [@stephens2014; @tedim2018; @linley2022], we focus here on the few days of extreme spread during which these fires exert most of their dangerous and negative effects – we call these days of extremely fast fire spread “extreme spread events”.
 Explaining these events requires a finer spatial and temporal analysis of fire spread than explaining variation in area burned.
 
-Recent advances in mapping fire spread at a daily time step [@parks2014; @balch2020] and more recently a half-daily time step [@chen2022] have enabled research into drivers of fire behavior at finer time-scales over large areas. 
-Previous research has found strong associations between the rate of fire spread, fire intensity, and fire severity [@mcfarland2025]. 
-Higher temperatures drive higher risk of extreme spread via higher aridity and lower fuel moisture, suggesting that extreme spread has increased and will continue to increase with anthropogenic climate warming [@brown2023]. 
-In this study, we complement these previous studies on drivers of extreme spread by taking a more comprehensive look at all classes of drivers including weather, fuel, topography, and human factors. 
-In our analysis, we also consider where fire is already burning actively in an effort to identify factors that distinguish active and extreme spread. 
+Recent advances in mapping fire spread at a daily time step [@parks2014; @balch2020] and more recently a half-daily time step [@chen2022] have enabled research into drivers of fire behavior at finer time-scales over large areas.
+Previous research has found strong associations between the rate of fire spread, fire intensity, and fire severity [@mcfarland2025].
+Higher temperatures drive higher risk of extreme spread via higher aridity and lower fuel moisture, suggesting that extreme spread has increased and will continue to increase with anthropogenic climate warming [@brown2023].
+In this study, we complement these previous studies on drivers of extreme spread by taking a more comprehensive look at all classes of drivers including weather, fuel, topography, and human factors.
+In our analysis, we also consider where fire is already burning actively in an effort to identify factors that distinguish active and extreme spread.
 
-[Placeholder for possible methods paragraph in intro] Relating potential drivers to daily burned area presents a methodological challenge, since the distributions of fine-grained spatial variables such as topographic and fuel variables are often scale-dependent. 
-To address this scale challenge, we developed a new randomization method to attempt to normalize the driver values for burned areas of different sizes. 
-Essentially, we compared the value of spatial drivers to the values for 500 polygons of the same size and shape, randomly placed throughout the target domain. 
-This procedure normalized values effectively for many spatially varying drivers (see Methods). 
-To characterize the associations between drivers and EWE risk in more detail, we then used random forest, which allowed us to evaluate the effect of each driver in context of the other driver variables. 
+\[Placeholder for possible methods paragraph in intro\] Relating potential drivers to daily burned area presents a methodological challenge, since the distributions of fine-grained spatial variables such as topographic and fuel variables are often scale-dependent.
+To address this scale challenge, we developed a new randomization method to attempt to normalize the driver values for burned areas of different sizes.
+Essentially, we compared the value of spatial drivers to the values for 500 polygons of the same size and shape, randomly placed throughout the target domain.
+This procedure normalized values effectively for many spatially varying drivers (see Methods).
+To characterize the associations between drivers and extreme spread risk in more detail, we then used random forest, which allowed us to evaluate the effect of each driver in context of the other driver variables.
 Following recent results in machine learning, we used unbiased methods to evaluate variable importance, measure model performance, and characterize the form of associations (see Methods).
 
-In this study, we use daily time-step fire data to investigate drivers of extremely rapid spread in California from 2003-2020. 
-We define extremely rapid spread as the top 5% of all spread days and term them “extreme wildfire events” (EWEs). 
-We describe the spatial and temporal distribution of these events in California. We build on previous research that suggests rapid spread dynamics may be different in forests vs other Mediterranean-climate vegetation (woodland, scrubland, grassland) to investigate whether the predictors of rapid spread differ in important ways between these two zones. 
-We also investigate whether the drivers of rapid spread differ at the beginning of a wildfire from later on during the event. 
-To do this, we compile a large data set encompassing all major classes of drivers, including weather, fuels, topography, and human factors, including proxies for availability of firefighting resources and accessibility via roads. 
-Specifically, we ask the following questions: 
-1. What are the drivers of EWEs, and what is the relative importance of different classes of drivers, including weather, fuels, topography, and human factors? [“t-tests”, spatialRF analysis]
-1. Are EWEs driven by different factors in different ecosystems with distinct fire regimes? In particular, conifer forests vs mediterranean shrublands [“t-tests”, spatialRF analysis]
-3. Is there a distinct set of factors associated with escape from containment and extremely rapid spread early on in the life of a wildfire (i.e., within the first week) compared to later on (i.e., after three weeks)? [“t-tests”, spatialRF analysis of the early and small-size subsets of the data]
-4. Finally, we use geographically varying drivers to produce a map ranking potential operational delineations (i.e., PODs [@thompson2022]) in California’s Sierra Nevada forests, for propensity to support extreme fire spread. [compare to previous work @peeler2023 mapping risk]. 
+In this study, we use daily time-step fire data to investigate drivers of extremely rapid spread in California from 2003-2020.
+We define extremely rapid spread as the top 5% of all spread days and term them “extreme spread events”.
+We describe the spatial and temporal distribution of these events in California.
+We build on previous research that suggests rapid spread dynamics may be different in forests vs other Mediterranean-climate vegetation (woodland, scrubland, grassland) to investigate whether the predictors of rapid spread differ in important ways between these two zones.
+We also investigate whether the drivers of rapid spread differ at the beginning of a wildfire from later on during the event.
+To do this, we compile a large data set encompassing all major classes of drivers, including weather, fuels, topography, and human factors, including proxies for availability of firefighting resources and accessibility via roads.
+Specifically, we ask the following questions: 1.
+What are the drivers of extreme spread events, and what is the relative importance of different classes of drivers, including weather, fuels, topography, and human factors?
+\[“t-tests”, spatialRF analysis\] 1.
+Are extreme spread events driven by different factors in different ecosystems with distinct fire regimes?
+In particular, conifer forests vs mediterranean shrublands \[“t-tests”, spatialRF analysis\] 3.
+Is there a distinct set of factors associated with escape from containment and extremely rapid spread early on in the life of a wildfire (i.e., within the first week) compared to later on (i.e., after three weeks)?
+\[“t-tests”, spatialRF analysis of the early and small-size subsets of the data\] 4.
+Finally, we use geographically varying drivers to produce a map ranking potential operational delineations (i.e., PODs [@thompson2022]) in California’s Sierra Nevada forests, for propensity to support extreme fire spread.
+[compare to previous work @peeler2023 mapping risk].
 
 <!-- Over the past decade, wildfires in California have grown massively in size and total extent, with major ecological and social impacts.  -->
+
 <!-- Wildfire poses a growing risk to communities in the WUI, while emitting smoke that causes dangerously high levels of particulates with major health impacts, and has reached sizes and daily spread rates that are much higher than seen throughout most of the 20th century.  -->
+
 <!-- These fires are spreading despite record fire suppression efforts and costs (reaching $X billion in 2020) – the fires are simply spreading too fast and releasing too much energy to be fought effectively, and they more often escape containment.  -->
+
 <!-- Crucially, though large fires often burn for months, only a few days of extremely rapid spread generally account for most area burned, as well as most damage to property and lives lost (cite paper on human vs lightning fires).  -->
+
 <!-- For example, in the record fire year of 2020, of the ~1 million acres burned, >50% burned in just the largest 5% of fire-days.  -->
+
 <!-- To understand the causes of wildfire impacts and threats to communities, then, it’s essential to discover what drives these extreme spread events.  -->
-<!-- While the term “megafires” is increasingly used to characterize the larger scale and intensity of large recent fire, we focus here on the few days of extreme spread during which megafires exert most of their dangerous and negative effects – we call these days of extremely fast fire spread “extreme wildfire events” (EWEs) (Citation?).  -->
+
+<!-- While the term “megafires” is increasingly used to characterize the larger scale and intensity of large recent fire, we focus here on the few days of extreme spread during which megafires exert most of their dangerous and negative effects – we call these days of extremely fast fire spread “extreme spread events” (extreme spread events) (Citation?).  -->
+
 <!-- Explaining these events requires a finer spatial and temporal analysis of fire spread.  -->
 
 <!-- [the new opportunity we are taking advantage of in this paper] [we focus on daily fire spread. What technologies enable this, what is novel about our project. Why it’s important to consider more than just weather and fuel variables??]  -->
 
 <!-- [Lit review 1: Describe and distinguish the scope of this paper] In recent years, researchers have taken advantage of the ready availability of increasingly long records of fire extent coupled with more comprehensive datasets on potential drivers to identify factors most strongly associated with wildfire area burned, mostly at regional scales.  -->
+
 <!-- Key findings emerging from this research include that atmospheric aridity – often measured as VPD – strongly influences area burned (Williams et al., etc), although other factors also play important roles.  -->
+
 <!-- In contrast, our study domain falls entirely within the “high-wildfire-prevalence” weather conditions – every row in our dataset represents a place and time that contains an actively burning wildfire – so we would not necessarily expect the same weather drivers to emerge as dominant drivers.  -->
+
 <!-- The question we ask is different. We ask: given that weather conditions are suitable for wildfire, and given that a wildfire is actively burning nearby, what conditions are associated with extremely rapid wildfire spread?  -->
 
 <!-- [Lit review 2: Distinguish this paper from previous daily-time-step papers] Recent advances in mapping fire spread at a daily time step (Parks, Balch) have enabled research into drivers of fire behavior at finer time-scales over large areas. -->
+
 <!-- Previous research has found strong associations between the rate of fire spread, fire intensity, and fire severity (2023? paper involving parks).  -->
+
 <!-- Further, studies have found that rapid fire spread is more likely in human-ignited fires and in grass- or shrub- dominated ecosystems than in forests (ditto).  -->
+
 <!-- There is some evidence that roads and other fuel discontinuities limit fire spread (paper comparing across fire edges).  -->
+
 <!-- More generally, fire spread rates are associated with landform diversity and ?? (De Castro). -->
 
 <!-- [gap statement] It remains unknown whether other predictors vary systematically between biomes and if so, why, and whether drivers vary systematically across phases of wildfires, early vs later.  -->
+
 <!-- Further, there hasn’t been a comprehensive look at all classes of drivers including weather, fuel, topography, human factors.  -->
 
 <!-- Relating potential drivers to daily burned area presents a methodological challenge, since the distributions of fine-grained spatial variables such as topographic and fuel variables are often scale-dependent.  -->
+
 <!-- For example, the distribution of proportion barren area observed in 20-hectare samples is different from the distribution of proportions in 1000-hectare samples.  -->
-<!-- The proportion of relatively rare landscape features observed in relatively small samples (corresponding to small fire spread days) is likely to be zero. In contrast, the proportion observed in very large samples corresponding to EWEs is unlikely to be zero, and will be closer to the mean distribution across the modeled domain.  -->
-<!-- If we input raw value of such scale-dependent predictors into a model that relates EWE probability to explanatory variables, then we may get strong prediction for spurious reasons.  -->
-<!-- Yet fire science has firmly established that many of these spatially varying landscape predictors are critical in driving fire behavior — they make up two sides of the fire behavior triangle of weather, fuels, and topography — so ignoring them will probably strongly limit explanation and prediction of EWEs.   -->
+
+<!-- The proportion of relatively rare landscape features observed in relatively small samples (corresponding to small fire spread days) is likely to be zero. In contrast, the proportion observed in very large samples corresponding to extreme spread events is unlikely to be zero, and will be closer to the mean distribution across the modeled domain.  -->
+
+<!-- If we input raw value of such scale-dependent predictors into a model that relates extreme spread event probability to explanatory variables, then we may get strong prediction for spurious reasons.  -->
+
+<!-- Yet fire science has firmly established that many of these spatially varying landscape predictors are critical in driving fire behavior — they make up two sides of the fire behavior triangle of weather, fuels, and topography — so ignoring them will probably strongly limit explanation and prediction of extreme spread events.   -->
 
 <!-- To address this scale challenge, we developed a new randomization method to attempt to normalize the driver values for burned areas of different sizes.  -->
+
 <!-- Essentially, we compared the value of spatial drivers to the values for 500 polygons of the same size and shape, randomly placed throughout the target domain.  -->
+
 <!-- This procedure normalized values effectively for many spatially varying drivers (see Methods).  -->
-<!-- We used the resulting scale-adjusted variables in two ways. First and most directly, we simply asked whether the expected and observed levels of each driver were different for the population of non-EWE days compared with the population of EWE days.  -->
-<!-- Given the relatively large sample sizes, this univariate population-level comparison robustly tests whether there are associations between individual drivers and EWEs.  -->
-<!-- To characterize the associations between drivers and EWE risk in more detail, we then used random forest, which allowed us to evaluate the effect of each driver in context of the other driver variables using accumulated effects plots, and more directly to evaluate the relative importance of different drivers.  -->
+
+<!-- We used the resulting scale-adjusted variables in two ways. First and most directly, we simply asked whether the expected and observed levels of each driver were different for the population of non-extreme spread days compared with the population of extreme spread days.  -->
+
+<!-- Given the relatively large sample sizes, this univariate population-level comparison robustly tests whether there are associations between individual drivers and extreme spread events  -->
+
+<!-- To characterize the associations between drivers and extreme spread event hazard in more detail, we then used random forest, which allowed us to evaluate the effect of each driver in context of the other driver variables using accumulated effects plots, and more directly to evaluate the relative importance of different drivers.  -->
+
 <!-- Following recent results in machine learning, we used unbiased methods to evaluate variable importance, measure model performance, and characterize the form of associations (see Methods).  -->
 
 <!-- In this study, we use daily time-step fire data (FIRED, Balch et al.) to investigate drivers of extremely rapid spread in California from 2003-2020.  -->
-<!-- We define extremely rapid spread as the top 5% of all spread days and term “extreme wildfire events” (EWEs).  -->
+
+<!-- We define extremely rapid spread as the top 5% of all spread days and term “extreme spread events”.  -->
+
 <!-- We describe the spatial and temporal distribution of these events in California.  -->
+
 <!-- We build on previous research that suggests rapid spread dynamics may be different in forests vs other mediterranean-climate vegetation (woodland, scrubland, grassland) to investigate whether the predictors of rapid spread differ in important ways between these two zones. We also investigate whether the drivers of rapid spread differ at the beginning of a wildfire from later on during the event.  -->
+
 <!-- To do this, we compile a large data set encompassing all major classes of drivers, including weather, fuels, topography, and human factors, including proxies for availability of firefighting resources and accessibility via roads. Specifically, we ask the following questions:  -->
-<!-- 1. What are the drivers of EWEs, and what is the relative importance of different classes of drivers, including weather, fuels, topography, and human factors? [“t-tests”, spatialRF analysis] -->
-<!-- 1. Are EWEs driven by different factors in different ecosystems with distinct fire regimes? In particular, conifer forests vs mediterranean shrublands vs grasslands vs xeric ecosystems.  [“t-tests”, spatialRF analysis] -->
+
+<!-- 1. What are the drivers of extreme spread events, and what is the relative importance of different classes of drivers, including weather, fuels, topography, and human factors? [“t-tests”, spatialRF analysis] -->
+
+<!-- 1. Are extreme spread events driven by different factors in different ecosystems with distinct fire regimes? In particular, conifer forests vs mediterranean shrublands vs grasslands vs xeric ecosystems.  [“t-tests”, spatialRF analysis] -->
+
 <!-- 1. Is there a distinct set of factors associated with escape from containment and extremely rapid spread early on in the life of a wildfire? [“t-tests”, spatialRF analysis of the early and small-size subsets of the data] -->
 
-
-<!-- [put this point somewhere] The flipside of the rarity of EWEs is that during most days that they are burning, wildfires often accomplish important ecological work of reducing excessive fuel loads in ecosystems from which fire had been excluded. It’s a major state and federal policy goal to bring more “good fire” into fire-suppressed landscapes in order to reduce fuels and temper the risk of “dangerous fire”.  -->
-
-
-
+<!-- [put this point somewhere] The flipside of the rarity of extreme spread events is that during most days that they are burning, wildfires often accomplish important ecological work of reducing excessive fuel loads in ecosystems from which fire had been excluded. It’s a major state and federal policy goal to bring more “good fire” into fire-suppressed landscapes in order to reduce fuels and temper the risk of “dangerous fire”.  -->
 
 <!-- Increasing frequency of large fires in western U.S. [@dennison2014] -->
+
 <!-- Increasing frequency of extreme fire conditions in California [@goss2020]. -->
+
 <!-- Increasing severity of fires in western US [@parks2020]. -->
+
 <!-- Increasing area burned [@abatzoglou2016; @williams2019] -->
-<!-- Burned area is fundamentally limited way of characterizing wildfires, particularly extreme wildfire events [@kolden2020]. -->
+
+<!-- Burned area is fundamentally limited way of characterizing wildfires, particularly extreme spread events [@kolden2020]. -->
 
 <!-- Clear link between fire activity and climate change, and a proposed link to extreme events.  -->
 
-<!-- Important to understand extreme wildfire events, as they are likely to be societally impactful [@balch2018; Iglesias et al., 2021]. -->
+<!-- Important to understand extreme spread events, as they are likely to be societally impactful [@balch2018; Iglesias et al., 2021]. -->
 
 <!-- Some efforts exist, but still focus on size [@joseph2019]. -->
 
-<!-- Challenge of defining "extreme wildfire events", but can be done by considering fire behavior within the context of fire's controllability, but decoupled from the societal impact [@tedim2018]. -->
+<!-- Challenge of defining "extreme spread events", but can be done by considering fire behavior within the context of fire's controllability, but decoupled from the societal impact [@tedim2018]. -->
 
 <!-- Then we can further characterize drivers of these extremes, and under what conditions they can lead to disasters [@bowman2017]. -->
 
 <!-- Interactions between drivers can be especially important [@balch2018]. -->
+
 <!-- Notion of homogenization of conditions in space/time leading to more extreme behavior (continuous fuels, longer duration hot drought) -->
+
 <!-- Consideration of positive feedback-driven events as its own category. -->
 
-<!-- Fuel, topography, weather and their spatiotemporal nexus to describe different "taxa" of extreme wildfire events. -->
+<!-- Fuel, topography, weather and their spatiotemporal nexus to describe different "taxa" of extreme spread events. -->
 
 # Methods
 
-# Overview of FIRED dataset; defining “extreme spread event”
-We used the FIRED algorithm with a spatial window of 5 pixels and a temporal window of 11 days [@balch2020] to generate a dataset of daily fire growth in California between 2003 and 2020. 
-Each polygon represents the daily area of growth– a spread event– for one fire event. 
-Across all daily polygons, we calculated the 95th percentile of daily area of growth and classified all spread events that exceeded that threshold (corresponding to spread > xxxx ha) as an “extreme spread event” (ESE). 
-For each spread event, we assigned a Resolve biome based on greatest fractional coverage: 1) temperate conifer forests, 2) Mediterranean forests, woodlands, and scrub 3) temperate grasslands, savannas, and shrublands, and 4) deserts and xeric shrublands (Resolve 2017). 
-To capture a semblance of “surprise” in the spread events, we divided events into two temporal contexts: “early” spread events occurred within the first seven days of the fire event, and “late” spread events occurred after the first seven days of the fire event. 
+# Overview of data structure
+
+We used the FIRED algorithm with a spatial window of 5 pixels and a temporal window of 11 days [@balch2020] to generate a dataset of daily fire growth in California between 2003 and 2020.
+Each polygon represents the daily area of growth– a spread event– for one fire event.
+Across all spread events within each biome, we calculated the 95th percentile of daily area of growth and classified all spread events that exceeded that threshold as an “extreme spread event”.
+For each spread event, we assigned a Resolve biome based on greatest fractional coverage: 1) temperate conifer forests, 2) Mediterranean forests, woodlands, and scrub 3) temperate grasslands, savannas, and shrublands, and 4) deserts and xeric shrublands (Resolve 2017).
+To capture a semblance of “surprise” in the spread events, we divided events into two temporal contexts: “early” spread events occurred within the first seven days of the fire event, and “late” spread events occurred after the first seven days of the fire event.
 Ultimately, we assembled eight separate datasets (unique combinations of four biomes and two temporal contexts).
 
 # Assembling predictor variables
-We collated a set of 50 potential predictor variables in five categories: human, weather, topography, fuel, and “fire” (which only included the daily area of increase of the most recent spread event within the same fire event). 
-Table 1 provides the source and means of calculating each variable, and we expand on the description for more complicated derived variables here. 
-We used Google Earth Engine to extract all weather and topography data [@gorelick2017]. 
-We also used Google Earth Engine to extract NDVI, NDVI heterogeneity, and landcover data from the USDA Forest Service’s Landcover Change Monitoring System  (in the fuel category). 
-For each biome/temporal context, we removed all spread events that had missing data for any of the covariates. 
-For modeling, we divided each of the datasets into 10 spatial folds based on the centroid location of the largest polygon in the spread event using the `spatialsample` package in R [@mahoney2023]. 
-We ensured that all predictor variables had greater than 0 variance in each spatial fold. We removed spatial folds that resulted in fewer than 40 observations or fewer than 2 extreme spread events.
+
+We collated a set of 50 potential predictor variables in five categories: human, weather, topography, fuel, and “fire” (which only included the daily area of increase of the most recent spread event within the same fire event).
+@tbl-driver-descriptions provides the source and means of calculating each variable, and we expand on the description for more complicated derived variables here.
+We used Google Earth Engine to extract all weather and topography data [@gorelick2017].
+We also used Google Earth Engine to extract NDVI, NDVI heterogeneity, and landcover data from the USDA Forest Service’s Landcover Change Monitoring System (in the fuel category).
+For each biome/temporal context, we removed all spread events that had missing data for any of the covariates.
+For modeling, we divided each of the datasets into 10 spatial folds based on the centroid location of the largest polygon in the spread event using the `spatialsample` package in R [@mahoney2023].
+We ensured that all predictor variables had greater than 0 variance in each spatial fold.
+We removed spatial folds that resulted in fewer than 40 observations or fewer than 2 extreme spread events.
+
+
+```{r}
+#| echo: false
+# # | label: tbl-driver-descriptions
+# # | tbl-cap: "Drivers of fire activity assembled for this paper."
+
+driver_descriptions |>
+  dplyr::select(-variable, -percentile_calculated, -hexcode, -col_desc) |>
+  dplyr::rename(Feature = display_name, Type = type, Source = source, Calculation = calculation) |>
+  dplyr::select(Feature, Type, Source, Calculation) |>
+  gt::gt()
+```
 
 ## Normalizing covariates as percentiles to characterize counterfactuals
-To aid the comparisons of spread events across time and space, we normalized many predictor variables by converting the measured value of the predictor to a percentile. 
-Some predictor variables were already measured in a way that codified their context (e.g., z-scores), and we did not further adjust these. 
-We opted to not normalize predictor variables that were measured at very broad scales (i.e., number of concurrent fires, National Preparedness Level), when there wasn’t a clear monotonicity to the measurements (i.e., predictors based on wind direction), or when normalization didn’t enable a counterfactual comparison to “expected” conditions independent of fire (i.e., area of growth of previous spread event). 
+
+To aid the comparisons of spread events across time and space, we normalized most predictor variables by converting the measured value of the predictor to a percentile.
+Some predictor variables were already measured in a way that codified their context (e.g., Palmer Drought Severity Index data is delivered as a z-score), and we did not further adjust these.
+We opted to not normalize predictor variables that were measured at very broad scales (i.e., number of concurrent fires, National Preparedness Level) or when normalization didn’t enable a counterfactual comparison to “expected” conditions independent of fire (i.e., area of growth of previous spread event, predictors based on wind direction).
 See Table 1 for an accounting of the variables to which we made further normalization adjustments.
 
-For each weather variable that was normalized, we generated a 401-layer raster at the data product’s original resolution where each layer represented the value of that weather variable that corresponded to a particular percentile (0th through 100th percentiles in increments of 0.25) aggregated through time between January 1, 1981 and December 31, 2020. 
-Then, for each daily fire polygon location, we matched the extracted weather variable value on the day of the fire to the value closest to it in the 401-layer raster. 
+For each weather variable that was normalized, we generated a 401-layer raster at the data product’s original resolution where each layer represented the value of that weather variable that corresponded to a particular percentile (0th through 100th percentiles in increments of 0.25) aggregated through time between January 1, 1981 and December 31, 2020.
+Then, for each daily fire polygon location, we matched the extracted weather variable value on the day of the fire to the value closest to it in the 401-layer raster.
 The percentile to which the layer of closest match corresponded was the approximate percentile of the observed fire weather on the day of interest (compared to the 40-year record of the weather data at that location).
 
-For each normalized fuel and topography variable measurement in each spread event, we calculated their percentile within a sample of measurements taken of the same variable within polygons of the same size and shape of the spread event but over areas not in the actual location of the spread event (@fig-counterfactual-landcover). 
-A priori, we determined approximately 500 “fire independent” locations within each biome based on a hexagonal grid. 
-For each spread event, we created a copy of its polygon at each of those fire independent locations using a simple translation, such that its new centroid coincided with one of the fire independent points. 
-We matched the biome of the fire independent locations with the biome of the whole fire event to which the spread event belonged. 
-To avoid the fire independent polygons overlapping the ocean, we buffered the hexagonal grid 50km inward from the coast. 
-Further, we calculated the fractional cover of water within each fire independent polygon, and used it as the denominator for calculating fractional cover of fire independent fuel and topography variables. 
-We also excluded fire-independent polygons whose areal cover of water divided by the areal cover of water in the spread event was greater than 1.1. 
+For each normalized fuel and topography variable measurement in each spread event, we calculated their percentile within a sample of measurements taken of the same variable within polygons of the same size and shape of the spread event but over areas not in the actual location of the spread event (@fig-counterfactual-landcover).
+A priori, we determined approximately 500 “fire independent” locations within each biome based on a hexagonal grid.
+For each spread event, we created a copy of its polygon at each of those fire independent locations using a simple translation, such that its new centroid coincided with one of the fire independent points.
+We matched the biome of the fire independent locations with the biome of the whole fire event to which the spread event belonged.
+To avoid the fire independent polygons overlapping the ocean, we buffered the hexagonal grid 50km inward from the coast.
+Further, we calculated the fractional cover of water within each fire independent polygon, and used it as the denominator for calculating fractional cover of fire independent fuel and topography variables.
+We also excluded fire-independent polygons whose areal cover of water divided by the areal cover of water in the spread event was greater than 1.1.
+
+![A) Location of the spread event on September 7, 2020 from the Creek Fire from the FIRED dataset. B) Location of actual spread event (red), and location of a portion of the fire-independent spread events (blue). C) Same as B, but showing coverage across the full temperate forest biome in the state of California.](figs/establishing-counterfactual-landcover.png){#fig-counterfactual-landcover}
 
 ## Weather
-For each daily polygon, we extracted the weather variables from the referenced data source at the spatial centroid of the daily polygon in the case of single-polygon geometries and from the spatial centroid of the largest polygon for multipolygon geometries. 
-We extracted weather data derived from the ERA5-Land reanalysis for each of the 24 observations within the day that the spread event represented [@hersbach2020] and then summarized those values in various ways as described below to produce a single daily value. 
-We produced mean and standard deviation daily summaries of wind direction using a sine transformation to capture the east/west axis (with a value of 1 representing wind from the east and a value of -1 representing wind from the west) and a cosine transformation to capture the north/south axis (with a value of 1 representing wind from the north and a value of 0 representing wind from the south). 
-We summarized wind speed, relative humidity, vapor pressure deficit, and temperature percentiles as their minima and maxima for the day. 
+
+For each daily polygon, we extracted the weather variables from the referenced data source at the spatial centroid of the daily polygon in the case of single-polygon geometries and from the spatial centroid of the largest polygon for multipolygon geometries.
+We extracted weather data derived from the ERA5-Land reanalysis for each of the 24 observations within the day that the spread event represented [@hersbach2020] and then summarized those values in various ways as described below to produce a single daily value.
+We produced mean and standard deviation daily summaries of wind direction using a sine transformation to capture the east/west axis (with a value of 1 representing wind from the east and a value of -1 representing wind from the west) and a cosine transformation to capture the north/south axis (with a value of 1 representing wind from the north and a value of 0 representing wind from the south).
+We summarized wind speed, relative humidity, vapor pressure deficit, and temperature percentiles as their minima and maxima for the day.
 GRIDMET variables on a daily scale were extracted for each daily polygon for the relevant day, and GRIDMET drought variables (all standardized precipitation evapotranspiration indices (SPEI) and the Palmer Drought Severity Index (PDSI)) were extracted for each spread event at the nearest 5-day interval of those data products.
 
 ## Topography
-We implemented the rumple index as “surface area / projected area” [@jenness2004] to capture terrain roughness across each daily polygon using the 3DEP 10m digital elevation model (USGS -- citation needed). 
-We simplified the fifteen different landform types from [@theobald2015] into five broader categories by combining some similar, relatively rare cover types (see Table 1), then calculated the fractional cover of each of the five broader categories for each daily polygon. 
-We then calculated the Shannon-Wiener diversity index for landform cover using the fractional cover of those five landform types per daily polygon using the `vegan` package in R [@oksanen2025]. 
+
+We implemented the rumple index as “surface area / projected area” [@jenness2004] to capture terrain roughness across each daily polygon using the 3DEP 10m digital elevation model (U.S. Geological Survey, 3D Elevation Program 10-Meter Resolution Digital Elevation Model).
+We simplified the fifteen different landform types from [@theobald2015] into five broader categories by combining some similar, relatively rare cover types (see Table 1), then calculated the fractional cover of each of the five broader categories for each daily polygon.
+We then calculated the Shannon-Wiener diversity index for landform cover using the fractional cover of those five landform types per daily polygon using the `vegan` package in R [@oksanen2025].
 
 ## Fuels
-We extracted the spatial mean NDVI across each daily polygon for the year prior to the observed fire spread. 
-The NDVI data was derived from a temporal mean composite raster using Landsat data and the same image window as [@parks2019] for California (152nd to 258th day of year) after first masking snow, water, clouds, and cloud shadows. 
-We also calculated the rumple index [@jenness2004] to the NDVI across each daily polygon to capture variability in vegetation cover across a broad area. 
-We first multiplied NDVI (on a -1 to 1 scale) by 100 in order to avoid computational underflow errors. 
-We aggregated the 14 categories of the “land cover” layer of the Landcover Monitoring Change System v2020-5 (USDA Forest Service-- citation needed) into four simpler categories based on the earliest seral stage/lowest biomass growth form present in the categories that represent mixtures of physiognomic types (e.g., “shrub/tree mix” is grouped with “shrubs” in a single “shrubs” category; see Table 1) and then calculated the fractional cover of those broader categories within each spread event. 
-We also calculated the Shannon-Wiener diversity index for land cover using these four broader categories as we did for topographic landform. 
-We characterized the fractional cover of 10-year fire and insect/disease disturbance histories using annual Landfire disturbance data. We subdivided the fire category into “high-severity” and “not high-severity” as well as “recent” (one- to five-year history) and “less recent” (six- to ten-year history).
+
+We extracted the spatial mean NDVI across each daily polygon for the year prior to the observed fire spread.
+The NDVI data was derived from a temporal mean composite raster using Landsat data and the same image window as [@parks2019] for California (152nd to 258th day of year) after first masking snow, water, clouds, and cloud shadows.
+We also calculated the rumple index [@jenness2004] to the NDVI across each daily polygon to capture variability in vegetation cover across a broad area.
+We first multiplied NDVI (on a -1 to 1 scale) by 100 in order to avoid computational underflow errors.
+We aggregated the 14 categories of the “land cover” layer of the Landcover Monitoring Change System v2020-5 (USDA Forest Service-- citation needed) into four simpler categories based on the earliest seral stage/lowest biomass growth form present in the categories that represent mixtures of physiognomic types (e.g., “shrub/tree mix” is grouped with “shrubs” in a single “shrubs” category; see Table 1) and then calculated the fractional cover of those broader categories within each spread event.
+We also calculated the Shannon-Wiener diversity index for land cover using these four broader categories as we did for topographic landform.
+We characterized the fractional cover of 10-year fire and insect/disease disturbance histories using annual Landfire disturbance data.
+We subdivided the fire category into “high-severity” and “not high-severity” as well as “recent” (one- to five-year history) and “less recent” (six- to ten-year history).
 
 ## Human
-The number of fires burning concurrently – a proxy for demand on firefighting resources – was derived for each spread event using a subset of the FPA-FOD database [@short2022] based on events only in California and which had a reported start and end day. 
-We assigned a National Preparedness Level to each spread event based on the day of burning (National Interagency Fire Center -- citation needed; @cullen2020; @podschwit2020). 
-We calculated road density as “meters of road per hectare” within each spread event using data from CalTrans Functional Classification system (CalTrans <accessed 2022-12-20>).
-[@haight2007]
-[@miller2012]
-[@safford2022]
-[@calfire2020]
 
-## Fire 
-To capture the effect of ignition pressure of the active fireline to cause spread into new areas, we included the area of growth from the previous spread event within the same fire event as a driver of daily area of growth. 
+The number of fires burning concurrently – a proxy for demand on firefighting resources – was derived for each spread event using a subset of the FPA-FOD database [@short2022] based on events only in California and which had a reported start and end day.
+We assigned a National Preparedness Level to each spread event based on the day of burning (National Interagency Fire Center -- citation needed; @cullen2020; @podschwit2020).
+We calculated road density as “meters of road per hectare” within each spread event using data from CalTrans Functional Classification system (CalTrans \<accessed 2022-12-20\>).
+[@haight2007] [@miller2012] [@safford2022] [@calfire2020]
+
+## Fire
+
+To capture the effect of ignition pressure of the active fireline to cause spread into new areas, we included the area of growth from the previous spread event within the same fire event as a driver of daily area of growth.
 For the first spread event within a fire event, we recorded this value as zero.
 
 # Focus on temperate forest and Mediterranean forest, woodland, and scrub
-Initial analysis revealed very little extreme spread events activity in the temperate grasslands and the xeric desert and shrub biomes, so we focused further analyses on the temperate forests and the Mediterranean forest, woodland, and scrub biomes.
 
-# Analysis of all spread events
-We visualized the distribution and calculated the mean value of all predictor variables across the two remaining biomes and the two temporal contexts. 
+Initial analysis revealed very few extreme spread events in the temperate grasslands and the xeric desert and shrub biomes, so we focused further analyses on the temperate forests and the Mediterranean forest, woodland, and scrub biomes.
+
+# Percentile analysis of all spread events
+
+We visualized the distribution and calculated the mean value of all predictor variables across the two remaining biomes and the two temporal contexts.
 For the normalized variables, we compared the mean normalized value to the expectation for the variable (i.e., 50th percentile or a z-score of 0) in order to characterize the overall conditions of fire spread, regardless of whether that spread was extreme or not.
 
 # Model predicting extreme spread events
 
 ## Model tuning
-For each of the two remaining biomes in two temporal contexts, we also built models that predicted whether or not a spread event was an extreme spread event in a random forest classification framework with probability forests [@malley2012] using the `ranger` package in R [@wright2017]. 
-This allowed for continuous predictions between 0 and 1, which allowed us to tune the classification threshold. 
-We used a value of 1000 for the `num.trees` hyperparameter as a balance between computational needs and model skill (citation needed).
-We used class weights for the extreme spread events class as the reciprocal of the number of non-extreme spread events in the training data, and vice versa, in order to upsample the non-dominant class (citation needed). 
-We used the `hellinger` split rule, which is more robust for classification problems with unbalanced data (citation needed). We tuned the `mtry` (13 values), `sample.fraction` (6 values), and `min.node.size` (6 values) hyperparameters as well as the classification threshold (40 values) using a complete grid. 
-We ran 10 iterations of each of the 10 spatial folds in order to account for the stochastic nature of building random forests. 
-For each unique combination of `mtry`, `sample.fraction`, `min.node.size`, and classification threshold, we calculated the Matthew’s Correlation Coefficient (MCC) across all 10 iterations and all 10 spatial folds (citations needed for MCC, Chicco and Poisot). 
-For each model, we use the combination of hyperparameters that yields the highest mean MCC across spatial folds.
+
+For each of the two remaining biomes in two temporal contexts, we also built models that predicted whether or not a spread event was an extreme spread event in a random forest classification framework with probability forests [@malley2012] using the `ranger` package in R [@wright2017].
+This allowed for continuous predictions between 0 and 1, which allowed us to additionally tune the classification threshold.
+We used a value of 1000 for the `num.trees` hyperparameter as a balance between computational needs and model skill [@probst2018].
+We used class weights for the extreme spread events class as the reciprocal of the number of non-extreme spread events in the training data, and vice versa, in order to upsample the non-dominant class.
+We used the Hellinger's Distance split rule, which is more robust for classification problems with unbalanced data [@cieslak2012; @aler2020], and also sampled without replacement to help avoid variable selection bias when building trees [@strobl2007].
+We tuned the `mtry` (13 values), `sample.fraction` (6 values), and `min.node.size` (6 values) hyperparameters as well as the classification threshold (40 values) using a complete grid.
+We ran 10 iterations of each of the 10 spatial folds in order to account for the stochastic nature of building random forests.
+For each unique combination of `mtry`, `sample.fraction`, `min.node.size`, and classification threshold, we calculated the Matthew’s Correlation Coefficient (MCC) across all 10 iterations and all 10 spatial folds [@matthews1975].
+MCC is particularly well-suited to binary classification problems with imbalanced class representation as is the case here (i.e., by definition, the "extreme spread event" category contains 5% of data while the "regular spread event" category contains 95% of data) [@chicco2021; @poisot2022].
+For each model, we use the combination of hyperparameters that yields the highest mean MCC across spatial folds and which resulted in fewer than 50% of spatial folds with missing MCC estimates.
 
 ## Variable importance
-Conditional predictive impact
+
+We interpreted the relative importance of features in the random forest model using conditional predictive impact [@watson2021].
+Traditional measures of variable importance, such as the Gini Index or permutation importance, can be biased towards features that have more categories (or groupings of continuous values) and can also be sensitive to correlations among features [@wei2015].
+Conditional predictive impact circumvents these limitations by assessing the change in model skill imparted by including the unique information encoded within each feature [@watson2021]. 
+In short, the values for a feature are replaced by knockoff statistics, which break the relationship between that feature and the target while retaining the correlation between that feature and other features [@candes2018].
+We used the {cpi} package [@watson2021] to implement the conditional predictive impact analysis, which relies on the {mlr3} architecture [@lang2019] for building machine learning workflows in R.
+We modified the {cpi} package to allow it to use the the Matthew's Correlation Coefficient as a model skill metric and to allow it to accept a tuned value of a classification threshold to re-determine whether a model prediction is 0 or 1.
+For example, if the tuned classification threshold was 0.3 (instead of a default of 0.5), then we allowed for the {cpi} package to predict an observation to be a '1' if the probability prediction was greater than or equal to 0.3.
+To assess conditional predictive impact, we fit 50 random forest models for each of 10 spatial folds using the tuned hyperparameters as determined above, as well as the same fixed tree building rules (i.e., Hellinger split rule, 1000 trees per forest, class weights based on the reciprocal of the number of instances in the training data, sampling without replacement).
+The conditional predictive impact for each feature (measured in units of MCC) was calculated by first computing the mean value for each spatial fold across the 50 iterations, then by computing the median across the 10 spatial folds. 
+Features were deemed "important" and retained for further investigation if this conditional predictive impact value was greater than 0 (i.e., the unique information contained in a feature contributed positively to model skill across most of the spatial folds).
 
 ## Response function interpretation
-Accumulated local effects plots
 
-# Hazard mapping 
--	PODs 
--	How models used to predict relative hazard in different PODs under different assumptions about previous day’s fireline length / area burned. 
+We visualized the effect of each important feature on the predicted response using accumulated local effects plots [@apley2020] implemented using the {ALEPlot} package [@apley2018].
+Accumulated local effects plots avoid the pitfalls of partial dependence plots by preventing unrealistic permutations of data from contributing to the assumed impact of the highlighted feature on the model response.
+The effect of a highlighted feature on the model response for each value of the feature can therefore be thought of as how that feature changes the model prediction within a small window of variation around that feature value, conditional on the values of the other features that tend to correlate with that feature value [@apley2020].
 
-![A) Location of the spread event on September 7, 2020 from the Creek Fire from the FIRED dataset. B) Location of actual spread event (red), and location of a portion of the fire-independent spread events (blue). C) Same as B, but showing coverage across the full temperate forest biome in the state of California.](figs/establishing-counterfactual-landcover.png){#fig-counterfactual-landcover}
+# Relative hazard mapping
 
-<!-- Calculating percentiles from raw weather data -->
-<!-- For each weather variable, we generated a 401-layer raster at the data product’s original resolution where each layer represented the value of that weather variable that corresponded to a particular percentile (0th through 100th percentiles in increments of 0.25) aggregated through time between January 1, 1981 and December 31, 2020.  -->
-<!-- Then, for each daily fire polygon location, we matched the extracted weather variable value on the day of the fire to the value closest to it in the 401-layer raster.  -->
-<!-- The percentile to which the layer of closest match corresponded was the approximate percentile of the observed fire weather on the day of interest (compared to the 40-year record of the weather data at that location). -->
-
-<!-- Where and when are the fastest spread days? -->
-<!-- To evaluate drivers of EWEs, we classified each daily fire spread increment as EWEs or non-EWEs.  -->
-<!-- We set a simple size percentile threshold to define EWEs – across the entire dataset of daily California fire spread, we flagged as EWEs the event/day combinations with area burned in the top 5% (> xxxx ha).  -->
-
-<!-- What are the drivers of daily fire spread? -->
-<!-- For each event/day combination, we extracted the variables described in Table 1 using Google Earth Engine.  -->
-<!-- For weather variables, we extracted the single weather value at the centroid of the largest polygon of each event/day combination (which could be different from the centroid of the whole polygon for an event/day combination in the case of multipolygons).  -->
-<!-- For subdaily weather variables (i.e., hourly values from ERA5-Land and RTMA), we extracted each of the 24 hours worth of data at the centroid of the largest polygon for each day for each event.   -->
-<!-- For “rumple” variables (i.e., topography rumple index and heterogeneity of NDVI vegetation structure rumple index), we summed the surface area and projected area values within the polygon then calculated the indices as “surface area / projected area” at the event/day combination scale.  -->
-<!-- For all other variables, we calculated the mean value within the event/day combination polygon. -->
-<!-- For each biome, we reduced the candidate covariates to a set of model covariates such that: -->
-<!-- 1. No covariate had more than 50 missing values  -->
-<!-- 1. Covariates all had >0 variance -->
-
-<!-- What are the conditions associated with the very largest daily fire spread events? -->
-<!-- To compare the covariate values within the fire-generated polygons to expectations of those covariate values within a similar-sized polygon independent of fire, we created “fire-independent” polygons throughout each biome. -->
-
-<!-- We calculated the expectation of each covariate as a function of polygon area as the median value of each covariate within each polygon size.  -->
-<!-- For each event/day combination of the fire polygons, we calculated the difference between the measured value of each covariate and the expected median of that value by linearly interpolating the expected median between the two fire-independent polygon sizes closest to the size of the fire event/day polygon of interest. -->
-<!-- For each biome, we divided the daily fire polygons into deciles based on their size, and calculated the mean value of each driver within each decile. -->
-<!-- In Figures 3 through 7, we show the mean value of the difference between the measured daily fire polygon covariates and the expected median as a function of size. We also show the distribution of the expected value of each covariate as a function of size (centered on 0) and with its interquartile range represented by the gray ribbon. -->
-
-<!-- ## Characterize extreme wildfire events -->
-<!-- FIRED dataset daily fire perimeters [@balch2020]. -->
-<!-- 2000 fire events in California between 2001 and 2020. -->
-<!-- MODIS active fire product (MCD14ML) [@giglio2016]. -->
-<!-- Fire radiative power (FRP) to fireline intensity on a 4x daily timestep, then classification of that day based on @tedim2018. -->
-<!-- Classes 5, 6, and 7 considered "extreme wildfire events." -->
-<!-- Fire radiative power to fire radiative energy (FRE) by integrating through time course of each event. -->
-<!-- Additional characterization of "extreme" based on FRE due to smoke impact -->
-
-<!-- ## Causes of extreme wildfire events -->
-<!-- Collate potential causes of extreme wildfire events (or perhaps of all events; might as well?) -->
-<!-- Total fuel, fuel heterogeneity   -->
-<!-- Max wind speed from nearby RAWS station   -->
-<!-- VPD from ERA-5 or Gridmet [@abatzoglou2013]   -->
-<!-- Wind alignment [@abatzoglou2013] with slope (National Elevation Dataset)   -->
-<!-- Historic aridity from CWD? [@flint2013]   -->
-
-<!-- ## Interpretable machine learning -->
-
-<!-- ### Random Forest -->
-
-<!-- ### Conditional predictive impact -->
-
-<!-- ### Accumulated local effect curves -->
-
+We mapped relative hazard of extreme spread events across the landscape of the temperate conifer forest biome using Potential Operational Delineation units (PODs) for spatial aggregation [@thompson2022].
+We first calculated the actual values of topographic and fuel variables within each POD in 2019 (thus the relative hazard is "current" for 2020).
+Next, we ranked the values of each topographic and fuel feature across the PODs and converted them to percentiles (e.g., the POD with the maximum value for a feature was given a percentile value of 1, the POD that had the median value for a feature was given a percentile value of 0.5).
+For all other variables, we set them to be different sets of fixed values in order to compare the influence of those manipulated features on the relative hazard, given the actual measured values of fuel and topography features.
+Relative hazard was then determined by fitting the most skillful model to each set of new values for the features (i.e., the percentile ranked actual measures of the fuel and topography features within each pod and the fixed values of the human, weather, and fire features).
 
 # Results
 
-Figures
-1. Conceptual diagram of fuel, topography, weather factors (and how they interact) to drive extreme wildfire events  
-1. Map of daily FIRED perimeter having active fire detections within it and delineation of fire head  
-1. Distribution of fireline intensity for all California fires
-1. Distribution of multivariate fuel, topography, climate conditions
-1. 
+![Location of spread event and extreme spread events by biome within California.](figs/megafire-resolve-map.jpg){#fig-megafire-map}
 
-Table
-1. Akin to [@bowman2017] showing different categories of extreme wildfire events
-1. Depending on how many are classified as "extreme", a table with the info joined from MTBS/FRAP
+We identified `{r} sum(ese_summary_table$n_ese)` extreme spread events across the state of California during the study period (`{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "tcf"]` in temperate conifer forest, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "mfws"]` in Mediterranean forests, woodland, and scrub, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "tgss"]` in temperate grasslands, savannas, and shrublands, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "dxs"]` in desert and xeric shrubland; @fig-megafire-map).
+The threshold size for being considered an extreme spread event was a daily area of growth of approximately `{r} round(mean(ese_summary_table$min_ese_size), 1)` hectares (`{r} round(2.471*mean(ese_summary_table$min_ese_size), 1)` acres; `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "tcf"], 1)` hectares in temperate conifer forest, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "mfws"], 1)` hectares in Mediterranean forests, woodland, and scrub, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "tgss"], 1)` hectares in temperate grasslands, savannas, and shrublands, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "dxs"], 1)` hectares in desert and xeric shrubland).
 
+![Accumulated local effects curves for "important" features for early fires in the temperate conifer forests.](figs/ale-curves/tcf_ale-curves_early.png){#fig-ale-tcf-early}
 
+![Accumulated local effects curves for "important" features for late fires in the temperate conifer forests.](figs/ale-curves/tcf_ale-curves_late.png){#fig-ale-tcf-late}
+
+![Accumulated local effects curves for "important" features for early fires in the Mediterranean forests, woodland, and scrub.](figs/ale-curves/mfws_ale-curves_early.png){#fig-ale-mfws-early}
+
+![Accumulated local effects curves for "important" features for late fires in the Mediterranean forests, woodland, and scrub.](figs/ale-curves/mfws_ale-curves_late.png){#fig-ale-mfws-late}
+
+## Relative hazard
+
+![Relative hazard mapped for extreme fire weather and as though a nearby fire was spreading quickly the day before.](figs/relative-hazard/relative-megafire-hazard-pods_big-spread-yesterday.png){#fig-relative-hazard-big-spread-yesterday-extreme-weather-today}
 # Discussion
 
-- The hope for “let’s manage fires for wildland benefit” will be fundamentally challenged by increasing megafire hazard with increasing number of concurrent fires
-- Argues for need to set landscape up ahead of time
-- Limitations of data (particularly wind)
-- There is a natural cautiousness concerning fire management vs fire suppression since we don’t have the workforce needed to manage several concurrent fires. This bolsters the argument for setting up the landscape for beneficial/ low severity fire ahead of time. 
+Here, we provide a robust analysis of the conditions under which all fires spread, as well as disentangle the conditions under which extreme fire spread is more likely.k
+
+-   The hope for “let’s manage fires for wildland benefit” will be fundamentally challenged by increasing megafire hazard with increasing number of concurrent fires
+-   Argues for need to set landscape up ahead of time
+-   Limitations of data (particularly wind)
+-   There is a natural cautiousness concerning fire management vs fire suppression since we don’t have the workforce needed to manage several concurrent fires. This bolsters the argument for setting up the landscape for beneficial/ low severity fire ahead of time.
+
+Hazard potential is often measured by using process-based models, simulating many thousands of ignitions, and then calculating summaries of fire activity across those simulations.
+Here, we demonstrate a robust approach to using historical observations to inform hazard estimation that avoids endogeneity issues associated with fire size influencing feature measurement independent of how those features affect fire spread.
+
+
 
 # Acknowledgements
 
 # Author contributions
 
 Author contributions are defined using the Contributor Roles Taxonomy (CRediT; https://casrai.org/credit/).
-Conceptualization: ; Data curation: ; Formal analysis: ; Funding acquisition: ; Investigation: ; Methodology: ; Project administration: ; Resources: ; Software: ; Supervision: ; Validation: ; Visualization: ; Writing -- original draft: ; Writing -- review and editing:   
+Conceptualization: ; Data curation: ; Formal analysis: ; Funding acquisition: ; Investigation: ; Methodology: ; Project administration: ; Resources: ; Software: ; Supervision: ; Validation: ; Visualization: ; Writing -- original draft: ; Writing -- review and editing:
+
+# Supplemental material {.appendix}
+
+![Effect of sampling area on measured values of some example features that change from year to year, independent of fire. Each facet represents a different feature affected by the scale-dependence. Each point represents one location of a circle with an area given on the x-axis and the measured value of the feature given on the y-axis. A circle of ten different radii were located at approximately 500 predetermined locations within each biome. Thus there are ten vertical bands in each facet comprising 500 points. The solid red line is drawn through the mean value of each band. The lower dashed red line is drawn through the 10th percentile of each band and the upper dashed red line is drawn through the 90th percentile of each band.](figs/fire-independent-scaling-relationships/fire-independent-scaling-relationships_fluc_plot_v2.png){#fig-fire-independent-scaling-fluctuating}
+
+![Effect of sampling area on measured values of some features that do not change from year to year, independent of fire. The construction of the plot is the same as in @fig-fire-independent-scaling-fluctuating](figs/fire-independent-scaling-relationships/fire-independent-scaling-relationships_static_plot_v2.png){#fig-fire-independent-scaling-static}
 
 # References {.unnumbered}
+

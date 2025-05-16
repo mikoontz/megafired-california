@@ -102,6 +102,21 @@ Subject\_term\_id: climate-change;fire-ecology},
   file = {C:\Users\mkoontz\Zotero\storage\RXCWL3JD\Abolafia-Rosenzweig et al. - 2022 - Winter and spring climate explains a large portion.pdf}
 }
 
+@article{aler2020,
+  title = {Study of {{Hellinger Distance}} as a Splitting Metric for {{Random Forests}} in Balanced and Imbalanced Classification Datasets},
+  author = {Aler, Ricardo and Valls, Jos{\'e} M. and Bostr{\"o}m, Henrik},
+  year = {2020},
+  month = jul,
+  journal = {Expert Systems with Applications},
+  volume = {149},
+  pages = {113264},
+  issn = {0957-4174},
+  doi = {10.1016/j.eswa.2020.113264},
+  urldate = {2025-05-06},
+  abstract = {Hellinger Distance (HD) is a splitting metric that has been shown to have an excellent performance for imbalanced classification problems for methods based on Bagging of trees, while also showing good performance for balanced problems. Given that Random Forests (RF) use Bagging as one of two fundamental techniques to create diversity in the ensemble, it could be expected that HD is also effective for this ensemble method. The main aim of this article is to carry out an extensive investigation on important aspects about the use of HD in RF, including handling of multi-class problems, hyper-parameter optimization, metrics comparison, probability estimation, and metrics combination. In particular, HD is compared to other commonly used splitting metrics (Gini and Gain Ratio) in several contexts: balanced/imbalanced and two-class/multi-class. Two aspects related to classification problems are assessed: classification itself and probability estimation. HD is defined for two-class problems, but there are several ways in which it can be extended to deal with multi-class and this article studies the performance of the available options. Finally, even though HD can be used as an alternative to other splitting metrics, there is no reason to limit RF to use just one of them. Therefore, the final study of this article is to determine whether selecting the splitting metric using cross-validation on the training data can improve results further. Results show HD to be a robust measure for RF, with some weakness for balanced multi-class datasets (especially for probability estimation). Combination of metrics is able to result in a more robust performance. However, experiments of HD with text datasets show Gini to be more suitable than HD for this kind of problems.},
+  keywords = {Hellinger Distance,Imbalanced problems,Random Forests}
+}
+
 @article{alexander1989,
   title = {Predicting Fire Behavior in the Black Spruce-Lichen Woodland Fuel Type of Western and Northern {{Canada}} ({{POSTER}}/{{PAMPHLET WITH TEXT}})},
   author = {Alexander, M. E. and Lanoville, R. A.},
@@ -110,6 +125,29 @@ Subject\_term\_id: climate-change;fire-ecology},
   abstract = {Site menu for NRCan internet website.},
   langid = {english},
   file = {C\:\\Users\\mkoontz\\Zotero\\storage\\NT8Q44T9\\Alexander and Lanoville - 1989 - Predicting fire behavior in the black spruce-liche.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\KH5BE383\\publications.html}
+}
+
+@manual{apley2018,
+  type = {Manual},
+  title = {{{ALEPlot}}: {{Accumulated}} Local Effects ({{ALE}}) Plots and Partial Dependence ({{PD}}) Plots},
+  author = {Apley, Dan},
+  year = {2018}
+}
+
+@article{apley2020,
+  title = {Visualizing the Effects of Predictor Variables in Black Box Supervised Learning Models},
+  author = {Apley, Daniel W. and Zhu, Jingyu},
+  year = {2020},
+  month = sep,
+  journal = {Journal of the Royal Statistical Society Series B: Statistical Methodology},
+  volume = {82},
+  number = {4},
+  pages = {1059--1086},
+  issn = {1369-7412},
+  doi = {10.1111/rssb.12377},
+  urldate = {2023-03-03},
+  abstract = {In many supervised learning applications, understanding and visualizing the effects of the predictor variables on the predicted response is of paramount importance. A shortcoming of black box supervised learning models (e.g. complex trees, neural networks, boosted trees, random forests, nearest neighbours, local kernel-weighted methods and support vector regression) in this regard is their lack of interpretability or transparency. Partial dependence plots, which are the most popular approach for visualizing the effects of the predictors with black box supervised learning models, can produce erroneous results if the predictors are strongly correlated, because they require extrapolation of the response at predictor values that are far outside the multivariate envelope of the training data. As an alternative to partial dependence plots, we present a new visualization approach that we term accumulated local effects plots, which do not require this unreliable extrapolation with correlated predictors. Moreover, accumulated local effects plots are far less computationally expensive than partial dependence plots. We also provide an R package ALEPlot as supplementary material to implement our proposed method.},
+  file = {C:\Users\mkoontz\Zotero\storage\2G86VZZF\Apley and Zhu - 2020 - Visualizing the Effects of Predictor Variables in .pdf}
 }
 
 @article{balch2018,
@@ -317,6 +355,24 @@ Subject\_term\_id: climate-change;fire-ecology},
   file = {C:\Users\mkoontz\Zotero\storage\AZCKYCIF\full-9-sept-2020-directors-report.pdf}
 }
 
+@article{candes2018,
+  title = {Panning for Gold: `Model-{{X}}' Knockoffs for High Dimensional Controlled Variable Selection},
+  shorttitle = {Panning for Gold},
+  author = {Cand{\`e}s, Emmanuel and Fan, Yingying and Janson, Lucas and Lv, Jinchi},
+  year = {2018},
+  journal = {Journal of the Royal Statistical Society: Series B (Statistical Methodology)},
+  volume = {80},
+  number = {3},
+  pages = {551--577},
+  issn = {1467-9868},
+  doi = {10.1111/rssb.12265},
+  urldate = {2022-09-10},
+  abstract = {Many contemporary large-scale applications involve building interpretable models linking a large set of potential covariates to a response in a non-linear fashion, such as when the response is binary. Although this modelling problem has been extensively studied, it remains unclear how to control the fraction of false discoveries effectively even in high dimensional logistic regression, not to mention general high dimensional non-linear models. To address such a practical problem, we propose a new framework of `model-X' knockoffs, which reads from a different perspective the knockoff procedure that was originally designed for controlling the false discovery rate in linear models. Whereas the knockoffs procedure is constrained to homoscedastic linear models with n⩾p, the key innovation here is that model-X knockoffs provide valid inference from finite samples in settings in which the conditional distribution of the response is arbitrary and completely unknown. Furthermore, this holds no matter the number of covariates. Correct inference in such a broad setting is achieved by constructing knockoff variables probabilistically instead of geometrically. To do this, our approach requires that the covariates are random (independent and identically distributed rows) with a distribution that is known, although we provide preliminary experimental evidence that our procedure is robust to unknown or estimated distributions. To our knowledge, no other procedure solves the controlled variable selection problem in such generality but, in the restricted settings where competitors exist, we demonstrate the superior power of knockoffs through simulations. Finally, we apply our procedure to data from a case--control study of Crohn's disease in the UK, making twice as many discoveries as the original analysis of the same data.},
+  langid = {english},
+  keywords = {False discovery rate,Generalized linear models,Genomewide association study,Knockoff filter,Logistic regression,Markov blanket,Testing for conditional independence in non-linear models},
+  file = {C\:\\Users\\mkoontz\\Zotero\\storage\\UZRNT7WS\\Candès et al. - 2018 - Panning for gold ‘model-X’ knockoffs for high dim.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\P2BEYN2S\\rssb.html}
+}
+
 @article{chen2022,
   title = {California Wildfire Spread Derived Using {{VIIRS}} Satellite Observations and an Object-Based Tracking System},
   author = {Chen, Yang and Hantson, Stijn and Andela, Niels and Coffield, Shane R. and Graff, Casey A. and Morton, Douglas C. and Ott, Lesley E. and {Foufoula-Georgiou}, Efi and Smyth, Padhraic and Goulden, Michael L. and Randerson, James T.},
@@ -335,6 +391,23 @@ Subject\_term\_id: climate-change;fire-ecology},
   langid = {english},
   keywords = {Fire ecology,Natural hazards},
   file = {C:\Users\mkoontz\Zotero\storage\U5H6N2KX\Chen et al. - 2022 - California wildfire spread derived using VIIRS sat.pdf}
+}
+
+@article{chicco2021,
+  title = {The {{Matthews}} Correlation Coefficient ({{MCC}}) Is More Reliable than Balanced Accuracy, Bookmaker Informedness, and Markedness in Two-Class Confusion Matrix Evaluation},
+  author = {Chicco, Davide and T{\"o}tsch, Niklas and Jurman, Giuseppe},
+  year = {2021},
+  month = feb,
+  journal = {BioData Mining},
+  volume = {14},
+  number = {1},
+  pages = {13},
+  issn = {1756-0381},
+  doi = {10.1186/s13040-021-00244-z},
+  urldate = {2022-09-21},
+  abstract = {Evaluating binary classifications is a pivotal task in statistics and machine learning, because it can influence decisions in multiple areas, including for example prognosis or therapies of patients in critical conditions. The scientific community has not agreed on a general-purpose statistical indicator for evaluating two-class confusion matrices (having true positives, true negatives, false positives, and false negatives) yet, even if advantages of the Matthews correlation coefficient (MCC) over accuracy and F1 score have already been shown.In this manuscript, we reaffirm that MCC is a robust metric that summarizes the classifier performance in a single value, if positive and negative cases are of equal importance. We compare MCC to other metrics which value positive and negative cases equally: balanced accuracy (BA), bookmaker informedness (BM), and markedness (MK). We explain the mathematical relationships between MCC and these indicators, then show some use cases and a bioinformatics scenario where these metrics disagree and where MCC generates a more informative response.Additionally, we describe three exceptions where BM can be more appropriate: analyzing classifications where dataset prevalence is unrepresentative, comparing classifiers on different datasets, and assessing the random guessing level of a classifier. Except in these cases, we believe that MCC is the most informative among the single metrics discussed, and suggest it as standard measure for scientists of all fields. A Matthews correlation coefficient close to +1, in fact, means having high values for all the other confusion matrix metrics. The same cannot be said for balanced accuracy, markedness, bookmaker informedness, accuracy and F1 score.},
+  keywords = {Balanced accuracy,Binary classification,Bookmaker informedness,Confusion matrix,Machine learning,Markedness,Matthews correlation coefficient},
+  file = {C\:\\Users\\mkoontz\\Zotero\\storage\\CTUUP9IA\\Chicco et al. - 2021 - The Matthews correlation coefficient (MCC) is more.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\F46SDSD7\\s13040-021-00244-z.html}
 }
 
 @article{cieslak2012,
@@ -654,6 +727,24 @@ Subject\_term\_id: climate-change;fire-ecology},
   file = {C:\Users\mkoontz\Zotero\storage\CBV3AFR3\Goss et al. - 2020 - Climate change is increasing the likelihood of ext.pdf}
 }
 
+@article{goss2020a,
+  title = {Climate Change Is Increasing the Likelihood of Extreme Autumn Wildfire Conditions across {{California}}},
+  author = {Goss, Michael and Swain, Daniel L and Abatzoglou, John T and Sarhadi, Ali and Kolden, Crystal A and Williams, A Park and Diffenbaugh, Noah S},
+  year = {2020},
+  month = aug,
+  journal = {Environmental Research Letters},
+  volume = {15},
+  number = {9},
+  pages = {094016},
+  publisher = {IOP Publishing},
+  issn = {1748-9326},
+  doi = {10.1088/1748-9326/ab83a7},
+  urldate = {2025-05-16},
+  abstract = {California has experienced devastating autumn wildfires in recent years. These autumn wildfires have coincided with extreme fire weather conditions during periods of strong offshore winds coincident with unusually dry vegetation enabled by anomalously warm conditions and late onset of autumn precipitation. In this study, we quantify observed changes in the occurrence and magnitude of meteorological factors that enable extreme autumn wildfires in California, and use climate model simulations to ascertain whether these changes are attributable to human-caused climate change. We show that state-wide increases in autumn temperature ({$\sim$}1 {$^\circ$}C) and decreases in autumn precipitation ({$\sim$}30\%) over the past four decades have contributed to increases in aggregate fire weather indices (+20\%). As a result, the observed frequency of autumn days with extreme (95th percentile) fire weather---which we show are preferentially associated with extreme autumn wildfires---has more than doubled in California since the early 1980s. We further find an increase in the climate model-estimated probability of these extreme autumn conditions since {$\sim$}1950, including a long-term trend toward increased same-season co-occurrence of extreme fire weather conditions in northern and southern California. Our climate model analyses suggest that continued climate change will further amplify the number of days with extreme fire weather by the end of this century, though a pathway consistent with the UN Paris commitments would substantially curb that increase. Given the acute societal impacts of extreme autumn wildfires in recent years, our findings have critical relevance for ongoing efforts to manage wildfire risks in California and other regions.},
+  langid = {english},
+  file = {C:\Users\mkoontz\Zotero\storage\ZXVHPSGG\Goss et al. - 2020 - Climate change is increasing the likelihood of extreme autumn wildfire conditions across California.pdf}
+}
+
 @article{gutierrez2021,
   title = {Wildfire Response to Changing Daily Temperature Extremes in {{California}}'s {{Sierra Nevada}}},
   author = {Gutierrez, Aurora A. and Hantson, Stijn and Langenbrunner, Baird and Chen, Bin and Jin, Yufang and Goulden, Michael L. and Randerson, James T.},
@@ -940,6 +1031,26 @@ Subject\_term\_id: climate-change;fire-ecology},
   file = {C\:\\Users\\mkoontz\\Zotero\\storage\\JXJPIQYC\\Kolden - 2020 - Wildfires count lives and homes, not hectares bur.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\J8XJ72B4\\d41586-020-02740-4.html}
 }
 
+@article{kreider2024,
+  title = {Fire Suppression Makes Wildfires More Severe and Accentuates Impacts of Climate Change and Fuel Accumulation},
+  author = {Kreider, Mark R. and Higuera, Philip E. and Parks, Sean A. and Rice, William L. and White, Nadia and Larson, Andrew J.},
+  year = {2024},
+  month = mar,
+  journal = {Nature Communications},
+  volume = {15},
+  number = {1},
+  pages = {2412},
+  publisher = {Nature Publishing Group},
+  issn = {2041-1723},
+  doi = {10.1038/s41467-024-46702-0},
+  urldate = {2025-05-16},
+  abstract = {Fire suppression is the primary management response to wildfires in many areas globally. By removing less-extreme wildfires, this approach ensures that remaining wildfires burn under more extreme conditions. Here, we term this the ``suppression bias'' and use a simulation model to highlight how this bias fundamentally impacts wildfire activity, independent of fuel accumulation and climate change. We illustrate how attempting to suppress all wildfires necessarily means that fires will burn with more severe and less diverse ecological impacts, with burned area increasing at faster rates than expected from fuel accumulation or climate change. Over a human lifespan, the modeled impacts of the suppression bias exceed those from fuel accumulation or climate change alone, suggesting that suppression may exert a significant and underappreciated influence on patterns of fire globally. Managing wildfires to safely burn under low and moderate conditions is thus a critical tool to address the growing wildfire crisis.},
+  copyright = {2024 The Author(s)},
+  langid = {english},
+  keywords = {Fire ecology,Forestry,Natural hazards},
+  file = {C:\Users\mkoontz\Zotero\storage\I4K5K5ES\Kreider et al. - 2024 - Fire suppression makes wildfires more severe and accentuates impacts of climate change and fuel accu.pdf}
+}
+
 @article{kulakowski2007,
   title = {Effect of {{Prior Disturbances}} on the {{Extent}} and {{Severity}} of {{Wildfire}} in {{Colorado Subalpine Forests}}},
   author = {Kulakowski, Dominik and Veblen, Thomas T.},
@@ -955,6 +1066,24 @@ Subject\_term\_id: climate-change;fire-ecology},
   langid = {english},
   keywords = {Abies lasiocarpa,blowdown,classification trees,disturbance interactions,fire,Picea engelmannii,spruce beetle,subalpine forests},
   file = {C\:\\Users\\mkoontz\\Zotero\\storage\\WVPH6GK2\\Kulakowski and Veblen - 2007 - Effect of Prior Disturbances on the Extent and Sev.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\ZRXGIRS7\\06-0124.html}
+}
+
+@article{lang2019,
+  title = {Mlr3: {{A}} Modern Object-Oriented Machine Learning Framework in {{R}}},
+  shorttitle = {Mlr3},
+  author = {Lang, Michel and Binder, Martin and Richter, Jakob and Schratz, Patrick and Pfisterer, Florian and Coors, Stefan and Au, Quay and Casalicchio, Giuseppe and Kotthoff, Lars and Bischl, Bernd},
+  year = {2019},
+  month = dec,
+  journal = {Journal of Open Source Software},
+  volume = {4},
+  number = {44},
+  pages = {1903},
+  issn = {2475-9066},
+  doi = {10.21105/joss.01903},
+  urldate = {2025-05-06},
+  abstract = {Lang et al., (2019). mlr3: A modern object-oriented machine learning framework in R. Journal of Open Source Software, 4(44), 1903, https://doi.org/10.21105/joss.01903},
+  langid = {english},
+  file = {C:\Users\mkoontz\Zotero\storage\W7ETRHKE\Lang et al. - 2019 - mlr3 A modern object-oriented machine learning framework in R.pdf}
 }
 
 @article{lareau2022,
@@ -1126,6 +1255,23 @@ Subject\_term\_id: climate-change;fire-ecology},
   copyright = {Schattauer GmbH},
   langid = {english},
   file = {C\:\\Users\\mkoontz\\Zotero\\storage\\YYL6LDV6\\Malley et al. - 2012 - Probability Machines.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\WPE28XXQ\\ME00-01-0052.html}
+}
+
+@article{matthews1975,
+  title = {Comparison of the Predicted and Observed Secondary Structure of {{T4}} Phage Lysozyme},
+  author = {Matthews, B. W.},
+  year = {1975},
+  month = oct,
+  journal = {Biochimica et Biophysica Acta (BBA) - Protein Structure},
+  volume = {405},
+  number = {2},
+  pages = {442--451},
+  issn = {0005-2795},
+  doi = {10.1016/0005-2795(75)90109-9},
+  urldate = {2022-12-10},
+  abstract = {Predictions of the secondary structure of T4 phage lysozyme, made by a number of investigators on the basis of the amino acid sequence, are compared with the structure of the protein determined experimentally by X-ray crystallography. Within the amino terminal half of the molecule the locations of helices predicted by a number of methods agree moderately well with the observed structure, however within the carboxyl half of the molecule the overall agreement is poor. For eleven different helix predictions, the coefficients giving the correlation between prediction and observation range from 0.14 to 0.42. The accuracy of the predictions for both {$\beta$}-sheet regions and for turns are generally lower than for the helices, and in a number of instances the agreement between prediction and observation is no better than would be expected for a random selection of residues. The structural predictions for T4 phage lysozyme are much less successful than was the case for adenylate kinase (Schulz et al. (1974) Nature 250, 140--142). No one method of prediction is clearly superior to all others, and although empirical predictions based on larger numbers of known protein structure tend to be more accurate than those based on a limited sample, the improvement in accuracy is not dramatic, suggesting that the accuracy of current empirical predictive methods will not be substantially increased simply by the inclusion of more data from additional protein structure determinations.},
+  langid = {english},
+  file = {C:\Users\mkoontz\Zotero\storage\QMQYQX7L\0005279575901099.html}
 }
 
 @article{mccarthy2019,
@@ -1350,6 +1496,21 @@ Subject\_term\_id: climate-change;fire-ecology},
   file = {C\:\\Users\\mkoontz\\Zotero\\storage\\3MNACXLJ\\Podschwit et al. - 2020 - Patterns and trends in simultaneous wildfire activ.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\VPU8KCTE\\WF19150.html}
 }
 
+@misc{poisot2022,
+  title = {Guidelines for the Prediction of Species Interactions through Binary Classification},
+  author = {Poisot, Timoth{\'e}e},
+  year = {2022},
+  month = jan,
+  publisher = {EcoEvoRxiv},
+  doi = {10.32942/osf.io/aty7n},
+  urldate = {2022-09-18},
+  abstract = {1. The prediction of species interactions is gaining momentum as a way to circumvent limitations in data volume. Yet, ecological networks are challenging to predict because they are typically small and sparse. Dealing with extreme class imbalance is a challenge for most binary classifiers, and there are currently no guidelines as to how predictive models can be trained for this specific problem. 2. Using simple mathematical arguments and numerical experiments in which a variety of classifiers (for supervised learning) are trained on simulated networks, we develop a series of guidelines related to the choice of measures to use for model selection, and the degree of unbiasing to apply to the training dataset. 3. Neither classifier accuracy nor the ROC-AUC are informative measures for the performance of interaction prediction. PR-AUC is a fairer assessment of performance. In some cases, even standard measures can lead to selecting a more biased classifier because the effect of connectance is strong. The amount of correction to apply to the training dataset depends on network connectance, on the measure to be optimized, and only weakly on the classifier. 4. These results reveal that training machines to predict networks is a challenging task, and that in virtually all cases, the composition of the training set needs to be experimented on before performing the actual training. We discuss these consequences in the context of the low volume of data.},
+  archiveprefix = {EcoEvoRxiv},
+  langid = {american},
+  keywords = {binary classification,Biodiversity,ecological networks,Life Sciences,machine learning},
+  file = {C:\Users\mkoontz\Zotero\storage\BZSRV3AY\Poisot - 2022 - Guidelines for the prediction of species interacti.pdf}
+}
+
 @article{povak2018,
   title = {Evidence for Scale-Dependent Topographic Controls on Wildfire Spread},
   author = {Povak, Nicholas A. and Hessburg, Paul F. and Salter, R. Brion},
@@ -1383,6 +1544,20 @@ Subject\_term\_id: climate-change;fire-ecology},
   langid = {english},
   keywords = {Computer Science - Machine Learning,Statistics - Machine Learning},
   file = {C:\Users\mkoontz\Zotero\storage\H7W2RWFV\Probst and Boulesteix - 2017 - To tune or not to tune the number of trees in rand.pdf}
+}
+
+@article{probst2018,
+  title = {To {{Tune}} or {{Not}} to {{Tune}} the {{Number}} of {{Trees}} in {{Random Forest}}},
+  author = {Probst, Philipp and Boulesteix, Anne-Laure},
+  year = {2018},
+  journal = {Journal of Machine Learning Research},
+  volume = {18},
+  number = {181},
+  pages = {1--18},
+  issn = {1533-7928},
+  urldate = {2022-12-02},
+  abstract = {The number of trees  T T  in the random forest (RF) algorithm for supervised learning has to be set by the user. It is unclear whether  T T  should simply be set to the largest computationally manageable value or whether a smaller  T T  may be sufficient or in some cases even better. While the principle underlying bagging is that more trees are better, in practice the classification error rate sometimes reaches a minimum before increasing again for increasing number of trees. The goal of this paper is four-fold: (i) providing theoretical results showing that the expected error rate may be a non-monotonous function of the number of trees and explaining under which circumstances this happens; (ii) providing theoretical results showing that such non-monotonous patterns cannot be observed for other performance measures such as the Brier score and the logarithmic loss (for classification) and the mean squared error (for regression); (iii) illustrating the extent of the problem through an application to a large number (n = 306) of datasets from the public database OpenML; (iv) finally arguing in favor of setting  T T  to a computationally feasible large number as long as classical error measures based on average loss are considered.},
+  file = {C\:\\Users\\mkoontz\\Zotero\\storage\\BHKHKEMN\\Probst and Boulesteix - 2018 - To Tune or Not to Tune the Number of Trees in Rand.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\EQ48C4QG\\Probst and Boulesteix - 2017 - Preprint - To tune or not to tune the number of trees in rand.pdf}
 }
 
 @article{reilly2022,
@@ -1454,6 +1629,24 @@ Subject\_term\_id: climate-change;fire-ecology},
   abstract = {Aim: Wildfire burned area, fire size, fire severity and the ecological and socio-economic impacts of fire have been increasing rapidly in California in recent decades. We sum marize the record-breaking 2020 wildfire season in California statistically, evaluate the drivers of high-severity burning in the 2020 fires and consider implications for fire and resource management.},
   langid = {english},
   file = {C:\Users\mkoontz\Zotero\storage\UQ7SARJY\Safford et al. - 2022 - The 2020 California fire season A year like no other, a return to the past or a harbinger of the fu.pdf}
+}
+
+@article{sauer2020,
+  title = {The {{FastEddy}}{\textregistered} {{Resident}}-{{GPU Accelerated Large}}-{{Eddy Simulation Framework}}: {{Model Formulation}}, {{Dynamical}}-{{Core Validation}} and {{Performance Benchmarks}}},
+  shorttitle = {The {{FastEddy}}{\textregistered} {{Resident}}-{{GPU Accelerated Large}}-{{Eddy Simulation Framework}}},
+  author = {Sauer, Jeremy A. and Mu{\~n}oz-Esparza, Domingo},
+  year = {2020},
+  month = nov,
+  journal = {Journal of Advances in Modeling Earth Systems},
+  volume = {12},
+  number = {11},
+  pages = {e2020MS002100},
+  issn = {1942-2466, 1942-2466},
+  doi = {10.1029/2020MS002100},
+  urldate = {2025-05-06},
+  abstract = {This paper introduces a new large-eddy simulation model, FastEddy{\textregistered}, purpose built for leveraging the accelerated and more power-efficient computing capacity of graphics processing units (GPUs) toward adopting microscale turbulence-resolving atmospheric boundary layer simulations into future numerical weather prediction activities. Here a basis for future endeavors with the FastEddy{\textregistered} model is provided by describing the model dry dynamics formulation and investigating several validation scenarios that establish a baseline of model predictive skill for canonical neutral, convective, and stable boundary layer regimes, along with boundary layer flow over heterogeneous terrain. The current FastEddy{\textregistered} GPU performance and efficiency gains versus similarly formulated, state-of-the-art CPU-based models is determined through scaling tests as 1 GPU to 256 CPU cores. At this ratio of GPUs to CPU cores, FastEddy{\textregistered} achieves 6 times faster prediction rate than commensurate CPU models under equivalent power consumption. Alternatively, FastEddy{\textregistered} uses 8 times less power at this ratio under equivalent CPU/GPU prediction rate. The accelerated performance and efficiency gains of the FastEddy{\textregistered} model permit more broad application of large-eddy simulation to emerging atmospheric boundary layer research topics through substantial reduction of computational resource requirements and increase in model prediction rate.},
+  langid = {english},
+  file = {C:\Users\mkoontz\Zotero\storage\AYATQNI5\Sauer and Muñoz‐Esparza - 2020 - The FastEddy® Resident‐GPU Accelerated Large‐Eddy Simulation Framework Model Formulation, Dynamical.pdf}
 }
 
 @article{scaduto2020,
@@ -1624,6 +1817,24 @@ Subject\_term\_id: climate-change;fire-ecology},
   file = {C\:\\Users\\mkoontz\\Zotero\\storage\\ELVK3WJB\\Storey et al. - 2021 - Experiments on the influence of spot fire and topo.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\HUDSIFJB\\article.html}
 }
 
+@article{strobl2007,
+  title = {Bias in Random Forest Variable Importance Measures: {{Illustrations}}, Sources and a Solution},
+  shorttitle = {Bias in Random Forest Variable Importance Measures},
+  author = {Strobl, Carolin and Boulesteix, Anne-Laure and Zeileis, Achim and Hothorn, Torsten},
+  year = {2007},
+  month = jan,
+  journal = {BMC Bioinformatics},
+  volume = {8},
+  number = {1},
+  pages = {25},
+  issn = {1471-2105},
+  doi = {10.1186/1471-2105-8-25},
+  urldate = {2025-05-06},
+  abstract = {Variable importance measures for random forests have been receiving increased attention as a means of variable selection in many classification tasks in bioinformatics and related scientific fields, for instance to select a subset of genetic markers relevant for the prediction of a certain disease. We show that random forest variable importance measures are a sensible means for variable selection in many applications, but are not reliable in situations where potential predictor variables vary in their scale of measurement or their number of categories. This is particularly important in genomics and computational biology, where predictors often include variables of different types, for example when predictors include both sequence data and continuous variables such as folding energy, or when amino acid sequence data show different numbers of categories.},
+  keywords = {Bootstrap Sampling,Importance Measure,Random Forest,Variable Importance,Variable Selection},
+  file = {C:\Users\mkoontz\Zotero\storage\FN89MZLX\Strobl et al. - 2007 - Bias in random forest variable importance measures Illustrations, sources and a solution.pdf}
+}
+
 @article{swain,
   title = {A Shorter, Sharper Rainy Season Amplifies {{California}} Wildfire Risk},
   author = {Swain, Daniel L.},
@@ -1712,6 +1923,41 @@ Subject\_term\_id: climate-change;fire-ecology},
   abstract = {Background: The PODs (potential operational delineations) concept is an adaptive framework for cross-boundary and collaborative land and fire management planning. Use of PODs is increasingly recognized as a best practice, and PODs are seeing growing interest from federal, state, local, tribal, and non-governmental organizations. Early evidence suggests PODs provide utility for planning, communication, coordination, prioritization, incident response strategy development, and fuels mitigation and forest restoration. Recent legislative action codifies the importance of PODs by devoting substantial financial resources to their expansion. The intent of this paper is to explore new horizons that would help land and fire management organizations better address risks and capitalize on opportunities. Specifically, we focus on how PODs are a natural platform for improvement related to two core elements of risk management: how we leverage preparation and foresight to better prepare for the future; and how we learn from the past to better understand and improve performance and its alignment with strategy. Results: We organize our exploration of new horizons around three key areas, suggesting that PODs can enable climate-smart forest and fire management and planning, inform more agile and adaptive allocation of suppression resources, and enable risk-informed performance measurement. These efforts can be synergistic and self-reinforcing, and we argue that expanded application of PODs at local levels could enhance the performance of the broader wildland fire system. We provide rationales for each problem area and offer growth opportunities with attendant explanations and illustrations. Conclusions: With commitment and careful effort, PODs can provide rich opportunities for innovation in both backward-looking evaluative and forward-looking anticipatory frameworks. In addition to continued improvement of core PODs elements, attention must be paid to being more inclusive and participatory in PODs planning, to building sufficient capacity to expand PODs applications in meaningful boundary spanning ways, to ensure their continuity and relevance over time through maintenance and updating, and to deliver necessary information to responders to inform the effective management of wildfires. Lastly, ongoing monitoring and evaluation of PODs and related initiatives is essential to support organizational learning and continual improvement.},
   langid = {english},
   file = {C:\Users\mkoontz\Zotero\storage\VU66M59T\Thompson et al. - 2022 - Potential operational delineations new horizons for proactive, risk-informed strategic land and fir.pdf}
+}
+
+@article{watson2021,
+  title = {Testing Conditional Independence in Supervised Learning Algorithms},
+  author = {Watson, David S. and Wright, Marvin N.},
+  year = {2021},
+  month = aug,
+  journal = {Machine Learning},
+  volume = {110},
+  number = {8},
+  pages = {2107--2129},
+  issn = {1573-0565},
+  doi = {10.1007/s10994-021-06030-6},
+  urldate = {2022-08-31},
+  abstract = {We propose the conditional predictive impact (CPI), a consistent and unbiased estimator of the association between one or several features and a given outcome, conditional on a reduced feature set. Building on the knockoff framework of Cand{\`e}s et al. (J R Stat Soc Ser B 80:551--577, 2018), we develop a novel testing procedure that works in conjunction with any valid knockoff sampler, supervised learning algorithm, and loss function. The CPI can be efficiently computed for high-dimensional data without any sparsity constraints. We demonstrate convergence criteria for the CPI and develop statistical inference procedures for evaluating its magnitude, significance, and precision. These tests aid in feature and model selection, extending traditional frequentist and Bayesian techniques to general supervised learning tasks. The CPI may also be applied in causal discovery to identify underlying multivariate graph structures. We test our method using various algorithms, including linear regression, neural networks, random forests, and support vector machines. Empirical results show that the CPI compares favorably to alternative variable importance measures and other nonparametric tests of conditional independence on a diverse array of real and synthetic datasets. Simulations confirm that our inference procedures successfully control Type I error with competitive power in a range of settings. Our method has been implemented in an R package, cpi, which can be downloaded from https://github.com/dswatson/cpi.},
+  langid = {english},
+  keywords = {Conditional independence,Knockoffs,Machine learning,Markov blanket,Variable importance},
+  file = {C:\Users\mkoontz\Zotero\storage\2AMH7ZB9\Watson and Wright - 2021 - Testing conditional independence in supervised lea.pdf}
+}
+
+@article{wei2015,
+  title = {Variable Importance Analysis: {{A}} Comprehensive Review},
+  shorttitle = {Variable Importance Analysis},
+  author = {Wei, Pengfei and Lu, Zhenzhou and Song, Jingwen},
+  year = {2015},
+  month = oct,
+  journal = {Reliability Engineering \& System Safety},
+  volume = {142},
+  pages = {399--432},
+  issn = {0951-8320},
+  doi = {10.1016/j.ress.2015.05.018},
+  urldate = {2025-05-06},
+  abstract = {Measuring variable importance for computational models or measured data is an important task in many applications. It has drawn our attention that the variable importance analysis (VIA) techniques were developed independently in many disciplines. We are strongly aware of the necessity to aggregate all the good practices in each discipline, and compare the relative merits of each method, so as to instruct the practitioners to choose the optimal methods to meet different analysis purposes, and to guide current research on VIA. To this end, all the good practices, including seven groups of methods, i.e., the difference-based variable importance measures (VIMs), parametric regression and related VIMs, nonparametric regression techniques, hypothesis test techniques, variance-based VIMs, moment-independent VIMs and graphic VIMs, are reviewed and compared with a numerical test example set in two situations (independent and dependent cases). For ease of use, the recommendations are provided for different types of applications, and packages as well as software for implementing these VIA techniques are collected. Prospects for future study of VIA techniques are also proposed.},
+  keywords = {Difference-based,Graphic variable importance measures,Moment-independent,Random forest,Regression technique,Variable importance analysis,Variance-based},
+  file = {C\:\\Users\\mkoontz\\Zotero\\storage\\FS64AIPX\\Wei et al. - 2015 - Variable importance analysis A comprehensive review.pdf;C\:\\Users\\mkoontz\\Zotero\\storage\\ZPF4E2QK\\S0951832015001672.html}
 }
 
 @article{williams2019,

@@ -107,6 +107,10 @@ driver_descriptions <- readr::read_csv(file = "../data/out/drivers/driver-descri
 ```
 
 ```{r, model_skill}
+#| echo: false
+#| message: false
+#| error: false
+#| results: false
 
 file.copy(
   from = "../tables/rf/early/2023-06-21/model-skill-results_early.csv", 
@@ -452,7 +456,7 @@ Minimum relative humidity is extremely low and vapor pressure deficit is extreme
 Integrated measures of fire potential, such as the energy release component and burning index are both extremely high during active fire spread (@fig-bi; @fig-erc)
 
 We observed differences in the conditions associated with fire spread depending on biome (temperate conifer forest vs. Mediterranean forest, woodland, and scrub).
-Compared to the temperate conifer forest, fires in Mediterranean forest, woodland, and scrub tended to spread under milder minimum vapor pressure deficit, under more easterly winds, and under lower National Preparedness Levels, 
+Compared to the temperate conifer forest, fires in Mediterranean forest, woodland, and scrub tended to spread under milder minimum vapor pressure deficit, under more easterly winds, and under lower National Preparedness Levels.
 There also appeared to be differences in the conditions associated with all fire spread depending on temporal context (whether the fire spread event was within the first week of the fire starting or later).
 Fires that were still spreading a week after starting tended to occur in areas with more tree cover, greater cover of cool slopes (i.e., north-facing slopes), in more complex terrain, in lower landcover diversity, in areas with greater NDVI, and lower grass/forb/herb cover.
 We also observed interactions between biome and temporal context in the conditions of fire spread.

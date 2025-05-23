@@ -83,7 +83,7 @@ date: last-modified
 bibliography: megafired-california.bib
 
 format:
-  docx
+  # docx
   # elsevier-pdf:
   #   keep-tex: true
   #   journal:
@@ -91,8 +91,8 @@ format:
   #     formatting: preprint
   #     model: 3p
   #     cite-style: authoryear
-  # html:
-  #   embed-resources: true
+  html:
+    embed-resources: true
   
 appendix-style: default
 ---
@@ -269,7 +269,7 @@ Ultimately, we assembled eight separate datasets (unique combinations of four bi
 # Assembling predictor variables
 
 We collated a set of 50 potential predictor variables in five categories: human, weather, topography, fuel, and “fire” (which only included the daily area of increase of the most recent spread event within the same fire event).
-@tbl-driver-descriptions provides the source and means of calculating each variable, and we expand on the description for more complicated derived variables here.
+Table 1 provides the source and means of calculating each variable, and we expand on the description for more complicated derived variables here.
 We used Google Earth Engine to extract all weather and topography data [@gorelick2017].
 We also used Google Earth Engine to extract NDVI, NDVI heterogeneity, and landcover data from the USDA Forest Service’s Landcover Change Monitoring System (in the fuel category).
 For each biome/temporal context, we removed all spread events that had missing data for any of the covariates.
@@ -277,7 +277,7 @@ For modeling, we divided each of the datasets into 10 spatial folds based on the
 We ensured that all predictor variables had greater than 0 variance in each spatial fold.
 We removed spatial folds that resulted in fewer than 40 observations or fewer than 2 extreme spread events.
 
-
+Table 1. Drivers of fire activity assembled for this paper.
 ```{r}
 #| echo: false
 # # | label: tbl-driver-descriptions
@@ -401,10 +401,40 @@ Relative hazard was then determined by fitting the most skillful model to each s
 
 # Results
 
+## Geography of extreme spread events
+
 ![Location of spread event and extreme spread events by biome within California.](figs/megafire-resolve-map.jpg){#fig-megafire-map}
 
 We identified `{r} sum(ese_summary_table$n_ese)` extreme spread events across the state of California during the study period (`{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "tcf"]` in temperate conifer forest, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "mfws"]` in Mediterranean forests, woodland, and scrub, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "tgss"]` in temperate grasslands, savannas, and shrublands, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "dxs"]` in desert and xeric shrubland; @fig-megafire-map).
 The threshold size for being considered an extreme spread event was a daily area of growth of approximately `{r} round(mean(ese_summary_table$min_ese_size), 1)` hectares (`{r} round(2.471*mean(ese_summary_table$min_ese_size), 1)` acres; `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "tcf"], 1)` hectares in temperate conifer forest, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "mfws"], 1)` hectares in Mediterranean forests, woodland, and scrub, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "tgss"], 1)` hectares in temperate grasslands, savannas, and shrublands, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "dxs"], 1)` hectares in desert and xeric shrubland).
+
+## Conditions of fire spread
+We found that relatively extreme weather conditions are typical for any kind of fire spread (i.e., both extreme and non-extreme) (@fig-erc, @fig-fm100, @fig-fm1000, @fig-max-temp, @fig-min-rh, @fig-max-wind-speed, @fig-max-vpd).
+
+![Energy Release Component](figs/covariate-histograms/erc_pct.png){#fig-erc}
+![100-hour fuel moisture](figs/covariate-histograms/fm100_pct.png){#fig-fm100}
+![1000-hour fuel moisture](figs/covariate-histograms/fm1000_pct.png){#fig-fm1000}
+
+![Maximum temperature](figs/covariate-histograms/max_temp_era5_pct.png){#fig-max-temp}
+![Minimum relative humidity](figs/covariate-histograms/min_rh_era5_pct.png){#fig-min-rh}
+
+![Maximum wind speed](figs/covariate-histograms/max_wind_speed_era5_pct.png){#fig-max-wind-speed}
+
+![Maximum vapor pressure deficit](figs/covariate-histograms/max_vpd_era5_pct.png){#fig-max-vpd}
+We observed differences in the conditions associated with fire spread depending on biome (temperate conifer forest vs. Mediterranean forest, woodland, and scrub).
+Compared to the temperate conifer forest, fires in Mediterranean forest, woodland, and scrub tended to spread under milder minimum vapor pressure deficit, under more easterly winds, and under lower National Preparedness Levels, 
+There also appeared to be differences in the conditions associated with all fire spread depending on temporal context (whether the fire spread event was within the first week of the fire starting or later).
+Fires that were still spreading a week after starting tended to occur in areas with more tree cover, greater cover of cool slopes (i.e., north-facing slopes), in more complex terrain, in lower landcover diversity, in areas with greater NDVI, and lower grass/forb/herb cover.
+We also observed interactions between biome and temporal context in the conditions of fire spread.
+In temperate conifer forests, fires that were still spreading a week after starting tended to be spreading into areas with less shrub cover, less barren cover, lower road density, lower landcover diversity, lower cover of flat ground, greater variability in east/west wind direction, and during periods of higher National Preparedness Levels.
+In Mediterranean forest, woodland, and scrub, fires that were still spreading a week after starting tended to be spreading into areas with greater vegetation structural complexity.
+
+## Drivers of extreme fire spread
+
+Our spatially cross-validated random forest model achieved a model skill of XXXX as measured by Matthew's Correlation Coefficient, a conservative measure that accounts for both correct and missed classification of both the potential binary outcomes.
+Our feature importance investigation using conditional predictive impact revealed that many features contributed substantially to the overall model skill across most spatial folds.
+Representatives of all five driver types (human, fuel, topography, weather, fire) were deemed "important features" in the most skillful model for each of the biome/temporal context combinations.
+The most important feature in each biome/temporal context was the area of the fire in the previous timestep.
 
 ![Accumulated local effects curves for "important" features for early fires in the temperate conifer forests.](figs/ale-curves/tcf_ale-curves_early.png){#fig-ale-tcf-early}
 
@@ -444,5 +474,7 @@ Conceptualization: ; Data curation: ; Formal analysis: ; Funding acquisition: ; 
 
 ![Effect of sampling area on measured values of some features that do not change from year to year, independent of fire. The construction of the plot is the same as in @fig-fire-independent-scaling-fluctuating](figs/fire-independent-scaling-relationships/fire-independent-scaling-relationships_static_plot_v2.png){#fig-fire-independent-scaling-static}
 
-# References {.unnumbered}
+## References
 
+::: {#refs}
+:::

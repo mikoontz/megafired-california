@@ -83,7 +83,7 @@ date: last-modified
 bibliography: megafired-california.bib
 
 format:
-  # docx
+  docx
   # elsevier-pdf:
   #   keep-tex: true
   #   journal:
@@ -91,8 +91,8 @@ format:
   #     formatting: preprint
   #     model: 3p
   #     cite-style: authoryear
-  html:
-    embed-resources: true
+  # html:
+    # embed-resources: true
   
 appendix-style: default
 ---
@@ -105,6 +105,23 @@ drivers <- readr::read_csv("./tables/drivers.csv")
 ese_summary_table <- readr::read_csv("./tables/ese-summary-table.csv")
 driver_descriptions <- readr::read_csv(file = "../data/out/drivers/driver-descriptions.csv")
 ```
+
+```{r, model_skill}
+
+file.copy(
+  from = "../tables/rf/early/2023-06-21/model-skill-results_early.csv", 
+  to = "./tables/model-skill-results_early.csv"
+)
+file.copy(
+  from = "../tables/rf/early/2023-06-21/model-skill-results_late.csv", 
+  to = "./tables/model-skill-results_late.csv"
+)
+
+early_model_skill <- readr::read_csv("./tables/model-skill-results_early.csv")
+late_model_skill <- readr::read_csv("./tables/model-skill-results_late.csv")
+
+```
+
 
 # Introduction
 
@@ -408,19 +425,32 @@ Relative hazard was then determined by fitting the most skillful model to each s
 We identified `{r} sum(ese_summary_table$n_ese)` extreme spread events across the state of California during the study period (`{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "tcf"]` in temperate conifer forest, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "mfws"]` in Mediterranean forests, woodland, and scrub, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "tgss"]` in temperate grasslands, savannas, and shrublands, `{r} ese_summary_table$n_ese[ese_summary_table$biome_shortname == "dxs"]` in desert and xeric shrubland; @fig-megafire-map).
 The threshold size for being considered an extreme spread event was a daily area of growth of approximately `{r} round(mean(ese_summary_table$min_ese_size), 1)` hectares (`{r} round(2.471*mean(ese_summary_table$min_ese_size), 1)` acres; `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "tcf"], 1)` hectares in temperate conifer forest, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "mfws"], 1)` hectares in Mediterranean forests, woodland, and scrub, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "tgss"], 1)` hectares in temperate grasslands, savannas, and shrublands, `{r} round(ese_summary_table$min_ese_size[ese_summary_table$biome_shortname == "dxs"], 1)` hectares in desert and xeric shrubland).
 
+
 ## Conditions of fire spread
-We found that relatively extreme weather conditions are typical for any kind of fire spread (i.e., both extreme and non-extreme) (@fig-erc, @fig-fm100, @fig-fm1000, @fig-max-temp, @fig-min-rh, @fig-max-wind-speed, @fig-max-vpd).
 
-![Energy Release Component](figs/covariate-histograms/erc_pct.png){#fig-erc}
-![100-hour fuel moisture](figs/covariate-histograms/fm100_pct.png){#fig-fm100}
-![1000-hour fuel moisture](figs/covariate-histograms/fm1000_pct.png){#fig-fm1000}
+We found that relatively extreme weather conditions are typical for any kind of fire spread (i.e., both extreme and non-extreme)
 
-![Maximum temperature](figs/covariate-histograms/max_temp_era5_pct.png){#fig-max-temp}
-![Minimum relative humidity](figs/covariate-histograms/min_rh_era5_pct.png){#fig-min-rh}
+![Maximum temperature is extremely high.](figs/covariate-histograms/max_temp_era5_pct.png){#fig-max-temp}
 
-![Maximum wind speed](figs/covariate-histograms/max_wind_speed_era5_pct.png){#fig-max-wind-speed}
+![Minimum relative humidity is extremely low.](figs/covariate-histograms/min_rh_era5_pct.png){#fig-min-rh}
 
-![Maximum vapor pressure deficit](figs/covariate-histograms/max_vpd_era5_pct.png){#fig-max-vpd}
+![Maximum vapor pressure deficit is extremely high.](figs/covariate-histograms/max_vpd_era5_pct.png){#fig-max-vpd}
+
+![100-hour fuel moisture is extremely low.](figs/covariate-histograms/fm100_pct.png){#fig-fm100}
+
+![1000-hour fuel moisture is extremely low.](figs/covariate-histograms/fm1000_pct.png){#fig-fm1000}
+
+![Maximum wind speed is extremely high.](figs/covariate-histograms/max_wind_speed_era5_pct.png){#fig-max-wind-speed}
+
+![Burning index is high during all active fire spread events](figs/covariate-histograms/bi_pct.png){#fig-bi}
+
+![Energy Release Component is extremely high.](figs/covariate-histograms/erc_pct.png){#fig-erc}
+
+Maximum temperature and maximum wind speed are extremely high during active fire spread (@fig-max-temp; @fig-max-wind-speed).
+Fuel moisture conditions are extremely low during active fire spread (@fig-fm100; @fig-fm1000).
+Minimum relative humidity is extremely low and vapor pressure deficit is extremely high during active fire spread (@fig-min-rh; @fig-max-vpd).
+Integrated measures of fire potential, such as the energy release component and burning index are both extremely high during active fire spread (@fig-bi; @fig-erc)
+
 We observed differences in the conditions associated with fire spread depending on biome (temperate conifer forest vs. Mediterranean forest, woodland, and scrub).
 Compared to the temperate conifer forest, fires in Mediterranean forest, woodland, and scrub tended to spread under milder minimum vapor pressure deficit, under more easterly winds, and under lower National Preparedness Levels, 
 There also appeared to be differences in the conditions associated with all fire spread depending on temporal context (whether the fire spread event was within the first week of the fire starting or later).
@@ -431,7 +461,71 @@ In Mediterranean forest, woodland, and scrub, fires that were still spreading a 
 
 ## Drivers of extreme fire spread
 
-Our spatially cross-validated random forest model achieved a model skill of XXXX as measured by Matthew's Correlation Coefficient, a conservative measure that accounts for both correct and missed classification of both the potential binary outcomes.
+```{r, model_skill_table}
+#| echo: false
+
+model_skill_summary_table <- rbind(
+  dplyr::mutate(early_model_skill, `Temporal context` = "early"),
+  dplyr::mutate(late_model_skill, `Temporal context` = "late")
+) |> 
+  dplyr::mutate(
+    `Resolve biome name` = dplyr::case_when(
+      biome == "dxs" ~ "Deserts and xeric shrublands",
+      biome == "tcf" ~ "Temperate conifer forests",
+      biome == "mfws" ~ "Mediterranean forests, woodland, and scrub"
+    )
+  ) |>
+  dplyr::filter(biome != "dxs") |> 
+  dplyr::mutate(
+    `Matthew's Correlation Coefficient (MCC)` = stringr::str_pad(
+      string = round(
+        mean_mcc, 
+        digits = 3
+      ), 
+      side = "right", 
+      pad = "0", 
+      width = 5
+    ),
+    `Classification threshold` = stringr::str_pad(
+      string = classification_thresh,
+      side = "right",
+      pad = "0",
+      width = 4
+    )
+  ) |> 
+  dplyr::rename(
+    `Sample fraction` = sample.fraction, 
+    `Minimum node size` = min.node.size
+  ) |> 
+  dplyr::select(
+    `Resolve biome name`, 
+    `Temporal context`, 
+    mtry, 
+    `Sample fraction`, 
+    `Minimum node size`, 
+    `Classification threshold`, 
+    `Matthew's Correlation Coefficient (MCC)`
+  )
+
+```
+
+### Overall model performance
+Our spatially cross-validated random forest model achieved a model skill ranging from `r min(unlist(model_skill_summary_table[, "Matthew's Correlation Coefficient (MCC)"]))` to `r max(unlist(model_skill_summary_table[, "Matthew's Correlation Coefficient (MCC)"]))` as measured by Matthew's Correlation Coefficient, a conservative measure that accounts for both correct and missed classification of both the potential binary outcomes (Table 2).
+
+Table 2. Tuned random forest hyperparameters and model skill based on Matthew's Correlation Coefficient for the four unique combinations of biome/temporal context.
+
+
+
+```{r}
+#| echo: false
+
+model_skill_summary_table |> 
+  gt::gt()
+```
+
+
+### Feature importance
+
 Our feature importance investigation using conditional predictive impact revealed that many features contributed substantially to the overall model skill across most spatial folds.
 Representatives of all five driver types (human, fuel, topography, weather, fire) were deemed "important features" in the most skillful model for each of the biome/temporal context combinations.
 The most important feature in each biome/temporal context was the area of the fire in the previous timestep.
@@ -447,6 +541,7 @@ The most important feature in each biome/temporal context was the area of the fi
 ## Relative hazard
 
 ![Relative hazard mapped for extreme fire weather and as though a nearby fire was spreading quickly the day before.](figs/relative-hazard/relative-megafire-hazard-pods_big-spread-yesterday.png){#fig-relative-hazard-big-spread-yesterday-extreme-weather-today}
+
 # Discussion
 
 Here, we provide a robust analysis of the conditions under which all fires spread, as well as disentangle the conditions under which extreme fire spread is more likely.k

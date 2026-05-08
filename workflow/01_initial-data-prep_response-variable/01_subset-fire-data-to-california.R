@@ -14,8 +14,8 @@ dir.create("data/out/active-fire", recursive = TRUE, showWarnings = FALSE)
 # https://github.com/earthlab/firedpy/commit/9a585f828a8e8e7510a15171ff0311457defad13
 # firedpy -proj_dir H:\dev\megafired_california\data\raw --shapefile -landcover_type 1 -daily yes
 
-fired_daily <- sf::st_read("data/raw/fired_daily.gpkg") %>% sf::st_transform(3310)
-fired_events <- sf::st_read("data/raw/fired_events.gpkg") %>% sf::st_transform(3310)
+fired_daily <- sf::st_read("data/raw/fired_daily.gpkg") |> sf::st_transform(3310)
+fired_events <- sf::st_read("data/raw/fired_events.gpkg") |>  sf::st_transform(3310)
 
 ca <- 
   USAboundaries::us_states(resolution = "high", states = "California") %>% 

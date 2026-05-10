@@ -580,6 +580,22 @@ collate_cpi_results <- function(biome_shortname,
   
 }
 
+# borrowed from Sara Winsemius
+#' @description
+#' Computes the maximum correlation among all features in a model by parsing
+#' the formula string
+#' @param formula_str
+#' @param data
+#' @returns a numeric representing the maximum correlation of the variables
+get_max_corr <- function(formula_str, data) {
+  vars <- trimws(strsplit(sub(".*~\\s*", "", formula_str), "\\s*\\+\\s*")[[1]])
+  vars <- vars[vars %in% names(data)]
+  if (length(vars) < 2) return(NA_real_)
+  cm <- cor(data[, vars], use = "complete.obs", method = "pearson")
+  diag(cm) <- NA
+  max(abs(cm), na.rm = TRUE)
+}
+
 #' @description
 #' Performs a cross-validation of a ranger random forest model
 #' @param data 

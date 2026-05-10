@@ -4,6 +4,34 @@ source("./R/utils.R")
 
 tune_varselect_version <- glue::glue("v0.1.a")
 
+### Gather analysis ready data
+latest_ard_fname <- sort(
+  list.files(
+    path = here::here("data", "ard"), 
+    pattern = "[0-9]",
+    full.names = TRUE), 
+  decreasing = TRUE
+) |> 
+  getElement(1)
+
+latest_ard_date <- stringr::str_sub(latest_ard_fname, start = -14, end = -5)
+
+local_out_dir <- here::here("data", "out", "rf", "tuning", latest_ard_date)
+dir.create(local_out_dir, recursive = TRUE, showWarnings = FALSE)
+
+ard <- readr::read_csv(
+  latest_ard_fname, 
+  col_types = list(spatial_fold = "factor")
+)
+
+# group by biome
+ard_nested <- ard |> 
+  dplyr::filter(!validation) |> 
+  # Set up an ewe of 1 to be the "positive" class
+  dplyr::mutate(ewe = factor(ewe, levels = c("1", "0"))) |> 
+  tidyr::nest(.by = "biome_shortname", .key = "data")
+
+### collate all model results
 model_skill_by_fold <- list.files(
   path = glue::glue(
     "data/out/rf/tune_varselect/{tune_varselect_version}/",
@@ -61,51 +89,140 @@ model_skill_by_fold_compact <- model_skill_by_fold |>
 model_skill <- dplyr::left_join(
   model_skill_overall_compact,
   model_skill_by_fold_compact
+) |> 
+  tidyr::drop_na() |> 
+  # compute maximum correlation among variables in the model
+  dplyr::left_join(ard_nested) |> 
+  dplyr::mutate(
+    max_corr = purrr::pmap_dbl(
+      .l = list(important_variable_rf_formula, data), 
+      .f = get_max_corr
+    )
+  )
+
+best_models <- model_skill |> 
+  dplyr::select(-n, -logloss_reduced, -logloss_reduced_by_fold) |> 
+  dplyr::group_by(biome_shortname) |> 
+  dplyr::filter(max_corr < 0.8) |> 
+  dplyr::group_map(
+    .f = ~ rPref::psel(
+      df = .x, 
+      pref = rPref::high(mcc_reduced) * rPref::low(n_important_variables)
+    ),
+    .keep = TRUE
+  ) |> 
+  dplyr::bind_rows() |> 
+  dplyr::group_by(biome_shortname) |> 
+  dplyr::filter(n_important_variables == min(n_important_variables))
+
+best_models
+
+fetch_cpi_results <- function(biome_shortname, tune_varselect_version,
+                              mtry, sample.fraction, min.node.size, ...) {
+  
+  # label for decimal sample.fraction
+  sample.fraction_label <- stringr::str_pad(
+    round(sample.fraction, digits = 3), 
+    side = 'right', 
+    width = 5, 
+    pad = '0'
+  )
+  
+  # Basename that captures hyperparameter combination
+  hyperparameter_basename <- glue::glue(
+    "mtry_{mtry}_",
+    "sample.fraction_{sample.fraction_label}",
+    "_min.node.size_{min.node.size}.csv"
+  )
+  
+  ## The full local output filenames
+  cpi_results_fname <- glue::glue(
+    "data/out/rf/tune_varselect/{tune_varselect_version}/",
+    "cpi-results/",
+    "tune_varselect_{tune_varselect_version}_",
+    "{biome_shortname}_cpi-results_",
+    "{hyperparameter_basename}"
+  )
+  
+  data.table::fread(cpi_results_fname)
+  
+}
+
+cpi_of_best_models <- best_models |> 
+  purrr::pmap(.f = fetch_cpi_results) |> 
+  dplyr::bind_rows() |> 
+  dplyr::group_by(biome_shortname) |> 
+  dplyr::group_map(
+    .f = ~ .x |> dplyr::arrange(dplyr::desc(ci.lo)) |> dplyr::filter(ci.lo > 0),
+    .keep = TRUE
+  )
+
+best_models
+cpi_of_best_models
+
+fit_best_model <- function(biome_shortname, mtry, sample.fraction, min.node.size, rf_formula, data, ...) {
+  
+  fm <- ranger::ranger(
+    formula = as.formula(rf_formula), 
+    data = data,
+    num.trees = 1000,
+    mtry = mtry,
+    sample.fraction = sample.fraction,
+    min.node.size = min.node.size, 
+    splitrule = "hellinger", 
+    probability = TRUE, 
+    class.weights = 1/c(0.05, 0.95), 
+    classification = TRUE,
+    replace = FALSE,
+    keep.inbag = TRUE
+  )
+  
+  list(biome_shortname = biome_shortname, fm = fm, data = data)
+  
+}
+
+fitted_models <- best_models |> 
+  dplyr::rename(rf_formula = important_variable_rf_formula) |> 
+  purrr::pmap(
+  .f = fit_best_model
 )
 
-pareto_front = rPref::psel(
-  df = model_skill[model_skill$biome_shortname == "tcf", ],
-  pref = rPref::high(mcc_reduced) * rPref::high(mcc_reduced_by_fold) * rPref::low(n_important_variables)
+names(fitted_models) <- purrr::map_chr(
+  .x = fitted_models, 
+  .f = ~purrr::pluck(.x, "biome_shortname")
+  )
+
+# Define custom predict function for ranger classification (probabilities)
+ale_ranger_predict <- function(object, newdata, type) {
+  # 'type' is typically passed as 'response' by ale()
+  res <- predict(object, data = newdata, type = type)
+  # Returns a matrix where each column is a class probability
+  res$predictions[, 1]
+}
+
+# ale_results <- purrr::map(
+#   .x = fitted_models,
+#   .f = ~ ale::ALE(
+#     model = .x[["fm"]], 
+#     y_col = "ewe",
+#     data = .x[["data"]],
+#     pred_fun = ale_ranger_predict
+#   )
+# )
+
+ale_tcf <- ale::ALE(
+  model = fitted_models[["tcf"]]$fm, 
+  y_col = "ewe",
+  data = fitted_models[["tcf"]]$data,
+  pred_fun = ale_ranger_predict
 )
 
-top_results = r2_pareto_front |> na.omit()
+ale_mfws <- ale::ALE(
+  model = fitted_models[["mfws"]]$fm,
+  y_col = "ewe",
+  data = fitted_models[["mfws"]]$data,
+  pred_fun = ale_ranger_predict
+  )
 
-best_fit = top_results[2,]
-
-best_hyperparameter_set_overall_mcc <- model_skill_overall |> 
-  dplyr::group_by(biome_shortname) |> 
-  dplyr::filter(mcc_reduced == max(mcc_reduced, na.rm = TRUE)) |> 
-  dplyr::select(biome_shortname, mtry, sample.fraction, min.node.size, mcc_reduced)
-
-best_hyperparameter_set_overall_logloss <- model_skill_overall |> 
-  dplyr::group_by(biome_shortname) |> 
-  dplyr::filter(logloss_reduced == min(logloss_reduced, na.rm = TRUE)) |> 
-  dplyr::select(biome_shortname, mtry, sample.fraction, min.node.size, logloss_reduced)
-
-model_skill_overall |> 
-  dplyr::right_join(best_hyperparameter_set_overall_mcc) |> 
-  dplyr::select(biome_shortname, n_important_variables, important_variable_rf_formula)
-
-model_skill_overall |> 
-  dplyr::right_join(best_hyperparameter_set_overall_logloss) |> 
-  dplyr::select(biome_shortname, n_important_variables, important_variable_rf_formula)
-
-# best across folds
-best_hyperparameter_set_by_fold_mcc <- model_skill_by_fold |> 
-  dplyr::group_by(biome_shortname) |>
-  dplyr::filter(mcc_reduced == max(mcc_reduced, na.rm = TRUE)) |> 
-  dplyr::select(biome_shortname, mtry, sample.fraction, min.node.size, mcc_reduced)
-
-best_hyperparameter_set_by_fold_logloss <- model_skill_by_fold |> 
-  dplyr::group_by(biome_shortname) |>
-  dplyr::filter(logloss_reduced == min(logloss_reduced, na.rm = TRUE)) |> 
-  dplyr::select(biome_shortname, mtry, sample.fraction, min.node.size, logloss_reduced)
-
-model_skill_by_fold |> 
-  dplyr::right_join(best_hyperparameter_set_by_fold_mcc) |> 
-  dplyr::select(biome_shortname, n_important_variables, important_variable_rf_formula)
-
-model_skill_by_fold |> 
-  dplyr::right_join(best_hyperparameter_set_by_fold_logloss) |> 
-  dplyr::select(biome_shortname, n_important_variables, important_variable_rf_formula)
-
+ale_tcf_plots <- plot(ale_tcf)
+ale_mfws_plots <- plot(ale_mfws)

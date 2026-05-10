@@ -8,7 +8,7 @@ library(mlr3verse)
 lgr::get_logger("mlr3")$set_threshold("warn")
 # lgr::get_logger("mlr3")$set_threshold("info") # reset to default
 
-tune_varselect_version <- "v0.1.7"
+tune_varselect_version <- "v0.2.4"
 overwrite_model_skill <- FALSE
 overwrite_cpi_results <- FALSE
 
@@ -46,7 +46,7 @@ driver_descriptions <- readr::read_csv(
 
 features <- driver_descriptions$variable
 # Drop the sqrt_aoi_tm1 feature for this round
-# features <- features[features != "sqrt_aoi_tm1"]
+features <- features[features != "sqrt_aoi_tm1"]
 
 # The target (i.e., response variable)
 target <- "ewe"
